@@ -1551,12 +1551,8 @@ window.probarSupabase = async function(){
   var status = document.getElementById('supabase-status');
   if (status) status.textContent = 'Probando conexion...';
   try {
-    var data = await window.supabaseRequest('prueba_conexion', {
-      method: 'POST',
-      prefer: 'return=representation',
-      body: { mensaje: 'Prueba desde EXCOMERCAFE ' + new Date().toLocaleString() }
-    });
-    var ok = data && data[0] ? 'Conectado. Registro #' + data[0].id + ' guardado en Supabase.' : 'Conectado con Supabase.';
+    var data = await window.supabaseRequest('/rest/v1/ventas_agromercado?select=id&limit=1');
+    var ok = 'Conectado con Supabase. Tabla ventas lista' + (data && data.length ? ' con registros.' : '.');
     if (status) status.textContent = ok;
     if (typeof showToast === 'function') showToast('Conexion Supabase correcta');
     else alert(ok);
