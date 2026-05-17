@@ -11125,6 +11125,37 @@ document.addEventListener('DOMContentLoaded', function() {
     return totals;
   }
 
+  function sumDistribucionesStorage(storageKey, fecha){
+    var totals = emptyProducts();
+    var data = [];
+    try { data = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch(e) {}
+    data.forEach(function(item){
+      if (fecha && !sameDate(item.fecha, fecha)) return;
+      BODEGA_PRODUCTS.forEach(function(p){
+        totals[p.key] += Math.max(0, num(item[p.key]));
+      });
+    });
+    return totals;
+  }
+
+  function sumProducts(){
+    var totals = emptyProducts();
+    Array.from(arguments).forEach(function(row){
+      BODEGA_PRODUCTS.forEach(function(p){
+        totals[p.key] += num(row && row[p.key]);
+      });
+    });
+    return totals;
+  }
+
+  function maxProducts(a, b){
+    var totals = emptyProducts();
+    BODEGA_PRODUCTS.forEach(function(p){
+      totals[p.key] = Math.max(num(a && a[p.key]), num(b && b[p.key]));
+    });
+    return totals;
+  }
+
   function getSavedCuadre(fecha){
     var all = {};
     try { all = JSON.parse(localStorage.getItem('cuadre-bodegas-data') || '{}'); } catch(e) {}
@@ -11161,7 +11192,12 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.cdaUsulutanEntrada[p.key];
     });
 
-    rows.recibidoAgromercados = sumByLocation(['agromercados'], fecha, true);
+    var recibidoPorInventario = sumByLocation(['agromercados'], fecha, true);
+    var recibidoPorDistribucion = sumProducts(
+      sumDistribucionesStorage('descargas-data', fecha),
+      sumDistribucionesStorage('distribucion-cda-data', fecha)
+    );
+    rows.recibidoAgromercados = maxProducts(recibidoPorInventario, recibidoPorDistribucion);
     rows.bodegaTiendona = sumByLocation(['descargas-tiendona','descargas-tiendona-abajo','descargas-tiendona-arriba'], null, false);
     rows.cdaSoyapango = sumByLocation(['distribucion-cda','distribucion-cda-soyapango'], null, false);
     rows.cdaUsulutan = sumByLocation(['distribucion-cda-usulutan'], null, false);
@@ -11695,6 +11731,19 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem(key, JSON.stringify(data || []));
   }
 
+  function readLocalObject(key){
+    try {
+      var value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : {};
+    } catch(error) {
+      return {};
+    }
+  }
+
+  function writeLocalObject(key, data){
+    localStorage.setItem(key, JSON.stringify(data || {}));
+  }
+
   function currentOnlineStatus(message){
     var el = document.getElementById('supabase-status');
     if (el) el.textContent = message;
@@ -11758,6 +11807,20 @@ document.addEventListener('DOMContentLoaded', function() {
       observaciones: record.observaciones || '',
       payload: record
     };
+  }
+
+  function flattenCuadreObject(storageKey, tipo){
+    var data = readLocalObject(storageKey);
+    return Object.keys(data).map(function(key){
+      var parts = key.split('|');
+      return {
+        local_id: tipo + '|' + key,
+        tipo: tipo,
+        fecha: parts[0] || key,
+        grupo: parts[1] || '',
+        payload: data[key] || {}
+      };
+    });
   }
 
   function ventaToSupabase(record){
@@ -11842,6 +11905,39 @@ document.addEventListener('DOMContentLoaded', function() {
     return added;
   }
 
+  async function uploadCuadreObject(storageKey, tipo){
+    if (!window.supabaseRequest) return 0;
+    var rows = flattenCuadreObject(storageKey, tipo);
+    if (!rows.length) return 0;
+    var inserted = await window.supabaseRequest('estado_cuadres?on_conflict=local_id', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=representation',
+      body: rows
+    });
+    return inserted ? inserted.length : rows.length;
+  }
+
+  async function downloadCuadreObject(storageKey, tipo){
+    if (!window.supabaseRequest) return 0;
+    var rows = await window.supabaseRequest('/rest/v1/estado_cuadres?select=local_id,tipo,fecha,grupo,payload&tipo=eq.' + encodeURIComponent(tipo));
+    var data = readLocalObject(storageKey);
+    var changed = 0;
+
+    (rows || []).forEach(function(row){
+      var key = row.grupo ? row.fecha + '|' + row.grupo : row.fecha;
+      if (!key) return;
+      var current = JSON.stringify(data[key] || {});
+      var remote = JSON.stringify(row.payload || {});
+      if (current !== remote) {
+        data[key] = row.payload || {};
+        changed++;
+      }
+    });
+
+    if (changed) writeLocalObject(storageKey, data);
+    return changed;
+  }
+
   var SUPABASE_SYNC_CONFIGS = [
     { table: 'ventas_agromercado', storageKey: 'exc_agro_hist', toSupabase: ventaToSupabase },
     { table: 'inventario_movimientos', storageKey: 'inventario-data', toSupabase: inventarioToSupabase },
@@ -11859,6 +11955,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderVentasHistorial === 'function') renderVentasHistorial();
     if (typeof renderHistorialVentas === 'function') renderHistorialVentas();
     if (typeof renderBancos === 'function') renderBancos();
+    if (typeof renderCuadreBodegas === 'function') renderCuadreBodegas();
+    if (typeof renderCuadreCDA === 'function') renderCuadreCDA();
   }
 
   window.sincronizarTablaSupabase = async function(config){
@@ -11888,6 +11986,17 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   };
 
+  window.sincronizarCuadresSupabase = async function(){
+    var upBodegas = await uploadCuadreObject('cuadre-bodegas-data', 'bodegas');
+    var upCda = await uploadCuadreObject('cuadre-cda-data', 'cda');
+    var downBodegas = await downloadCuadreObject('cuadre-bodegas-data', 'bodegas');
+    var downCda = await downloadCuadreObject('cuadre-cda-data', 'cda');
+    return {
+      uploaded: upBodegas + upCda,
+      downloaded: downBodegas + downCda
+    };
+  };
+
   window.sincronizarPendientesSupabase = async function(){
     currentOnlineStatus('Sincronizando datos con Supabase...');
     var totalUploaded = 0;
@@ -11904,6 +12013,15 @@ document.addEventListener('DOMContentLoaded', function() {
         errores.push(config.table + ': ' + error.message);
         console.warn('Supabase pendiente en ' + config.table + ':', error);
       }
+    }
+
+    try {
+      var cuadres = await window.sincronizarCuadresSupabase();
+      totalUploaded += cuadres.uploaded;
+      totalDownloaded += cuadres.downloaded;
+    } catch(error) {
+      errores.push('estado_cuadres: ' + error.message);
+      console.warn('Supabase pendiente en estado_cuadres:', error);
     }
 
     refreshAfterOnlineSync();
@@ -11957,6 +12075,20 @@ document.addEventListener('DOMContentLoaded', function() {
     return result;
   };
   window.guardarDistribucionTiendona = window.guardarDistribucionTiendonaFija;
+
+  var guardarCuadreBodegasLocalOnline = window.guardarCuadreBodegas;
+  window.guardarCuadreBodegas = function(){
+    var result = guardarCuadreBodegasLocalOnline ? guardarCuadreBodegasLocalOnline.apply(this, arguments) : false;
+    syncSoon();
+    return result;
+  };
+
+  var guardarCuadreCDALocalOnline = window.guardarCuadreCDA;
+  window.guardarCuadreCDA = function(){
+    var result = guardarCuadreCDALocalOnline ? guardarCuadreCDALocalOnline.apply(this, arguments) : false;
+    syncSoon();
+    return result;
+  };
 
   document.addEventListener('DOMContentLoaded', function(){
     setTimeout(function(){
