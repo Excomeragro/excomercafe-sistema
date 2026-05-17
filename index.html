@@ -33,6 +33,109 @@
   .online-indicator.online::before{background:#22c55e;}
   .online-indicator.offline::before{background:#ef4444;}
   .online-indicator.syncing::before{background:#3b82f6;}
+  .report-summary-toolbar{
+    display:flex;
+    align-items:end;
+    gap:10px;
+    flex-wrap:wrap;
+    margin:12px 0;
+  }
+  .report-summary-toolbar .fg{
+    min-width:150px;
+    margin:0;
+  }
+  .report-summary-toolbar label{
+    display:block;
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#0b2540;
+    margin-bottom:4px;
+  }
+  .report-summary-toolbar input,
+  .report-summary-toolbar select{
+    width:100%;
+    height:32px;
+    border:1px solid #b7d7f3;
+    border-radius:6px;
+    background:#fff7f2;
+    padding:4px 8px;
+    font-family:Barlow,Arial,sans-serif;
+    font-size:.85rem;
+  }
+  .report-summary-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:8px;
+    margin:10px 0 12px;
+  }
+  .report-summary-kpi{
+    border:1px solid #b7d7f3;
+    border-radius:6px;
+    padding:10px;
+    background:#f8fbff;
+  }
+  .report-summary-kpi span{
+    display:block;
+    font-size:.7rem;
+    color:#64748b;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .report-summary-kpi strong{
+    display:block;
+    margin-top:3px;
+    font-size:1.15rem;
+    color:#0b2540;
+  }
+  .report-summary-kpi.pending strong{color:#b91c1c;}
+  .report-summary-kpi.done strong{color:#15803d;}
+  .report-summary-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:.82rem;
+  }
+  .report-summary-table th{
+    background:#1a3c5e;
+    color:#fff;
+    text-align:left;
+    padding:7px;
+    border:1px solid #b7d7f3;
+  }
+  .report-summary-table td{
+    padding:6px 7px;
+    border:1px solid #d6e7f7;
+    vertical-align:top;
+  }
+  .report-summary-table tfoot td{
+    font-weight:700;
+    background:#eaf4ff;
+  }
+  .report-pending{
+    color:#b91c1c;
+    font-weight:800;
+  }
+  .report-done{
+    color:#15803d;
+    font-weight:800;
+  }
+  .report-summary-table .btn-remesado{
+    border:0;
+    border-radius:6px;
+    background:#16a34a;
+    color:#fff;
+    padding:5px 9px;
+    font-weight:800;
+    cursor:pointer;
+    font-size:.75rem;
+  }
+  .report-summary-table .btn-remesado:disabled{
+    background:#bbf7d0;
+    color:#166534;
+    cursor:default;
+  }
 </style>
 <script src="./index_files/xlsx.full.min.js"></script>
 </head>
@@ -117,16 +220,38 @@
   </div>
 
   
-  <!-- ══ RESUMEN DE REMESAS DEL DÍA ══ -->
+  <!-- ══ REPORTE DE VENTAS Y REMESAS ══ -->
   <div class="remesas-summary">
-    <div class="remesas-title">💰 Resumen de Remesas del Día</div>
+    <div class="remesas-title">💰 Resumen de Ventas y Remesas</div>
+    <div class="report-summary-toolbar">
+      <div class="fg">
+        <label>Periodo</label>
+        <select id="reporte-resumen-periodo" onchange="actualizarPeriodoResumenVentas()">
+          <option value="dia">Diario</option>
+          <option value="semana">Semanal</option>
+          <option value="mes">Mensual</option>
+          <option value="rango">Elegir fechas</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Desde</label>
+        <input type="date" id="reporte-resumen-desde" onchange="renderResumenVentasPeriodo()">
+      </div>
+      <div class="fg">
+        <label>Hasta</label>
+        <input type="date" id="reporte-resumen-hasta" onchange="renderResumenVentasPeriodo()">
+      </div>
+      <div class="fg">
+        <label>Banco</label>
+        <select id="reporte-resumen-banco" onchange="renderResumenVentasPeriodo()">
+          <option value="">Todos los bancos</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" onclick="imprimirResumenVentasPeriodo()">Imprimir Reporte</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="renderResumenVentasPeriodo()">Actualizar</button>
+    </div>
     <div id="resumen-remesas-dia">
-      <div id="banco-grid" class="banco-grid">
-        <!-- Las tarjetas de banco se generarán dinámicamente -->
-      </div>
-      <div id="no-remesas-message" class="no-remesas" style="display:none;">
-        Sin remesas registradas hoy
-      </div>
+      <div id="resumen-ventas-periodo"></div>
     </div>
   </div>
 </div>
@@ -9149,6 +9274,11 @@ window.cargarOpcionesBancoControlVenta = function() {
 
 window.actualizarResumenRemesasDia = function(){
 
+  if (typeof renderResumenVentasPeriodo === 'function') {
+    renderResumenVentasPeriodo();
+    return;
+  }
+
   const cont = document.getElementById('resumen-remesas-dia');
   if (!cont) return;
 
@@ -9180,6 +9310,212 @@ window.actualizarResumenRemesasDia = function(){
       Total remesado hoy: <b>$${total.toFixed(2)}</b>
     </div>
   `).join('');
+};
+
+function resumenVentasFechaHoy(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function resumenVentasParseDate(value){
+  var parts = String(value || '').split('-').map(Number);
+  if (parts.length !== 3) return new Date();
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function resumenVentasFormatDate(date){
+  var y = date.getFullYear();
+  var m = String(date.getMonth() + 1).padStart(2, '0');
+  var d = String(date.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+
+function resumenVentasMoney(value){
+  return '$' + (Number(value || 0) || 0).toFixed(2);
+}
+
+function resumenVentasRegistroId(record){
+  return String(record && (record.id || record.local_id || record.ts || record.timestamp) || '');
+}
+
+function resumenVentasBanco(record){
+  return (record && record.banco ? String(record.banco).trim() : '') || 'Sin banco';
+}
+
+function resumenVentasAjustarBancoFiltro(hist){
+  var select = document.getElementById('reporte-resumen-banco');
+  if (!select) return '';
+  var selected = select.value || '';
+  var bancos = {};
+  hist.forEach(function(r){
+    var banco = resumenVentasBanco(r);
+    if (banco && banco !== 'Sin banco') bancos[banco] = true;
+  });
+  var options = '<option value="">Todos los bancos</option>' + Object.keys(bancos).sort().map(function(banco){
+    return '<option value="' + banco.replace(/"/g, '&quot;') + '">' + banco + '</option>';
+  }).join('');
+  if (select.innerHTML !== options) select.innerHTML = options;
+  if (selected && bancos[selected]) select.value = selected;
+  return select.value || '';
+}
+
+window.actualizarPeriodoResumenVentas = function(){
+  var periodo = document.getElementById('reporte-resumen-periodo')?.value || 'dia';
+  var desde = document.getElementById('reporte-resumen-desde');
+  var hasta = document.getElementById('reporte-resumen-hasta');
+  if (!desde || !hasta) return;
+
+  var today = resumenVentasParseDate(resumenVentasFechaHoy());
+  var start = new Date(today);
+  var end = new Date(today);
+
+  if (periodo === 'semana') {
+    var day = today.getDay();
+    var offset = day === 0 ? 6 : day - 1;
+    start.setDate(today.getDate() - offset);
+    end = new Date(start);
+    end.setDate(start.getDate() + 6);
+  } else if (periodo === 'mes') {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  } else if (periodo === 'rango') {
+    if (!desde.value) desde.value = resumenVentasFormatDate(start);
+    if (!hasta.value) hasta.value = resumenVentasFormatDate(end);
+    renderResumenVentasPeriodo();
+    return;
+  }
+
+  desde.value = resumenVentasFormatDate(start);
+  hasta.value = resumenVentasFormatDate(end);
+  renderResumenVentasPeriodo();
+};
+
+window.renderResumenVentasPeriodo = function(){
+  var cont = document.getElementById('resumen-ventas-periodo') || document.getElementById('resumen-remesas-dia');
+  if (!cont) return;
+
+  var desdeInput = document.getElementById('reporte-resumen-desde');
+  var hastaInput = document.getElementById('reporte-resumen-hasta');
+  if (desdeInput && !desdeInput.value) desdeInput.value = resumenVentasFechaHoy();
+  if (hastaInput && !hastaInput.value) hastaInput.value = resumenVentasFechaHoy();
+  var desde = desdeInput ? desdeInput.value : resumenVentasFechaHoy();
+  var hasta = hastaInput ? hastaInput.value : resumenVentasFechaHoy();
+  if (desde > hasta) {
+    var tmp = desde;
+    desde = hasta;
+    hasta = tmp;
+  }
+
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(e) {}
+  var bancoFiltro = resumenVentasAjustarBancoFiltro(hist);
+  var rows = hist.filter(function(r){
+    var fecha = String(r.fecha || '').slice(0,10);
+    if (!(fecha >= desde && fecha <= hasta)) return false;
+    if (bancoFiltro && resumenVentasBanco(r) !== bancoFiltro) return false;
+    return true;
+  });
+
+  var totals = { ventas:0, gastos:0, remesa:0, remesado:0, registros: rows.length };
+  var porBanco = {};
+  rows.forEach(function(r){
+    var ventas = Number(r.ventas || r.totalVenta || 0) || 0;
+    var gastos = Number(r.gastos || 0) || 0;
+    var remesa = Number(r.remesa || 0) || 0;
+    var remesado = Number(r.dineroRemesado || r.dinero_remesado || 0) || 0;
+    totals.ventas += ventas;
+    totals.gastos += gastos;
+    totals.remesa += remesa;
+    totals.remesado += remesado;
+    var banco = resumenVentasBanco(r);
+    if (!porBanco[banco]) porBanco[banco] = { banco:banco, ventas:0, gastos:0, remesa:0, remesado:0, registros:0, ids:[] };
+    porBanco[banco].ventas += ventas;
+    porBanco[banco].gastos += gastos;
+    porBanco[banco].remesa += remesa;
+    porBanco[banco].remesado += remesado;
+    porBanco[banco].registros += 1;
+    var id = resumenVentasRegistroId(r);
+    if (id) porBanco[banco].ids.push(id);
+  });
+
+  var bancoRows = Object.keys(porBanco).sort().map(function(key){
+    var b = porBanco[key];
+    var pendiente = Math.max(0, b.remesa - b.remesado);
+    var done = pendiente <= 0.001 && b.remesa > 0;
+    var ids = b.ids.join('|').replace(/'/g, "\\'");
+    return '<tr>'
+      + '<td>' + b.banco + '</td>'
+      + '<td>' + b.registros + '</td>'
+      + '<td>' + resumenVentasMoney(b.ventas) + '</td>'
+      + '<td>' + resumenVentasMoney(b.gastos) + '</td>'
+      + '<td class="' + (done ? 'report-done' : 'report-pending') + '">' + resumenVentasMoney(pendiente) + '</td>'
+      + '<td class="' + (done ? 'report-done' : '') + '">' + resumenVentasMoney(b.remesado) + '</td>'
+      + '<td><button class="btn-remesado" ' + (done ? 'disabled' : '') + ' onclick="marcarResumenBancoRemesado(\'' + ids + '\')">' + (done ? 'Remesado' : 'Marcar remesado') + '</button></td>'
+      + '</tr>';
+  }).join('');
+
+  if (!rows.length) {
+    cont.innerHTML = '<div class="no-remesas">Sin ventas registradas en el periodo seleccionado.</div>';
+    return;
+  }
+
+  cont.innerHTML = ''
+    + '<div class="report-summary-kpis">'
+    + '<div class="report-summary-kpi"><span>Periodo</span><strong>' + desde + ' / ' + hasta + '</strong></div>'
+    + '<div class="report-summary-kpi"><span>Banco</span><strong>' + (bancoFiltro || 'Todos') + '</strong></div>'
+    + '<div class="report-summary-kpi"><span>Registros</span><strong>' + totals.registros + '</strong></div>'
+    + '<div class="report-summary-kpi"><span>Total ventas</span><strong>' + resumenVentasMoney(totals.ventas) + '</strong></div>'
+    + '<div class="report-summary-kpi"><span>Gastos</span><strong>' + resumenVentasMoney(totals.gastos) + '</strong></div>'
+    + '<div class="report-summary-kpi pending"><span>Pendiente a remesar</span><strong>' + resumenVentasMoney(Math.max(0, totals.remesa - totals.remesado)) + '</strong></div>'
+    + '<div class="report-summary-kpi done"><span>Remesado</span><strong>' + resumenVentasMoney(totals.remesado) + '</strong></div>'
+    + '</div>'
+    + '<table class="report-summary-table" id="tabla-resumen-ventas-periodo">'
+    + '<thead><tr><th>Banco</th><th>Registros</th><th>Ventas</th><th>Gastos</th><th>Pendiente</th><th>Remesado</th><th>Accion</th></tr></thead>'
+    + '<tbody>' + bancoRows + '</tbody>'
+    + '<tfoot><tr><td>Total</td><td>' + totals.registros + '</td><td>' + resumenVentasMoney(totals.ventas) + '</td><td>' + resumenVentasMoney(totals.gastos) + '</td><td class="report-pending">' + resumenVentasMoney(Math.max(0, totals.remesa - totals.remesado)) + '</td><td class="report-done">' + resumenVentasMoney(totals.remesado) + '</td><td></td></tr></tfoot>'
+    + '</table>';
+};
+
+window.marcarResumenBancoRemesado = function(idsText){
+  var ids = String(idsText || '').split('|').filter(Boolean);
+  if (!ids.length) return;
+  var idMap = {};
+  ids.forEach(function(id){ idMap[id] = true; });
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(e) {}
+  var count = 0;
+  hist = hist.map(function(r){
+    var id = resumenVentasRegistroId(r);
+    if (!idMap[id]) return r;
+    var remesa = Number(r.remesa || r.ventas || 0) || 0;
+    r.dineroRemesado = remesa;
+    r.dinero_remesado = remesa;
+    r.remesado = true;
+    r.fecha_remesado = new Date().toISOString();
+    r.supabase_synced = false;
+    count++;
+    return r;
+  });
+  localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
+  renderResumenVentasPeriodo();
+  if (typeof renderBancos === 'function') renderBancos();
+  if (typeof renderHistorialVentas === 'function') renderHistorialVentas();
+  if (typeof showToast === 'function') showToast('Marcado como remesado: ' + count + ' registro(s).');
+  if (typeof window.sincronizarPendientesSupabase === 'function') {
+    window.sincronizarPendientesSupabase().catch(function(error){
+      console.warn('No se pudo sincronizar remesado:', error);
+    });
+  }
+};
+
+window.imprimirResumenVentasPeriodo = function(){
+  if (typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
+  var desde = document.getElementById('reporte-resumen-desde')?.value || '';
+  var hasta = document.getElementById('reporte-resumen-hasta')?.value || '';
+  if (typeof imprimirTablaPorTitulo === 'function') {
+    imprimirTablaPorTitulo('Resumen de Ventas y Remesas ' + desde + ' a ' + hasta, '#tabla-resumen-ventas-periodo');
+  } else {
+    window.print();
+  }
 };
 
 // FUNCIÓN PARA TOGGLE DETALLE DE BANCO
@@ -12008,6 +12344,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderBancos === 'function') renderBancos();
     if (typeof renderCuadreBodegas === 'function') renderCuadreBodegas();
     if (typeof renderCuadreCDA === 'function') renderCuadreCDA();
+    if (typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
   }
 
   window.sincronizarTablaSupabase = async function(config){
@@ -12156,6 +12493,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('DOMContentLoaded', function(){
     setOnlineIndicator(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Sincronizando...' : 'Sin conexion');
+    if (typeof actualizarPeriodoResumenVentas === 'function') actualizarPeriodoResumenVentas();
     setTimeout(function(){
       window.sincronizarPendientesSupabase().catch(function(error){
         console.warn('Sincronizacion inicial pendiente:', error);
