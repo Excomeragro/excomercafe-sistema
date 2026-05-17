@@ -136,6 +136,26 @@
     color:#166534;
     cursor:default;
   }
+  .bank-report-remesado-input{
+    white-space:nowrap;
+  }
+  .bank-report-remesado-input input{
+    max-width:78px;
+    margin-right:6px;
+  }
+  .bank-report-remesado-input .btn-remesado{
+    border:0;
+    border-radius:6px;
+    background:#16a34a;
+    color:#fff;
+    padding:5px 8px;
+    font-weight:800;
+    cursor:pointer;
+    font-size:.72rem;
+  }
+  .bank-report-remesado-input .btn-remesado:hover{
+    background:#15803d;
+  }
   .report-section-title{
     display:flex;
     align-items:center;
@@ -8771,7 +8791,6 @@ const BANCOS_LISTA = [
   'Banco Agrícola',
   'Banco Cuscatlán',
   'BAC Credomatic',
-  'Davivienda',
   'Banco Hipotecario',
   'Banco Promerica',
   'Banco Atlántida',
@@ -9362,7 +9381,10 @@ function resumenVentasRegistroId(record){
 }
 
 function resumenVentasBanco(record){
-  return (record && record.banco ? String(record.banco).trim() : '') || 'Sin banco';
+  var banco = (record && record.banco ? String(record.banco).trim() : '');
+  if (!banco || banco === '0' || banco.toLowerCase() === 'pendiente') return 'Pendiente de banco';
+  if (window.normalizarNombreBancoReporte) return window.normalizarNombreBancoReporte(banco);
+  return banco;
 }
 
 function resumenVentasAjustarBancoFiltro(hist){
@@ -9465,7 +9487,6 @@ window.renderResumenVentasPeriodo = function(){
     var b = porBanco[key];
     var pendiente = Math.max(0, b.remesa - b.remesado);
     var done = pendiente <= 0.001 && b.remesa > 0;
-    var ids = b.ids.join('|').replace(/'/g, "\\'");
     return '<tr>'
       + '<td>' + b.banco + '</td>'
       + '<td>' + b.registros + '</td>'
@@ -9473,7 +9494,7 @@ window.renderResumenVentasPeriodo = function(){
       + '<td>' + resumenVentasMoney(b.gastos) + '</td>'
       + '<td class="' + (done ? 'report-done' : 'report-pending') + '">' + resumenVentasMoney(pendiente) + '</td>'
       + '<td class="' + (done ? 'report-done' : '') + '">' + resumenVentasMoney(b.remesado) + '</td>'
-      + '<td><button class="btn-remesado" ' + (done ? 'disabled' : '') + ' onclick="marcarResumenBancoRemesado(\'' + ids + '\')">' + (done ? 'Remesado' : 'Marcar remesado') + '</button></td>'
+      + '<td>' + (done ? '<span class="btn-remesado">Remesado</span>' : '<span class="report-pending">Pendiente</span>') + '</td>'
       + '</tr>';
   }
 
@@ -9506,7 +9527,7 @@ window.renderResumenVentasPeriodo = function(){
     + '</div>'
     + '<div class="report-section-title"><span>Pendientes por remesar</span></div>'
     + '<table class="report-summary-table" id="tabla-resumen-ventas-pendientes">'
-    + '<thead><tr><th>Banco</th><th>Registros</th><th>Ventas</th><th>Gastos</th><th>Pendiente</th><th>Remesado</th><th>Accion</th></tr></thead>'
+    + '<thead><tr><th>Banco</th><th>Registros</th><th>Ventas</th><th>Gastos</th><th>Pendiente</th><th>Remesado</th><th>Estado</th></tr></thead>'
     + '<tbody>' + (bancoRowsPendientes || '<tr><td colspan="7" style="text-align:center;color:#64748b;font-style:italic;">No hay pendientes en este periodo.</td></tr>') + '</tbody>'
     + '<tfoot><tr><td>Total</td><td>' + totals.registros + '</td><td>' + resumenVentasMoney(totals.ventas) + '</td><td>' + resumenVentasMoney(totals.gastos) + '</td><td class="report-pending">' + resumenVentasMoney(Math.max(0, totals.remesa - totals.remesado)) + '</td><td class="report-done">' + resumenVentasMoney(totals.remesado) + '</td><td></td></tr></tfoot>'
     + '</table>'
@@ -9525,36 +9546,8 @@ window.toggleResumenRemesados = function(){
   panel.classList.toggle('open');
 };
 
-window.marcarResumenBancoRemesado = function(idsText){
-  var ids = String(idsText || '').split('|').filter(Boolean);
-  if (!ids.length) return;
-  var idMap = {};
-  ids.forEach(function(id){ idMap[id] = true; });
-  var hist = [];
-  try { hist = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(e) {}
-  var count = 0;
-  hist = hist.map(function(r){
-    var id = resumenVentasRegistroId(r);
-    if (!idMap[id]) return r;
-    var remesa = Number(r.remesa || r.ventas || 0) || 0;
-    r.dineroRemesado = remesa;
-    r.dinero_remesado = remesa;
-    r.remesado = true;
-    r.fecha_remesado = new Date().toISOString();
-    r.supabase_synced = false;
-    count++;
-    return r;
-  });
-  localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
-  renderResumenVentasPeriodo();
-  if (typeof renderBancos === 'function') renderBancos();
-  if (typeof renderHistorialVentas === 'function') renderHistorialVentas();
-  if (typeof showToast === 'function') showToast('Marcado como remesado: ' + count + ' registro(s).');
-  if (typeof window.sincronizarPendientesSupabase === 'function') {
-    window.sincronizarPendientesSupabase().catch(function(error){
-      console.warn('No se pudo sincronizar remesado:', error);
-    });
-  }
+window.marcarResumenBancoRemesado = function(){
+  if (typeof switchTab === 'function') switchTab('tab-bancos', document.querySelectorAll('.tab-btn')[6]);
 };
 
 window.imprimirResumenVentasPeriodo = function(){
@@ -11098,9 +11091,51 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function readNumber(value){
     if(value === null || value === undefined || value === '') return 0;
-    var clean = String(value).replace(/\$/g,'').replace(/,/g,'').trim();
+    var clean = String(value).replace(/\$/g,'').trim();
+    if(clean.indexOf(',') >= 0 && clean.indexOf('.') < 0){
+      clean = clean.replace(',', '.');
+    } else {
+      clean = clean.replace(/,/g,'');
+    }
     var n = Number(clean);
     return isNaN(n) ? 0 : n;
+  }
+
+  function bancoNormKey(value){
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/Ã¡/gi, 'a')
+      .replace(/Ã©/gi, 'e')
+      .replace(/Ã­/gi, 'i')
+      .replace(/Ã³/gi, 'o')
+      .replace(/Ãº/gi, 'u')
+      .replace(/Ã±/gi, 'n')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  var BANK_CANONICAL = [
+    { nombre:'BAC Credomatic', cuenta:'200992790', keys:['bac', 'bac credomatic'] },
+    { nombre:'Banco Agricola', cuenta:'560-005547-0', keys:['agricola', 'banco agricola'] },
+    { nombre:'Banco Cuscatlan', cuenta:'0405-01747', keys:['cuscatlan', 'banco cuscatlan'] },
+    { nombre:'Banco Hipotecario', cuenta:'001-2015261-7', keys:['hipotecario', 'banco hipotecario'] },
+    { nombre:'Banco Promerica', cuenta:'50000046000244', keys:['promerica', 'banco promerica'] }
+  ];
+
+  window.normalizarNombreBancoReporte = function(nombre){
+    var key = bancoNormKey(nombre);
+    var found = BANK_CANONICAL.find(function(b){ return b.keys.indexOf(key) >= 0; });
+    return found ? found.nombre : String(nombre || '').trim();
+  };
+
+  function cuentaBancoCanonica(nombre){
+    var key = bancoNormKey(nombre);
+    var found = BANK_CANONICAL.find(function(b){
+      return b.keys.indexOf(key) >= 0 || bancoNormKey(b.nombre) === key;
+    });
+    return found ? found.cuenta : '';
   }
 
   function getHist(){
@@ -11153,9 +11188,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function getCuentaBanco(nombre){
     if(!nombre || nombre === '0') return '';
+    var cuentaCanonica = cuentaBancoCanonica(nombre);
+    if(cuentaCanonica) return cuentaCanonica;
     try {
       if(window.bancosSistema && typeof bancosSistema.obtenerCuenta === 'function'){
-        return bancosSistema.obtenerCuenta(nombre) || '';
+        return bancosSistema.obtenerCuenta(nombre) || bancosSistema.obtenerCuenta(window.normalizarNombreBancoReporte(nombre)) || '';
       }
     } catch(e) {}
     return '';
@@ -11166,11 +11203,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var seen = {};
 
     function addBanco(nombre, cuenta){
-      nombre = String(nombre || '').trim();
+      nombre = window.normalizarNombreBancoReporte(nombre);
       if(!nombre || seen[nombre]) return;
+      var cuentaFinal = String(cuenta || getCuentaBanco(nombre) || '').trim();
+      if(!cuentaFinal) return;
       seen[nombre] = true;
-      bancos.push({ nombre:nombre, cuenta:String(cuenta || '').trim() });
+      bancos.push({ nombre:nombre, cuenta:cuentaFinal });
     }
+
+    BANK_CANONICAL.forEach(function(b){ addBanco(b.nombre, b.cuenta); });
 
     try {
       if(window.bancosSistema && typeof bancosSistema.obtenerBancosConDatos === 'function'){
@@ -11184,8 +11225,8 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e) {}
 
     getHist().forEach(function(r){
-      if(r && r.banco) addBanco(r.banco, getCuentaBanco(r.banco));
-      if(r && r.remesado && isNaN(Number(r.remesado))) addBanco(r.remesado, getCuentaBanco(r.remesado));
+      if(r && r.banco && r.banco !== '0') addBanco(r.banco, getCuentaBanco(r.banco));
+      if(r && r.remesado && isNaN(Number(r.remesado)) && r.remesado !== '0') addBanco(r.remesado, getCuentaBanco(r.remesado));
     });
     if(selected) addBanco(selected, getCuentaBanco(selected));
 
@@ -11224,8 +11265,14 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function getBanco(record){
-    if(record.banco) return record.banco;
-    if(record.remesado && isNaN(Number(record.remesado))) return record.remesado;
+    if(record.banco && record.banco !== '0') {
+      var banco = window.normalizarNombreBancoReporte(record.banco);
+      return getCuentaBanco(banco) ? banco : '0';
+    }
+    if(record.remesado && isNaN(Number(record.remesado)) && record.remesado !== '0') {
+      var remesadoBanco = window.normalizarNombreBancoReporte(record.remesado);
+      return getCuentaBanco(remesadoBanco) ? remesadoBanco : '0';
+    }
     return '';
   }
 
@@ -11253,9 +11300,9 @@ document.addEventListener('DOMContentLoaded', function() {
       + '<td class="bank-report-agro"><strong>'+escapeHtml(record.agromercado || record.nombre || 'Sin agromercado')+'</strong><span>'+escapeHtml(record.municipio || record.distrito || dia || '')+'</span></td>'
       + productCells
       + '<td class="bank-report-money bank-report-ventas">'+money(ventas)+'</td>'
-      + '<td class="bank-report-gastos"><input type="number" min="0" step="0.01" value="'+gastos+'" oninput="actualizarReporteBanco('+originalIndex+', \'gastos\', this.value)"></td>'
+      + '<td class="bank-report-gastos"><input type="text" inputmode="decimal" value="'+gastos+'" oninput="actualizarReporteBanco('+originalIndex+', \'gastos\', this.value)"></td>'
       + '<td class="bank-report-money bank-report-remesa">'+money(remesa)+'</td>'
-      + '<td class="bank-report-remesado-input"><input type="number" min="0" step="0.01" value="'+remesadoManual+'" oninput="actualizarReporteBanco('+originalIndex+', \'dineroRemesado\', this.value)"></td>'
+      + '<td class="bank-report-remesado-input"><input type="text" inputmode="decimal" value="'+remesadoManual+'" oninput="actualizarReporteBanco('+originalIndex+', \'dineroRemesado\', this.value)"><button type="button" class="btn-remesado" onclick="confirmarRemesadoReporteBanco('+originalIndex+')">Remesado</button></td>'
       + '<td class="'+(!banco || banco === '0' ? 'bank-report-remesado-zero' : 'bank-report-remesado-ok')+'">'+buildBancoBadge(record, originalIndex)+'</td>'
       + '</tr>';
   }
@@ -11340,13 +11387,55 @@ document.addEventListener('DOMContentLoaded', function() {
     if(field === 'dineroRemesado'){
       hist[index].dineroRemesado = readNumber(value);
       hist[index].remesadoMonto = readNumber(value);
+      hist[index].remesado = readNumber(value) > 0;
+      if(readNumber(value) > 0) hist[index].fecha_remesado = new Date().toISOString();
     }
     if(field === 'banco'){
-      hist[index].banco = value || '';
+      hist[index].banco = value ? window.normalizarNombreBancoReporte(value) : '';
     }
+    hist[index].supabase_synced = false;
+    saveHist(hist);
+    if(field === 'banco'){
+      if(typeof renderBancos === 'function') renderBancos();
+      if(typeof renderHistorial === 'function') renderHistorial();
+      if(typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
+    } else {
+      if(typeof updateBankReportKpis === 'function') updateBankReportKpis();
+      if(typeof renderResumenVentasPeriodo === 'function' && !document.activeElement?.matches?.('input, textarea, select')) {
+        renderResumenVentasPeriodo();
+      }
+    }
+  };
+
+  window.confirmarRemesadoReporteBanco = function(index){
+    var hist = getHist();
+    if(!hist[index]) return;
+    var banco = getBanco(hist[index]);
+    if(!banco || banco === '0'){
+      if(typeof showToast === 'function') showToast('Seleccione banco antes de marcar remesado.');
+      else alert('Seleccione banco antes de marcar remesado.');
+      return;
+    }
+    var ventas = calcSales(hist[index]);
+    var gastos = readNumber(hist[index].gastos);
+    var remesa = Math.max(0, ventas - gastos);
+    hist[index].banco = banco;
+    hist[index].remesa = remesa;
+    hist[index].dineroRemesado = remesa;
+    hist[index].remesadoMonto = remesa;
+    hist[index].remesado = true;
+    hist[index].fecha_remesado = new Date().toISOString();
+    hist[index].supabase_synced = false;
     saveHist(hist);
     if(typeof renderBancos === 'function') renderBancos();
     if(typeof renderHistorial === 'function') renderHistorial();
+    if(typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
+    if(typeof showToast === 'function') showToast('Remesa marcada: ' + money(remesa));
+    if(typeof window.sincronizarPendientesSupabase === 'function'){
+      window.sincronizarPendientesSupabase().catch(function(error){
+        console.warn('No se pudo sincronizar remesa:', error);
+      });
+    }
   };
 
   window.limpiarFiltrosBancos = function(){
@@ -12383,6 +12472,14 @@ document.addEventListener('DOMContentLoaded', function() {
     window.descargasData = readLocalList('descargas-data');
   }
 
+  function usuarioDigitando(){
+    var el = document.activeElement;
+    if (!el || el === document.body) return false;
+    var tag = (el.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    return !!(el.isContentEditable || (el.closest && el.closest('[contenteditable="true"]')));
+  }
+
   function refreshAfterOnlineSync(){
     reloadLocalCaches();
     if (typeof renderInventarioTable === 'function') renderInventarioTable();
@@ -12397,6 +12494,21 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderCuadreBodegas === 'function') renderCuadreBodegas();
     if (typeof renderCuadreCDA === 'function') renderCuadreCDA();
     if (typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
+  }
+
+  function refreshAfterOnlineSyncSeguro(){
+    if (usuarioDigitando()) {
+      window.excomercafePendingSyncRefresh = true;
+      return false;
+    }
+    window.excomercafePendingSyncRefresh = false;
+    refreshAfterOnlineSync();
+    return true;
+  }
+
+  function aplicarRefreshPendiente(){
+    if (!window.excomercafePendingSyncRefresh || usuarioDigitando()) return;
+    refreshAfterOnlineSyncSeguro();
   }
 
   window.sincronizarTablaSupabase = async function(config){
@@ -12437,11 +12549,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   };
 
-  window.sincronizarPendientesSupabase = async function(){
+  window.sincronizarPendientesSupabase = async function(options){
+    options = options || {};
     if (window.supabaseSyncRunning) return { ok: true, skipped: true };
     window.supabaseSyncRunning = true;
     setOnlineIndicator('syncing', 'Sincronizando...');
-    currentOnlineStatus('Sincronizando datos con Supabase...');
+    if (!options.silent) currentOnlineStatus('Sincronizando datos con Supabase...');
     var totalUploaded = 0;
     var totalDownloaded = 0;
     var errores = [];
@@ -12468,19 +12581,19 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn('Supabase pendiente en estado_cuadres:', error);
       }
 
-      refreshAfterOnlineSync();
+      var refreshed = options.noInterrupt ? refreshAfterOnlineSyncSeguro() : (refreshAfterOnlineSync(), true);
 
       if (errores.length) {
         setOnlineIndicator('offline', 'Sincronizacion parcial');
         currentOnlineStatus('Sincronizacion parcial. Revisa tablas pendientes en Supabase.');
-        if (typeof showToast === 'function') showToast('Sincronizacion parcial. Faltan tablas en Supabase.');
+        if (!options.silent && typeof showToast === 'function') showToast('Sincronizacion parcial. Faltan tablas en Supabase.');
         return { ok: false, uploaded: totalUploaded, downloaded: totalDownloaded, errores: errores };
       }
 
       setOnlineIndicator('online', 'En linea');
-      currentOnlineStatus('En linea. Subidos: ' + totalUploaded + ' | Recibidos: ' + totalDownloaded + ' | ' + new Date().toLocaleString());
-      if (typeof showToast === 'function') showToast('Sincronizacion completa.');
-      return { ok: true, uploaded: totalUploaded, downloaded: totalDownloaded };
+      currentOnlineStatus((refreshed ? 'En linea.' : 'En linea. Refresco pendiente mientras digitas.') + ' Subidos: ' + totalUploaded + ' | Recibidos: ' + totalDownloaded + ' | ' + new Date().toLocaleString());
+      if (!options.silent && typeof showToast === 'function') showToast(refreshed ? 'Sincronizacion completa.' : 'Sincronizado. La pantalla se actualizara al terminar de digitar.');
+      return { ok: true, uploaded: totalUploaded, downloaded: totalDownloaded, refreshed: refreshed };
     } catch(error) {
       setOnlineIndicator('offline', 'Sin conexion');
       currentOnlineStatus('Sin conexion: ' + error.message);
@@ -12492,7 +12605,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function syncSoon(){
     setTimeout(function(){
-      window.sincronizarPendientesSupabase().catch(function(error){
+      window.sincronizarPendientesSupabase({ noInterrupt: true, silent: true }).catch(function(error){
         console.warn('No se pudo sincronizar con Supabase:', error);
         currentOnlineStatus('Guardado local. Supabase pendiente: ' + error.message);
         if (typeof showToast === 'function') showToast('Guardado local. Supabase pendiente.');
@@ -12547,7 +12660,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setOnlineIndicator(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Sincronizando...' : 'Sin conexion');
     if (typeof actualizarPeriodoResumenVentas === 'function') actualizarPeriodoResumenVentas();
     setTimeout(function(){
-      window.sincronizarPendientesSupabase().catch(function(error){
+      window.sincronizarPendientesSupabase({ noInterrupt: true, silent: true }).catch(function(error){
         console.warn('Sincronizacion inicial pendiente:', error);
       });
     }, 1200);
@@ -12559,14 +12672,14 @@ document.addEventListener('DOMContentLoaded', function() {
         currentOnlineStatus('Sin conexion. Esperando internet para sincronizar.');
         return;
       }
-      window.sincronizarPendientesSupabase().catch(function(error){
+      window.sincronizarPendientesSupabase({ noInterrupt: true, silent: true }).catch(function(error){
         console.warn('Sincronizacion automatica pendiente:', error);
       });
     }, 30000);
 
     window.addEventListener('online', function(){
       setOnlineIndicator('syncing', 'Sincronizando...');
-      window.sincronizarPendientesSupabase().catch(function(error){
+      window.sincronizarPendientesSupabase({ noInterrupt: true, silent: true }).catch(function(error){
         console.warn('Sincronizacion al reconectar pendiente:', error);
       });
     });
@@ -12574,6 +12687,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('offline', function(){
       setOnlineIndicator('offline', 'Sin conexion');
       currentOnlineStatus('Sin conexion. Los datos se guardaran localmente.');
+    });
+    document.addEventListener('focusout', function(){
+      setTimeout(aplicarRefreshPendiente, 250);
+    });
+    document.addEventListener('change', function(){
+      setTimeout(aplicarRefreshPendiente, 250);
     });
   });
 })();
