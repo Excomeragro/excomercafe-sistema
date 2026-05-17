@@ -2,10 +2,38 @@
 <html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EXCOMERCAFE — Reporte Agromercados</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3c5e'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='34' font-family='Arial' fill='%23fff'%3EE%3C/text%3E%3C/svg%3E">
 <link href="./index_files/css2" rel="stylesheet">
 <link href="./css/styles.css" rel="stylesheet">
 <link href="./css/components.css" rel="stylesheet">
 <link href="./css/distribution-matrix.css" rel="stylesheet">
+<style>
+  .online-indicator{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:30px;
+    padding:6px 10px;
+    border-radius:6px;
+    border:1px solid rgba(255,255,255,.2);
+    background:rgba(255,255,255,.1);
+    color:#fff;
+    font-size:.78rem;
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .online-indicator::before{
+    content:"";
+    width:8px;
+    height:8px;
+    border-radius:999px;
+    background:#f59e0b;
+    box-shadow:0 0 0 2px rgba(255,255,255,.14);
+  }
+  .online-indicator.online::before{background:#22c55e;}
+  .online-indicator.offline::before{background:#ef4444;}
+  .online-indicator.syncing::before{background:#3b82f6;}
+</style>
 <script src="./index_files/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -20,6 +48,7 @@
     <div class="header-org">Sistema de Control de Ventas</div>
   </div>
   <div class="header-actions">
+    <span id="online-indicator" class="online-indicator syncing" title="Estado de conexion">Sincronizando...</span>
     <button class="hbtn hbtn-print" onclick="window.print()">🖨️ Imprimir</button>
     <button class="hbtn hbtn-settings" onclick="openSettings()">⚙️ Ajustes</button>
   </div>
@@ -11749,6 +11778,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (el) el.textContent = message;
   }
 
+  function setOnlineIndicator(state, text){
+    var indicator = document.getElementById('online-indicator');
+    if (!indicator) return;
+    indicator.className = 'online-indicator ' + state;
+    indicator.textContent = text;
+    indicator.title = text;
+  }
+
   function inventarioToSupabase(record){
     return {
       local_id: localId(record),
@@ -12012,43 +12049,56 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   window.sincronizarPendientesSupabase = async function(){
+    if (window.supabaseSyncRunning) return { ok: true, skipped: true };
+    window.supabaseSyncRunning = true;
+    setOnlineIndicator('syncing', 'Sincronizando...');
     currentOnlineStatus('Sincronizando datos con Supabase...');
     var totalUploaded = 0;
     var totalDownloaded = 0;
     var errores = [];
 
-    for (var i = 0; i < SUPABASE_SYNC_CONFIGS.length; i++) {
-      var config = SUPABASE_SYNC_CONFIGS[i];
-      try {
-        var result = await window.sincronizarTablaSupabase(config);
-        totalUploaded += result.uploaded;
-        totalDownloaded += result.downloaded;
-      } catch(error) {
-        errores.push(config.table + ': ' + error.message);
-        console.warn('Supabase pendiente en ' + config.table + ':', error);
-      }
-    }
-
     try {
-      var cuadres = await window.sincronizarCuadresSupabase();
-      totalUploaded += cuadres.uploaded;
-      totalDownloaded += cuadres.downloaded;
+      for (var i = 0; i < SUPABASE_SYNC_CONFIGS.length; i++) {
+        var config = SUPABASE_SYNC_CONFIGS[i];
+        try {
+          var result = await window.sincronizarTablaSupabase(config);
+          totalUploaded += result.uploaded;
+          totalDownloaded += result.downloaded;
+        } catch(error) {
+          errores.push(config.table + ': ' + error.message);
+          console.warn('Supabase pendiente en ' + config.table + ':', error);
+        }
+      }
+
+      try {
+        var cuadres = await window.sincronizarCuadresSupabase();
+        totalUploaded += cuadres.uploaded;
+        totalDownloaded += cuadres.downloaded;
+      } catch(error) {
+        errores.push('estado_cuadres: ' + error.message);
+        console.warn('Supabase pendiente en estado_cuadres:', error);
+      }
+
+      refreshAfterOnlineSync();
+
+      if (errores.length) {
+        setOnlineIndicator('offline', 'Sincronizacion parcial');
+        currentOnlineStatus('Sincronizacion parcial. Revisa tablas pendientes en Supabase.');
+        if (typeof showToast === 'function') showToast('Sincronizacion parcial. Faltan tablas en Supabase.');
+        return { ok: false, uploaded: totalUploaded, downloaded: totalDownloaded, errores: errores };
+      }
+
+      setOnlineIndicator('online', 'En linea');
+      currentOnlineStatus('En linea. Subidos: ' + totalUploaded + ' | Recibidos: ' + totalDownloaded + ' | ' + new Date().toLocaleString());
+      if (typeof showToast === 'function') showToast('Sincronizacion completa.');
+      return { ok: true, uploaded: totalUploaded, downloaded: totalDownloaded };
     } catch(error) {
-      errores.push('estado_cuadres: ' + error.message);
-      console.warn('Supabase pendiente en estado_cuadres:', error);
+      setOnlineIndicator('offline', 'Sin conexion');
+      currentOnlineStatus('Sin conexion: ' + error.message);
+      throw error;
+    } finally {
+      window.supabaseSyncRunning = false;
     }
-
-    refreshAfterOnlineSync();
-
-    if (errores.length) {
-      currentOnlineStatus('Sincronizacion parcial. Revisa tablas pendientes en Supabase.');
-      if (typeof showToast === 'function') showToast('Sincronizacion parcial. Faltan tablas en Supabase.');
-      return { ok: false, uploaded: totalUploaded, downloaded: totalDownloaded, errores: errores };
-    }
-
-    currentOnlineStatus('En linea. Subidos: ' + totalUploaded + ' | Recibidos: ' + totalDownloaded + ' | ' + new Date().toLocaleString());
-    if (typeof showToast === 'function') showToast('Sincronizacion completa.');
-    return { ok: true, uploaded: totalUploaded, downloaded: totalDownloaded };
   };
 
   function syncSoon(){
@@ -12105,11 +12155,36 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   document.addEventListener('DOMContentLoaded', function(){
+    setOnlineIndicator(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Sincronizando...' : 'Sin conexion');
     setTimeout(function(){
       window.sincronizarPendientesSupabase().catch(function(error){
         console.warn('Sincronizacion inicial pendiente:', error);
       });
     }, 1200);
+
+    if (window.excomercafeSyncTimer) clearInterval(window.excomercafeSyncTimer);
+    window.excomercafeSyncTimer = setInterval(function(){
+      if (!navigator.onLine) {
+        setOnlineIndicator('offline', 'Sin conexion');
+        currentOnlineStatus('Sin conexion. Esperando internet para sincronizar.');
+        return;
+      }
+      window.sincronizarPendientesSupabase().catch(function(error){
+        console.warn('Sincronizacion automatica pendiente:', error);
+      });
+    }, 30000);
+
+    window.addEventListener('online', function(){
+      setOnlineIndicator('syncing', 'Sincronizando...');
+      window.sincronizarPendientesSupabase().catch(function(error){
+        console.warn('Sincronizacion al reconectar pendiente:', error);
+      });
+    });
+
+    window.addEventListener('offline', function(){
+      setOnlineIndicator('offline', 'Sin conexion');
+      currentOnlineStatus('Sin conexion. Los datos se guardaran localmente.');
+    });
   });
 })();
 </script>
