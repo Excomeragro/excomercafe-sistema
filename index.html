@@ -136,6 +136,30 @@
     color:#166534;
     cursor:default;
   }
+  .report-section-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin:12px 0 6px;
+    font-weight:900;
+    color:#0b2540;
+  }
+  .report-section-title button{
+    border:1px solid #b7d7f3;
+    border-radius:6px;
+    background:#f8fbff;
+    padding:5px 9px;
+    font-weight:800;
+    cursor:pointer;
+    color:#0b2540;
+  }
+  .report-collapsible{
+    display:none;
+  }
+  .report-collapsible.open{
+    display:block;
+  }
 </style>
 <script src="./index_files/xlsx.full.min.js"></script>
 </head>
@@ -9437,7 +9461,7 @@ window.renderResumenVentasPeriodo = function(){
     if (id) porBanco[banco].ids.push(id);
   });
 
-  var bancoRows = Object.keys(porBanco).sort().map(function(key){
+  function rowBancoHtml(key){
     var b = porBanco[key];
     var pendiente = Math.max(0, b.remesa - b.remesado);
     var done = pendiente <= 0.001 && b.remesa > 0;
@@ -9451,7 +9475,19 @@ window.renderResumenVentasPeriodo = function(){
       + '<td class="' + (done ? 'report-done' : '') + '">' + resumenVentasMoney(b.remesado) + '</td>'
       + '<td><button class="btn-remesado" ' + (done ? 'disabled' : '') + ' onclick="marcarResumenBancoRemesado(\'' + ids + '\')">' + (done ? 'Remesado' : 'Marcar remesado') + '</button></td>'
       + '</tr>';
-  }).join('');
+  }
+
+  var bancoKeys = Object.keys(porBanco).sort();
+  var pendientesKeys = bancoKeys.filter(function(key){
+    var b = porBanco[key];
+    return Math.max(0, b.remesa - b.remesado) > 0.001;
+  });
+  var remesadosKeys = bancoKeys.filter(function(key){
+    var b = porBanco[key];
+    return Math.max(0, b.remesa - b.remesado) <= 0.001 && b.remesa > 0;
+  });
+  var bancoRowsPendientes = pendientesKeys.map(rowBancoHtml).join('');
+  var bancoRowsRemesados = remesadosKeys.map(rowBancoHtml).join('');
 
   if (!rows.length) {
     cont.innerHTML = '<div class="no-remesas">Sin ventas registradas en el periodo seleccionado.</div>';
@@ -9468,11 +9504,25 @@ window.renderResumenVentasPeriodo = function(){
     + '<div class="report-summary-kpi pending"><span>Pendiente a remesar</span><strong>' + resumenVentasMoney(Math.max(0, totals.remesa - totals.remesado)) + '</strong></div>'
     + '<div class="report-summary-kpi done"><span>Remesado</span><strong>' + resumenVentasMoney(totals.remesado) + '</strong></div>'
     + '</div>'
-    + '<table class="report-summary-table" id="tabla-resumen-ventas-periodo">'
+    + '<div class="report-section-title"><span>Pendientes por remesar</span></div>'
+    + '<table class="report-summary-table" id="tabla-resumen-ventas-pendientes">'
     + '<thead><tr><th>Banco</th><th>Registros</th><th>Ventas</th><th>Gastos</th><th>Pendiente</th><th>Remesado</th><th>Accion</th></tr></thead>'
-    + '<tbody>' + bancoRows + '</tbody>'
+    + '<tbody>' + (bancoRowsPendientes || '<tr><td colspan="7" style="text-align:center;color:#64748b;font-style:italic;">No hay pendientes en este periodo.</td></tr>') + '</tbody>'
     + '<tfoot><tr><td>Total</td><td>' + totals.registros + '</td><td>' + resumenVentasMoney(totals.ventas) + '</td><td>' + resumenVentasMoney(totals.gastos) + '</td><td class="report-pending">' + resumenVentasMoney(Math.max(0, totals.remesa - totals.remesado)) + '</td><td class="report-done">' + resumenVentasMoney(totals.remesado) + '</td><td></td></tr></tfoot>'
-    + '</table>';
+    + '</table>'
+    + '<div class="report-section-title"><span>Remesados</span><button type="button" onclick="toggleResumenRemesados()">Mostrar / ocultar</button></div>'
+    + '<div id="resumen-remesados-panel" class="report-collapsible">'
+    + '<table class="report-summary-table" id="tabla-resumen-ventas-remesados">'
+    + '<thead><tr><th>Banco</th><th>Registros</th><th>Ventas</th><th>Gastos</th><th>Pendiente</th><th>Remesado</th><th>Estado</th></tr></thead>'
+    + '<tbody>' + (bancoRowsRemesados || '<tr><td colspan="7" style="text-align:center;color:#64748b;font-style:italic;">No hay remesados en este periodo.</td></tr>') + '</tbody>'
+    + '</table>'
+    + '</div>';
+};
+
+window.toggleResumenRemesados = function(){
+  var panel = document.getElementById('resumen-remesados-panel');
+  if (!panel) return;
+  panel.classList.toggle('open');
 };
 
 window.marcarResumenBancoRemesado = function(idsText){
@@ -9511,8 +9561,10 @@ window.imprimirResumenVentasPeriodo = function(){
   if (typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
   var desde = document.getElementById('reporte-resumen-desde')?.value || '';
   var hasta = document.getElementById('reporte-resumen-hasta')?.value || '';
-  if (typeof imprimirTablaPorTitulo === 'function') {
-    imprimirTablaPorTitulo('Resumen de Ventas y Remesas ' + desde + ' a ' + hasta, '#tabla-resumen-ventas-periodo');
+  if (typeof imprimirTablasPorTitulo === 'function') {
+    imprimirTablasPorTitulo('Resumen de Ventas y Remesas ' + desde + ' a ' + hasta, ['#tabla-resumen-ventas-pendientes', '#tabla-resumen-ventas-remesados']);
+  } else if (typeof imprimirTablaPorTitulo === 'function') {
+    imprimirTablaPorTitulo('Resumen de Ventas y Remesas ' + desde + ' a ' + hasta, '#tabla-resumen-ventas-pendientes');
   } else {
     window.print();
   }
