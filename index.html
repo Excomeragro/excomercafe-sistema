@@ -11894,6 +11894,9 @@ document.addEventListener('DOMContentLoaded', function() {
       var id = String(row.local_id || localId(row.payload));
       if (existing[id]) return;
       var record = row.payload;
+      if (config.storageKey === 'inventario-data') {
+        record.total = num(record.total) || Math.abs(num(record.arroz)) + Math.abs(num(record.precocido)) + Math.abs(num(record.frijol1)) + Math.abs(num(record.frijol4)) + Math.abs(num(record.aceite)) + Math.abs(num(record.harina));
+      }
       record.supabase_synced = true;
       record.supabase_synced_at = row.creado_en || new Date().toISOString();
       local.unshift(record);
@@ -11945,7 +11948,18 @@ document.addEventListener('DOMContentLoaded', function() {
     { table: 'distribucion_cda', storageKey: 'distribucion-cda-data', toSupabase: distribucionCdaToSupabase }
   ];
 
+  function reloadLocalCaches(){
+    try {
+      if (typeof inventarioData !== 'undefined') inventarioData = readLocalList('inventario-data');
+    } catch(error) {}
+    try {
+      if (typeof distribucionData !== 'undefined') distribucionData = readLocalList('distribucion-cda-data');
+    } catch(error) {}
+    window.descargasData = readLocalList('descargas-data');
+  }
+
   function refreshAfterOnlineSync(){
+    reloadLocalCaches();
     if (typeof renderInventarioTable === 'function') renderInventarioTable();
     if (typeof renderDistribucionTable === 'function') renderDistribucionTable();
     if (typeof actualizarHistorialDescargas === 'function') actualizarHistorialDescargas();
