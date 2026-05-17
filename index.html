@@ -9566,8 +9566,27 @@ window.imprimirResumenVentasPeriodo = function(){
   var limpiar = typeof limpiarTablaParaImpresion === 'function'
     ? limpiarTablaParaImpresion
     : function(tabla){ return tabla ? tabla.cloneNode(true) : null; };
-  var pendientesHtml = pendientes ? limpiar(pendientes).outerHTML : '<p>No hay datos pendientes.</p>';
-  var remesadosHtml = remesados ? limpiar(remesados).outerHTML : '<p>No hay datos remesados.</p>';
+  function tablaTieneDatos(tabla){
+    if (!tabla) return false;
+    var rows = Array.from(tabla.querySelectorAll('tbody tr'));
+    return rows.some(function(row){
+      var text = (row.textContent || '').trim().toLowerCase();
+      return text && text.indexOf('no hay ') === -1;
+    });
+  }
+  function clonarTablaConTotal(tabla){
+    if (!tabla) return null;
+    var clone = limpiar(tabla);
+    if (!clone || clone.querySelector('tfoot')) return clone;
+    var originalFoot = pendientes && pendientes.querySelector('tfoot');
+    if (originalFoot) clone.appendChild(originalFoot.cloneNode(true));
+    return clone;
+  }
+  var hayPendientes = tablaTieneDatos(pendientes);
+  var hayRemesados = tablaTieneDatos(remesados);
+  var pendientesHtml = hayPendientes && pendientes ? limpiar(pendientes).outerHTML : '';
+  var remesadosTabla = clonarTablaConTotal(remesados);
+  var remesadosHtml = hayRemesados && remesadosTabla ? remesadosTabla.outerHTML : '<p>No hay remesados en este periodo.</p>';
   var kpisHtml = kpis ? kpis.cloneNode(true).outerHTML : '';
   var titulo = 'Resumen de Ventas y Remesas';
   var w = window.open('', '_blank');
@@ -9616,8 +9635,7 @@ window.imprimirResumenVentasPeriodo = function(){
         </div>
       </div>
       ${kpisHtml}
-      <h2>Pendientes por remesar</h2>
-      ${pendientesHtml}
+      ${hayPendientes ? '<h2>Pendientes por remesar</h2>' + pendientesHtml : ''}
       <h2>Remesados</h2>
       ${remesadosHtml}
       <div class="footer">EXCOMERCAFE - Reporte generado: ${new Date().toLocaleString()}</div>
