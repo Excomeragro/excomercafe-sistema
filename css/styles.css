@@ -733,6 +733,21 @@ main {
 .inventario-normal{background-color:#d1fae5 !important;color:#065f46 !important;border-color:#6ee7b7 !important;}
 .sp-btn .sp-btn-icon{font-size:1.3rem;}
 
+.creator-notes-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.62);z-index:1100;display:none;align-items:center;justify-content:center;padding:18px;}
+.creator-notes-overlay.open{display:flex;}
+.creator-notes-modal{width:min(760px,96vw);max-height:88vh;overflow:hidden;background:#fff;border:1px solid #bfdbfe;border-radius:10px;box-shadow:0 24px 70px rgba(0,0,0,0.25);display:flex;flex-direction:column;}
+.creator-notes-head{background:#1A3C5E;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #F59E0B;}
+.creator-notes-head h3{font-family:'Barlow Condensed',sans-serif;font-size:1.18rem;letter-spacing:1px;text-transform:uppercase;margin:0;}
+.creator-notes-close{border:1px solid rgba(255,255,255,0.45);background:rgba(255,255,255,0.12);color:#fff;border-radius:6px;min-width:34px;height:30px;cursor:pointer;font-weight:800;}
+.creator-notes-body{padding:20px 24px;overflow-y:auto;color:#0f172a;line-height:1.58;font-size:0.92rem;}
+.creator-notes-body h4{font-size:1.05rem;margin:0 0 12px;color:#0b2540;}
+.creator-notes-body h5{font-size:0.85rem;margin:18px 0 6px;color:#1A3C5E;text-transform:uppercase;letter-spacing:1px;}
+.creator-notes-body p{margin:0 0 10px;}
+.creator-notes-body ul{margin:6px 0 8px 20px;padding:0;}
+.creator-notes-body li{margin:4px 0;}
+.creator-notes-body blockquote{margin:8px 0 6px;padding:12px 14px;background:#f8fafc;border-left:4px solid #F59E0B;border-radius:6px;font-style:italic;color:#111827;}
+.creator-signature{font-weight:800;color:#1A3C5E;text-align:right;}
+
 /* AUTOCOMPLETADO MODERNO */
 .autocomplete-container {
   position: relative;
@@ -884,7 +899,7 @@ datalist {
 .swatch{display:none;visibility:hidden;}
 /* PRINT */
 @media print{
-  .header,.tabs,.hbtn,.btn,.save-bar,.modal-overlay,.settings-overlay,.hbtn-print{display:none !important;}
+  .header,.tabs,.hbtn,.btn,.save-bar,.modal-overlay,.settings-overlay,.creator-notes-overlay,.hbtn-print{display:none !important;}
   .tab-content{display:none !important;}
   .tab-content.active{display:block !important;}
   .card{box-shadow:none !important;border:1px solid #ccc;}
