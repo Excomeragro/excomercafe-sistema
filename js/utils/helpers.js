@@ -1,10 +1,44 @@
 // ══ FUNCIONES UTILITARIAS AUXILIARES ══
 
 // ── FUNCIONES DE FECHA ──
-window.fechaHoy = function(){
+window.fechaHoySV = function(){
+  try {
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/El_Salvador',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    var map = {};
+    parts.forEach(function(part){ map[part.type] = part.value; });
+    if (map.year && map.month && map.day) return map.year + '-' + map.month + '-' + map.day;
+  } catch(error) {}
   var d = new Date();
   return d.toISOString().split('T')[0];
-}
+};
+
+window.fechaHoy = window.fechaHoySV;
+
+window.obtenerFechaHoyISO = window.fechaHoySV;
+
+window.obtenerFechaHoyTexto = function(){
+  try {
+    return new Intl.DateTimeFormat('es-SV', {
+      timeZone: 'America/El_Salvador',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'numeric',
+      year: 'numeric'
+    }).format(new Date());
+  } catch(error) {
+    return new Date().toLocaleDateString('es-SV', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'numeric',
+      year: 'numeric'
+    });
+  }
+};
 
 // ── FUNCIONES DE MANIPULACIÓN DE VALORES ──
 window.n = function(id){ 
