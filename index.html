@@ -787,7 +787,7 @@
     <span>📋 Historial de Registros</span>
     <div class="flex gap-8 items-center flex-wrap">
       <button class="btn btn-sm btn-secondary" onclick="toggleHistorialRegistros()" id="btn-toggle-historial-registros"><span id="historial-toggle-icon">▼</span></button>
-      <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirTablaPorTitulo('Historial Control de Venta Agromercado', '#tbl-historial')">🖨️ Imprimir</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirTablaPorTitulo('Historial Control de Venta Agromercado', '#tbl-historial')">Imprimir</button>
     </div>
   </div>
   <div class="card-body" style="overflow-x:auto;padding:0;display:none;" id="historial-registros-content">
@@ -968,7 +968,6 @@
       <span>📋 Distribución por Agromercado</span>
       <div class="flex gap-8 items-center flex-wrap">
         <span class="dist-badge dist-badge-tiendona">TIENDONA</span>
-        <button type="button" class="btn btn-sm btn-primary" onclick="imprimirTablaPorTitulo('Distribucion Tiendona', '#tabla-distribucion-tiendona-fija')">Imprimir</button>
         <button class="btn btn-sm btn-success" onclick="event.preventDefault(); guardarDistribucionTiendonaFija(); return false;">✅ Guardar</button>
       </div>
     </div>
@@ -1039,7 +1038,7 @@
       <span>📊 Historial de Distribución</span>
       <span id="historial-descargas-toggle" style="font-size:0.8rem;color:var(--muted);">▼</span>
       <div class="flex gap-8 items-center flex-wrap" style="margin-left:auto;">
-        <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirHistorialTiendona()">🖨️ Imprimir</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirHistorialTiendona()">Imprimir</button>
         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); importarDescargasExcel()">📂 Importar Excel</button>
         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); exportarDescargasExcel()">📂 Exportar Excel</button>
       </div>
@@ -1090,7 +1089,6 @@
       <span>📋 Distribución por Agromercado</span>
       <div class="flex gap-8 items-center flex-wrap">
         <span class="dist-badge dist-badge-cda">CDA</span>
-        <button type="button" class="btn btn-sm btn-primary" onclick="imprimirTablaPorTitulo('Distribucion CDA', '#tabla-distribucion-cda-fija')">Imprimir</button>
         <button class="btn btn-sm btn-success" onclick="event.preventDefault(); guardarDistribucion(); return false;">✅ Guardar</button>
       </div>
     </div>
@@ -1126,7 +1124,7 @@
     </div>
   </div>
   <!-- TABLA DE DISTRIBUCIÓN CDA -->
-    <div class="card cda-balance-card" id="cuadre-cda-card" style="margin-top:16px;">
+    <div class="card cda-balance-card" id="cuadre-cda-card" style="margin-top:16px;display:none;">
     <div class="card-header">
       <span>Cuadre CDA</span>
       <div class="flex gap-8 items-center flex-wrap">
@@ -1134,7 +1132,6 @@
           <option value="soyapango">CDA Soyapango</option>
           <option value="usulutan">CDA Usulután</option>
         </select>
-        <button type="button" class="btn btn-sm btn-primary" onclick="imprimirTablasPorTitulo('Cuadre CDA', ['#tabla-cuadre-cda', '#tabla-envio-cda'])">Imprimir</button>
         <button class="btn btn-sm btn-success" onclick="guardarCuadreCDA()">Guardar Cuadre</button>
         <button class="btn btn-sm btn-secondary" onclick="renderCuadreCDA()">Actualizar</button>
       </div>
@@ -1162,7 +1159,7 @@
       <span>📊 Historial de Distribución</span>
       <span id="historial-distribucion-toggle" style="font-size:0.8rem;color:var(--muted);">▼</span>
       <div class="flex gap-8 items-center flex-wrap" style="margin-left:auto;">
-        <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirHistorialCDA()">🖨️ Imprimir</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirHistorialCDA()">Imprimir</button>
         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); importarDistribucionExcel()">📂 Importar Excel</button>
         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); exportarDistribucionExcel()">📂 Exportar Excel</button>
       </div>
@@ -1250,7 +1247,7 @@
       <span>📊 Historial de Devoluciones</span>
       <div class="flex gap-8 items-center flex-wrap">
         <button class="btn btn-sm btn-secondary" onclick="document.getElementById(&#39;excel-import-input&#39;).click()">📂 Importar Excel</button>
-        <button class="btn btn-sm btn-primary" onclick="imprimirHistorialDevoluciones()">🖨️ Imprimir</button>
+        <button class="btn btn-sm btn-primary" onclick="imprimirHistorialDevoluciones()">Imprimir</button>
         <button class="btn btn-sm btn-accent" onclick="exportarDevoluciones()">📥 Exportar Procesado</button>
       </div>
     </div>
@@ -1778,7 +1775,7 @@
       <span>📄 Tipo de Documento</span>
       <div class="flex gap-8 items-center flex-wrap">
         <button class="btn btn-sm btn-primary" onclick="nuevoRecibo()">➕ Nuevo Comprobante</button>
-        <button class="btn btn-sm btn-accent" onclick="imprimirRecibo()">🖨️ Imprimir Comprobante</button>
+        <button class="btn btn-sm btn-accent" onclick="imprimirRecibo()">Imprimir Comprobante</button>
         <button class="btn btn-sm btn-success" onclick="guardarRecibo()">✅ Guardar Comprobante</button>
       </div>
     </div>
@@ -1835,7 +1832,7 @@
     <div class="card-header">
       <span>📚 Historial de Documentos</span>
       <div class="flex gap-8 items-center flex-wrap">
-        <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirTablaPorTitulo('Historial de Documentos', '#tabla-historial-documentos')">🖨️ Imprimir</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirTablaPorTitulo('Historial de Documentos', '#tabla-historial-documentos')">Imprimir</button>
         <button class="btn btn-sm btn-danger" onclick="limpiarHistorialRecibos()">🗑️ Limpiar</button>
       </div>
     </div>
@@ -2463,6 +2460,7 @@ function initDropdowns(){
   // Dropdowns de Remesas (Reporte Banco)
   var dSel4 = document.getElementById('remesa-distrito');
   if(dSel4){
+    dSel4.innerHTML = '<option value="">-- Seleccionar Distrito --</option>';
     Object.keys(AGROMERCADOS_DATA).sort().forEach(function(d){
       var o = document.createElement('option'); o.value=d; o.textContent=d;
       dSel4.appendChild(o);
