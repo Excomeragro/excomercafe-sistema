@@ -347,6 +347,15 @@
   .bank-report-remesado-input .btn-remesado:hover{
     background:#15803d;
   }
+  .bank-report-actions{
+    white-space:nowrap;
+    min-width:120px;
+  }
+  .bank-report-actions .btn{
+    margin:2px;
+    padding:5px 7px;
+    font-size:.72rem;
+  }
   .report-section-title{
     display:flex;
     align-items:center;
@@ -12144,6 +12153,7 @@ document.addEventListener('DOMContentLoaded', function() {
       + '<td class="bank-report-money bank-report-remesa">'+money(remesa)+'</td>'
       + '<td class="bank-report-remesado-input"><input type="text" inputmode="decimal" value="'+remesadoManual+'" oninput="actualizarReporteBanco('+originalIndex+', \'dineroRemesado\', this.value)"><button type="button" class="btn-remesado" onclick="confirmarRemesadoReporteBanco('+originalIndex+')">Remesado</button></td>'
       + '<td class="'+(!banco || banco === '0' ? 'bank-report-remesado-zero' : 'bank-report-remesado-ok')+'">'+buildBancoBadge(record, originalIndex)+'</td>'
+      + '<td class="bank-report-actions"><button type="button" class="btn btn-sm btn-secondary" onclick="limpiarRemesaBanco('+originalIndex+')">Limpiar</button><button type="button" class="btn btn-sm btn-danger" onclick="borrarRegistroBanco('+originalIndex+')">Borrar</button></td>'
       + '</tr>';
   }
 
@@ -12171,10 +12181,10 @@ document.addEventListener('DOMContentLoaded', function() {
       '<thead>'
       + '<tr><th rowspan="2" class="bank-report-date-head">FECHA</th><th rowspan="2" class="bank-report-agro-head">AGROMERCADO</th>'
       + BANK_PRODUCTS.map(function(p){ return '<th class="'+p.cls+'">'+p.label+'</th>'; }).join('')
-      + '<th colspan="5" class="bank-report-efectivo-head">EFECTIVO</th></tr>'
+      + '<th colspan="6" class="bank-report-efectivo-head">EFECTIVO</th></tr>'
       + '<tr>'
       + BANK_PRODUCTS.map(function(p){ return '<th class="'+p.cls+'">VENTAS</th>'; }).join('')
-      + '<th>VENTAS</th><th>GASTOS</th><th>A REMESAR</th><th>REMESADO</th><th>BANCO</th></tr>'
+      + '<th>VENTAS</th><th>GASTOS</th><th>A REMESAR</th><th>REMESADO</th><th>BANCO</th><th>ACCIONES</th></tr>'
       + '</thead><tbody id="tbody-bancos"></tbody>';
     return document.getElementById('tbody-bancos');
   }
@@ -12191,7 +12201,7 @@ document.addEventListener('DOMContentLoaded', function() {
     BANK_PRODUCTS.forEach(function(p){ productTotals[p.key] = 0; });
 
     if(!rows.length){
-      tbody.innerHTML = '<tr><td colspan="13" class="bank-report-empty">Sin registros para los filtros seleccionados. Primero guarda datos en Control de Venta.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="14" class="bank-report-empty">Sin registros para los filtros seleccionados. Primero guarda datos en Control de Venta.</td></tr>';
     } else {
       tbody.innerHTML = rows.map(function(item){
         var r = item.record || {};
@@ -12206,7 +12216,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }).join('')
       + '<tr class="bank-report-total-row"><td></td><td>TOTALES</td>'
       + BANK_PRODUCTS.map(function(p){ return '<td>'+productTotals[p.key].toLocaleString('es-SV')+'</td>'; }).join('')
-      + '<td>'+money(totals.ventas)+'</td><td>'+money(totals.gastos)+'</td><td>'+money(totals.remesa)+'</td><td>'+money(totals.remesado)+'</td><td></td></tr>';
+      + '<td>'+money(totals.ventas)+'</td><td>'+money(totals.gastos)+'</td><td>'+money(totals.remesa)+'</td><td>'+money(totals.remesado)+'</td><td></td><td></td></tr>';
     }
 
     var kpiV = document.getElementById('kpi-b-ventas');
@@ -12276,6 +12286,46 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn('No se pudo sincronizar remesa:', error);
       });
     }
+  };
+
+  window.limpiarRemesaBanco = function(index){
+    if(!confirm('Limpiar la remesa y el banco de este registro?')) return;
+    var hist = getHist();
+    if(!hist[index]) return;
+    hist[index].banco = '';
+    hist[index].dineroRemesado = 0;
+    hist[index].dinero_remesado = 0;
+    hist[index].remesadoMonto = 0;
+    hist[index].remesaManual = 0;
+    hist[index].remesado = false;
+    hist[index].fecha_remesado = '';
+    hist[index].supabase_synced = false;
+    saveHist(hist);
+    if(typeof renderBancos === 'function') renderBancos();
+    if(typeof renderHistorial === 'function') renderHistorial();
+    if(typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
+    if(typeof showToast === 'function') showToast('Remesa limpiada.');
+    if(typeof window.sincronizarPendientesSupabase === 'function'){
+      window.sincronizarPendientesSupabase({ noInterrupt:true, silent:true }).catch(function(error){
+        console.warn('No se pudo sincronizar limpieza de remesa:', error);
+      });
+    }
+  };
+
+  window.borrarRegistroBanco = function(index){
+    var hist = getHist();
+    var registro = hist[index];
+    if(!registro) return;
+    if(!confirm('Borrar este registro de prueba? Tambien se devolvera el inventario relacionado.')) return;
+    if(typeof revertirInventarioPorVenta === 'function') revertirInventarioPorVenta(registro);
+    hist.splice(index, 1);
+    saveHist(hist);
+    if(registro.id && typeof eliminarSupabasePorLocalId === 'function') eliminarSupabasePorLocalId('ventas_agromercado', registro.id);
+    if(typeof refrescarInventarioEnTiempoReal === 'function') refrescarInventarioEnTiempoReal();
+    if(typeof renderBancos === 'function') renderBancos();
+    if(typeof renderHistorial === 'function') renderHistorial();
+    if(typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
+    if(typeof showToast === 'function') showToast('Registro borrado.');
   };
 
   window.limpiarFiltrosBancos = function(){
