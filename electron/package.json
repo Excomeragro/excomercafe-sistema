@@ -1,0 +1,68 @@
+{
+  "name": "excomercafe-sistema-desktop",
+  "version": "1.0.1",
+  "description": "Aplicacion de escritorio EXCOMERCAFE para Windows",
+  "main": "main.js",
+  "author": "Jorge Escobar",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.excomercafe.sistema",
+    "productName": "EXCOMERCAFE",
+    "directories": {
+      "output": "../dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../index.html",
+        "to": "www/index.html"
+      },
+      {
+        "from": "../favicon.ico",
+        "to": "www/favicon.ico"
+      },
+      {
+        "from": "../favicon.png",
+        "to": "www/favicon.png"
+      },
+      {
+        "from": "../css",
+        "to": "www/css"
+      },
+      {
+        "from": "../js",
+        "to": "www/js"
+      },
+      {
+        "from": "../index_files",
+        "to": "www/index_files"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "../favicon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EXCOMERCAFE",
+      "artifactName": "EXCOMERCAFE Setup.${ext}"
+    }
+  }
+}
