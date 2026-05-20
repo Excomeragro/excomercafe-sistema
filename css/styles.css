@@ -2329,7 +2329,7 @@ select option{
     width:var(--smart-menu-rail) !important;
     padding:14px 8px 16px !important;
     align-items:center;
-    bottom:176px !important;
+    bottom:232px !important;
     overflow-x:hidden;
     box-shadow:6px 0 22px rgba(15,23,42,.12);
   }
@@ -2386,7 +2386,7 @@ select option{
     left:8px !important;
     bottom:10px !important;
     width:50px !important;
-    min-height:150px;
+    min-height:206px;
     padding:7px !important;
     display:grid !important;
     grid-template-columns:1fr !important;
@@ -2432,7 +2432,8 @@ select option{
     line-height:1;
   }
 
-  body.smart-menu-collapsed .online-indicator{
+  body.smart-menu-collapsed .online-indicator,
+  body.smart-menu-collapsed .auth-user-badge{
     width:34px !important;
     height:32px;
     min-height:32px;
@@ -2446,8 +2447,16 @@ select option{
     margin:0 !important;
   }
 
+  body.smart-menu-collapsed .auth-user-badge::before{
+    content:"U";
+    color:#ffffff;
+    font-size:.82rem;
+    font-weight:900;
+  }
+
   body.smart-menu-collapsed .hbtn-chat,
-  body.smart-menu-collapsed .hbtn-settings{
+  body.smart-menu-collapsed .hbtn-settings,
+  body.smart-menu-collapsed .hbtn-logout{
     width:34px !important;
     min-width:34px;
     min-height:32px;
@@ -2473,8 +2482,16 @@ select option{
     font-size:1rem;
   }
 
+  body.smart-menu-collapsed .hbtn-logout::before{
+    content:"X";
+    color:#ffffff;
+    font-size:.86rem;
+    font-weight:900;
+  }
+
   body.smart-menu-collapsed .hbtn-chat span,
-  body.smart-menu-collapsed .hbtn-settings span{
+  body.smart-menu-collapsed .hbtn-settings span,
+  body.smart-menu-collapsed .hbtn-logout span{
     display:none !important;
   }
 
@@ -2491,7 +2508,8 @@ select option{
   }
 
   body.smart-menu-expanded .smart-menu-hide,
-  body.smart-menu-expanded .online-indicator{
+  body.smart-menu-expanded .online-indicator,
+  body.smart-menu-expanded .auth-user-badge{
     grid-column:1 / -1;
     width:100%;
     justify-content:center;
@@ -2501,7 +2519,8 @@ select option{
   }
 
   body.smart-menu-expanded .hbtn-chat,
-  body.smart-menu-expanded .hbtn-settings{
+  body.smart-menu-expanded .hbtn-settings,
+  body.smart-menu-expanded .hbtn-logout{
     min-height:32px !important;
     padding:6px 8px !important;
     font-size:.78rem !important;
