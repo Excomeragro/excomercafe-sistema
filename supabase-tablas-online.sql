@@ -212,6 +212,10 @@ drop policy if exists "presence_online_select" on public.presence_online;
 drop policy if exists "presence_online_insert" on public.presence_online;
 drop policy if exists "presence_online_update" on public.presence_online;
 drop policy if exists "presence_online_delete" on public.presence_online;
+drop policy if exists "presence_online_auth_select" on public.presence_online;
+drop policy if exists "presence_online_auth_insert" on public.presence_online;
+drop policy if exists "presence_online_auth_update" on public.presence_online;
+drop policy if exists "presence_online_auth_delete" on public.presence_online;
 
 create policy "presence_online_select"
 on public.presence_online for select
@@ -248,6 +252,10 @@ drop policy if exists "chat_messages_select" on public.chat_messages;
 drop policy if exists "chat_messages_insert" on public.chat_messages;
 drop policy if exists "chat_messages_update" on public.chat_messages;
 drop policy if exists "chat_messages_delete" on public.chat_messages;
+drop policy if exists "chat_messages_auth_select" on public.chat_messages;
+drop policy if exists "chat_messages_auth_insert" on public.chat_messages;
+drop policy if exists "chat_messages_auth_update" on public.chat_messages;
+drop policy if exists "chat_messages_auth_delete" on public.chat_messages;
 
 create policy "chat_messages_select"
 on public.chat_messages for select
@@ -311,3 +319,121 @@ create policy "backup_logs_delete"
 on public.backup_logs for delete
 to anon
 using (true);
+
+-- =========================================================
+-- SEGURIDAD PARA PUBLICAR EN LINEA
+-- La app usa usuario + contrasena, pero internamente Supabase
+-- Auth necesita un email. Crea cada usuario en Authentication
+-- con este formato:
+--   usuario@excomercafe.local
+-- Ejemplos:
+--   admin@excomercafe.local
+--   tiendona@excomercafe.local
+--   cda@excomercafe.local
+-- Marca el email como confirmado y asigna una contrasena.
+-- =========================================================
+
+alter table public.presence_online
+add column if not exists user_id uuid;
+
+alter table public.chat_messages
+add column if not exists user_id uuid default auth.uid(),
+add column if not exists privado boolean default false,
+add column if not exists destinatario_user_id uuid,
+add column if not exists destinatario_client_id text,
+add column if not exists destinatario_nombre text;
+
+-- Quitar politicas anon abiertas y dejar solo usuarios autenticados.
+do $$
+declare
+  t text;
+  p record;
+  tablas text[] := array[
+    'ventas_agromercado',
+    'inventario_movimientos',
+    'distribucion_tiendona',
+    'distribucion_cda',
+    'estado_cuadres',
+    'backup_logs',
+    'backups'
+  ];
+begin
+  foreach t in array tablas loop
+    if to_regclass('public.' || t) is not null then
+      execute format('alter table public.%I enable row level security', t);
+
+      for p in
+        select policyname
+        from pg_policies
+        where schemaname = 'public' and tablename = t
+      loop
+        execute format('drop policy if exists %I on public.%I', p.policyname, t);
+      end loop;
+
+      execute format('create policy %I on public.%I for select to authenticated using (true)', t || '_auth_select', t);
+      execute format('create policy %I on public.%I for insert to authenticated with check (true)', t || '_auth_insert', t);
+      execute format('create policy %I on public.%I for update to authenticated using (true) with check (true)', t || '_auth_update', t);
+      execute format('create policy %I on public.%I for delete to authenticated using (true)', t || '_auth_delete', t);
+    end if;
+  end loop;
+end $$;
+
+-- Presencia: todos los usuarios autenticados pueden ver conectados,
+-- pero cada sesion solo mantiene su propia presencia.
+drop policy if exists "presence_online_select" on public.presence_online;
+drop policy if exists "presence_online_insert" on public.presence_online;
+drop policy if exists "presence_online_update" on public.presence_online;
+drop policy if exists "presence_online_delete" on public.presence_online;
+
+create policy "presence_online_auth_select"
+on public.presence_online for select
+to authenticated
+using (true);
+
+create policy "presence_online_auth_insert"
+on public.presence_online for insert
+to authenticated
+with check (user_id = auth.uid());
+
+create policy "presence_online_auth_update"
+on public.presence_online for update
+to authenticated
+using (user_id = auth.uid() or user_id is null)
+with check (user_id = auth.uid());
+
+create policy "presence_online_auth_delete"
+on public.presence_online for delete
+to authenticated
+using (user_id = auth.uid());
+
+-- Chat: mensajes globales visibles para autenticados; mensajes privados
+-- solo para quien envia o quien recibe.
+drop policy if exists "chat_messages_select" on public.chat_messages;
+drop policy if exists "chat_messages_insert" on public.chat_messages;
+drop policy if exists "chat_messages_update" on public.chat_messages;
+drop policy if exists "chat_messages_delete" on public.chat_messages;
+
+create policy "chat_messages_auth_select"
+on public.chat_messages for select
+to authenticated
+using (
+  coalesce(privado, false) = false
+  or user_id = auth.uid()
+  or destinatario_user_id = auth.uid()
+);
+
+create policy "chat_messages_auth_insert"
+on public.chat_messages for insert
+to authenticated
+with check (coalesce(user_id, auth.uid()) = auth.uid());
+
+create policy "chat_messages_auth_update"
+on public.chat_messages for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+create policy "chat_messages_auth_delete"
+on public.chat_messages for delete
+to authenticated
+using (user_id = auth.uid());
