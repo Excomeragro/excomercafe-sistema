@@ -31,19 +31,36 @@
 }
 
 .dist-badge-tiendona {
-  background: #1a3c5e;
+  background: var(--brand);
 }
 
 .dist-badge-cda {
-  background: #e8a020;
+  background: var(--accent);
 }
 
 .dist-table-wrap {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   max-height: 68vh;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: 0 16px 40px rgba(15,23,42,0.05);
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.dist-table-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.dist-table-wrap::-webkit-scrollbar-track {
+  background: rgba(15,23,42,0.04);
+}
+
+.dist-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(15,23,42,0.18);
+  border-radius: 999px;
 }
 
 .dist-matrix-table {
@@ -51,20 +68,21 @@
   border-collapse: separate;
   border-spacing: 0;
   min-width: 980px;
-  font-size: 0.8rem;
+  font-size: 0.84rem;
 }
 
 .dist-matrix-table th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--table-header);
+  background: rgba(15,23,42,0.92);
   color: #fff;
-  padding: 9px 10px;
+  padding: 12px 14px;
   text-align: center;
   font-family: 'Barlow Condensed', sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
 }
 
 .dist-matrix-table th.dist-destino-col {
@@ -75,10 +93,10 @@
 }
 
 .dist-matrix-table td {
-  border-bottom: 1px solid var(--border-color);
-  padding: 6px 8px;
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+  padding: 12px 14px;
   text-align: center;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .dist-matrix-table td.dist-destino-cell {
@@ -88,7 +106,7 @@
   text-align: left;
   min-width: 300px;
   max-width: 360px;
-  background: #f8fbff;
+  background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   font-weight: 700;
   color: var(--text-primary);
@@ -97,22 +115,22 @@
 }
 
 .dist-matrix-table tr:nth-child(even) td {
-  background: #f9fafb;
+  background: var(--surface);
 }
 
 .dist-matrix-table tr:nth-child(even) td.dist-destino-cell {
-  background: #edf6ff;
+  background: var(--bg-secondary-variant, #edf6ff);
 }
 
 .dist-matrix-table input.dist-qty {
   width: 86px;
   min-width: 86px;
-  border: 1.5px solid #111827;
-  border-radius: 7px;
-  padding: 7px 8px;
+  border: 1.5px solid rgba(15,23,42,0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
   text-align: center;
   font-weight: 700;
-  background: #fff3ed;
+  background: var(--surface);
   color: #111827;
 }
 
@@ -134,6 +152,92 @@
 
   .dist-matrix-table {
     min-width: 900px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dist-topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .dist-table-wrap {
+    max-height: 62vh;
+  }
+
+  .dist-matrix-table {
+    min-width: 820px;
+    font-size: 0.82rem;
+  }
+
+  .dist-matrix-table th,
+  .dist-matrix-table td {
+    padding: 10px 12px;
+  }
+
+  .dist-matrix-table td.dist-destino-cell {
+    min-width: 240px;
+  }
+}
+
+@media (max-width: 720px) {
+  .dist-matrix-table {
+    min-width: 640px;
+    font-size: 0.82rem;
+  }
+
+  .dist-matrix-table th,
+  .dist-matrix-table td {
+    padding: 9px 10px;
+  }
+
+  .dist-matrix-table td.dist-destino-cell {
+    min-width: 180px;
+  }
+
+  .dist-matrix-table input.dist-qty {
+    width: 72px;
+    min-width: 72px;
+  }
+
+  .dist-table-wrap {
+    max-height: 56vh;
+  }
+}
+
+@media (max-width: 560px) {
+  .dist-matrix-table {
+    min-width: 100%;
+    font-size: 0.78rem;
+  }
+
+  .dist-matrix-table th,
+  .dist-matrix-table td {
+    padding: 8px 9px;
+    white-space: normal;
+  }
+
+  .dist-matrix-table td.dist-destino-cell {
+    min-width: 160px;
+  }
+
+  .dist-matrix-table input.dist-qty {
+    width: 64px;
+    min-width: 64px;
+  }
+
+  .dist-topbar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dist-fecha input,
+  .dist-observaciones input {
+    width: 100%;
+  }
+
+  .dist-table-wrap {
+    max-height: 52vh;
+    padding-bottom: 4px;
   }
 }
 
@@ -447,7 +551,7 @@
 
 /* CDA balance panel */
 .cda-balance-card {
-  border-top: 3px solid #1a3c5e;
+  border-top: 3px solid var(--brand);
 }
 
 .cda-balance-grid {
@@ -612,7 +716,7 @@
 .bank-report-table th {
   color: #fff !important;
   font-weight: 900;
-  background: #1a3c5e !important;
+  background: var(--brand) !important;
   letter-spacing: 0.2px;
   text-transform: uppercase;
   font-family: 'Barlow Condensed', sans-serif;
@@ -732,7 +836,7 @@
 .bank-report-table thead tr:nth-child(3) th,
 .bank-report-table thead tr:nth-child(2) th {
   background: #f8fafc !important;
-  color: #1a3c5e !important;
+  color: var(--brand) !important;
   font-family: inherit;
   font-size: 0.62rem;
   letter-spacing: 0;
@@ -890,4 +994,780 @@
 #tbl-devoluciones th:nth-child(5),
 #tbl-devoluciones td:nth-child(5) {
   width: 180px;
+}
+
+/* CAPA FINAL DE CONSISTENCIA VISUAL EXCOMERCAFE */
+.distribucion-matriz-card,
+#bancos-filtros-card,
+#bancos-detalle-card,
+#recibos-tipo-card,
+#tab-recibos .card:not(#recibos-tipo-card),
+.bank-report-table,
+.report-summary-table {
+  background:var(--card-bg) !important;
+  border:1px solid var(--border) !important;
+  border-radius:var(--radius-lg) !important;
+  box-shadow:var(--shadow-md) !important;
+}
+
+.distribucion-matriz-card .card-header,
+#bancos-filtros-card .card-header,
+#bancos-detalle-card .card-header,
+#recibos-tipo-card .card-header {
+  background:#fff !important;
+  border-bottom:1px solid var(--border) !important;
+  color:var(--text-primary) !important;
+}
+
+.distribution-matrix th,
+.distribucion-matriz th,
+.bank-report-table th,
+.report-summary-table th,
+#tbl-devoluciones th {
+  background:#3b0014 !important;
+  color:#fff !important;
+  border-color:#5f0a24 !important;
+}
+
+.distribution-matrix td,
+.distribucion-matriz td,
+.bank-report-table td,
+.report-summary-table td,
+#tbl-devoluciones td {
+  background:#fff !important;
+  color:var(--text-primary) !important;
+  border-bottom:1px solid var(--border) !important;
+}
+
+.distribution-matrix tr:hover td,
+.distribucion-matriz tr:hover td,
+.bank-report-table tr:hover td,
+.report-summary-table tr:hover td,
+#tbl-devoluciones tr:hover td {
+  background:#f8fafc !important;
+}
+
+.distribution-matrix input,
+.distribucion-matriz input,
+.bank-report-table input,
+.report-summary-table input,
+#tab-recibos input,
+#tab-recibos select,
+#tab-recibos textarea {
+  background:var(--input-bg) !important;
+  border:1px solid var(--input-border) !important;
+  border-radius:8px !important;
+  color:var(--text-primary) !important;
+}
+
+.distribution-matrix input:focus,
+.distribucion-matriz input:focus,
+.bank-report-table input:focus,
+.report-summary-table input:focus,
+#tab-recibos input:focus,
+#tab-recibos select:focus,
+#tab-recibos textarea:focus {
+  border-color:var(--accent) !important;
+  box-shadow:0 0 0 3px rgba(34,197,94,.15) !important;
+  outline:none !important;
+}
+
+/* Fase 6.1 - Capa visual global final.
+   Este archivo carga al final, por eso centraliza overrides visuales sin tocar logica. */
+:root{
+  --brand:#163a5a;
+  --brand-strong:#0b2033;
+  --accent:#22c55e;
+  --surface:#ffffff;
+  --surface-soft:#f4f7fb;
+  --surface-tint:#eef6ff;
+  --text-primary:#102033;
+  --text-secondary:#334155;
+  --text-muted:#64748b;
+  --border:#dbeafe;
+  --border-strong:#bfdbfe;
+  --input-bg:#fff7f2;
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:14px;
+  --shadow-sm:0 1px 3px rgba(15,23,42,.08);
+  --shadow-md:0 8px 24px rgba(15,23,42,.08);
+}
+
+html,
+body{
+  background:var(--surface-soft) !important;
+  color:var(--text-primary) !important;
+  scroll-padding-top:0 !important;
+}
+
+body{
+  overflow-anchor:none;
+}
+
+main{
+  padding-top:14px !important;
+  min-height:auto !important;
+  align-content:start !important;
+  justify-content:start !important;
+}
+
+.tab-content{
+  display:none;
+  margin-top:0 !important;
+  padding-top:0 !important;
+  min-height:0 !important;
+}
+
+.tab-content.active{
+  display:block !important;
+}
+
+.tab-content.active > :first-child,
+.tab-content.active > .sec-title:first-child,
+.tab-content.active > .card:first-child,
+.tab-content.active > .dashboard-hero:first-child{
+  margin-top:0 !important;
+}
+
+.sec-title{
+  margin-top:0 !important;
+  margin-bottom:12px !important;
+  color:var(--text-primary) !important;
+}
+
+.main-tabs,
+.tabs{
+  margin-bottom:0 !important;
+}
+
+.dashboard-hero{
+  min-height:0 !important;
+  margin:0 0 14px !important;
+  padding:0 !important;
+  align-items:center !important;
+}
+
+.dashboard-panel,
+.card,
+.home-card,
+.dashboard-kpi,
+.dashboard-date-card,
+.remesas-summary,
+.historial-section,
+.collapsible-section{
+  background:var(--surface) !important;
+  border:1px solid var(--border) !important;
+  border-radius:var(--radius-lg) !important;
+  box-shadow:var(--shadow-md) !important;
+  color:var(--text-primary) !important;
+}
+
+.card-header,
+.dashboard-panel-head,
+.historial-header,
+.collapsible-header{
+  background:var(--surface) !important;
+  border-bottom:1px solid var(--border) !important;
+  color:var(--text-primary) !important;
+}
+
+.card-header span,
+.dashboard-panel-head h3,
+.home-card-title,
+.dashboard-hero h2,
+.dashboard-kpi strong,
+.dashboard-date-card strong{
+  color:var(--text-primary) !important;
+}
+
+.dashboard-hero p,
+.home-card-desc,
+.dashboard-kpi small,
+.dashboard-date-card span,
+.fg label,
+label{
+  color:var(--text-secondary) !important;
+}
+
+.dashboard-kpi{
+  min-height:96px !important;
+  padding:16px !important;
+  gap:14px !important;
+}
+
+.dashboard-kpi-icon{
+  width:48px !important;
+  height:48px !important;
+  min-width:48px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  font-size:22px !important;
+  line-height:1 !important;
+  color:#ffffff !important;
+}
+
+input,
+select,
+textarea,
+.selector-moderno,
+.fg input,
+.fg select,
+.fg textarea{
+  background:var(--input-bg) !important;
+  color:var(--text-primary) !important;
+  border:1px solid var(--border-strong) !important;
+  border-radius:var(--radius-md) !important;
+  box-shadow:inset 0 1px 2px rgba(15,23,42,.04) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.selector-moderno:focus{
+  outline:none !important;
+  border-color:var(--accent) !important;
+  box-shadow:0 0 0 3px rgba(34,197,94,.16) !important;
+}
+
+select option,
+.selector-moderno option{
+  background:#ffffff !important;
+  color:var(--text-primary) !important;
+}
+
+table,
+.tbl,
+.ctrl-table,
+.dist-matrix-table,
+.venta-digitar-table,
+.warehouse-balance-table,
+.cda-balance-table,
+.bank-report-table,
+.report-summary-table{
+  border-color:var(--border) !important;
+}
+
+table th,
+table thead th,
+.tbl th,
+.tbl thead th,
+.ctrl-table th,
+.dist-matrix-table th,
+.venta-digitar-table th,
+.warehouse-balance-table th,
+.cda-balance-table th,
+.bank-report-table th,
+.report-summary-table th,
+.bank-report-table thead th,
+.bank-report-table thead tr:nth-child(2) th,
+.bank-report-table thead tr:nth-child(3) th,
+.distribution-matrix th,
+.distribucion-matriz th,
+#tbl-devoluciones th{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+  border-color:var(--border) !important;
+}
+
+table td,
+.tbl td,
+.ctrl-table td,
+.dist-matrix-table td,
+.venta-digitar-table td,
+.warehouse-balance-table td,
+.cda-balance-table td,
+.bank-report-table td,
+.report-summary-table td{
+  color:var(--text-primary) !important;
+  border-color:var(--border) !important;
+}
+
+table tbody tr:hover td,
+.tbl tbody tr:hover td{
+  background:#f8fafc !important;
+}
+
+.btn,
+.btn-sm,
+.hbtn,
+button{
+  border-radius:var(--radius-md) !important;
+}
+
+.hbtn-settings{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+}
+
+.settings-overlay.open{
+  display:flex !important;
+  z-index:5000 !important;
+}
+
+.settings-panel{
+  background:#ffffff !important;
+  color:var(--text-primary) !important;
+  height:100vh !important;
+  max-height:100vh !important;
+  overflow-y:auto !important;
+  border-left:1px solid var(--border) !important;
+  box-shadow:-18px 0 40px rgba(15,23,42,.18) !important;
+}
+
+.settings-panel *{
+  letter-spacing:0 !important;
+}
+
+.settings-panel .sp-head{
+  background:linear-gradient(90deg,var(--brand-strong),var(--brand)) !important;
+  color:#ffffff !important;
+  border-bottom:2px solid var(--accent) !important;
+}
+
+.settings-panel .sp-head h3,
+.settings-panel .sp-close{
+  color:#ffffff !important;
+}
+
+.settings-panel .sp-label,
+.settings-panel .sp-title,
+.settings-panel label{
+  color:var(--text-primary) !important;
+}
+
+.settings-panel .sp-sub,
+.settings-panel small{
+  color:var(--text-secondary) !important;
+}
+
+.settings-panel .sp-section{
+  border-bottom:1px solid var(--border) !important;
+  margin-bottom:18px !important;
+  padding-bottom:16px !important;
+}
+
+.settings-panel .sp-btn{
+  background:#f8fafc !important;
+  color:var(--text-primary) !important;
+  border:1px solid var(--border-strong) !important;
+  border-radius:var(--radius-md) !important;
+  min-height:42px !important;
+  box-shadow:var(--shadow-sm) !important;
+}
+
+.settings-panel .sp-btn:hover{
+  background:var(--surface-tint) !important;
+  color:var(--brand) !important;
+  border-color:var(--accent) !important;
+}
+
+.settings-panel .sp-btn.active{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+}
+
+.settings-panel table th{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+}
+
+.settings-panel table td{
+  background:#ffffff !important;
+  color:var(--text-primary) !important;
+}
+
+@media (max-width:900px){
+  main{
+    padding:10px !important;
+  }
+
+  .dashboard-kpis,
+  #tab-inicio .home-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  .settings-panel{
+    width:min(100vw,360px) !important;
+  }
+}
+
+/* Fix urgente: pestañas siempre empiezan arriba y sin separadores fantasma. */
+body main,
+main,
+.dashboard-main,
+.dashboard-content,
+.dashboard-shell,
+.dashboard-layout,
+.app-layout,
+.content,
+.modern-dashboard{
+  margin-top:0 !important;
+  padding-top:18px !important;
+  min-height:auto !important;
+  height:auto !important;
+  align-items:stretch !important;
+  justify-content:flex-start !important;
+  align-content:flex-start !important;
+}
+
+.tab-content,
+.tab-content.active{
+  padding-top:0 !important;
+  margin-top:0 !important;
+  min-height:auto !important;
+  height:auto !important;
+  transform:none !important;
+  align-items:stretch !important;
+  justify-content:flex-start !important;
+  align-content:flex-start !important;
+}
+
+.tab-content.active{
+  display:block !important;
+}
+
+.sec-title{
+  margin-top:0 !important;
+  margin-bottom:18px !important;
+  transform:none !important;
+}
+
+.tab-content > .card:first-child,
+.tab-content > .sec-title:first-child,
+.tab-content > .dashboard-hero:first-child,
+.tab-content.active > .card:first-child,
+.tab-content.active > .sec-title:first-child,
+.tab-content.active > .dashboard-hero:first-child{
+  margin-top:0 !important;
+  padding-top:0 !important;
+  top:auto !important;
+  transform:none !important;
+}
+
+.card:first-child,
+.dashboard-panel:first-child,
+.dashboard-hero:first-child{
+  margin-top:0 !important;
+}
+
+.empty-spacer,
+.dashboard-spacer,
+.hero-spacer,
+.top-spacer,
+.section-spacer,
+.layout-spacer{
+  display:none !important;
+  height:0 !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+
+/* FASE 6.1 - correccion visual global sin tocar logica */
+:root{
+  --brand:#17456b;
+  --brand-soft:#e7f0f8;
+  --accent:#16a34a;
+  --surface:#f5f8fc;
+  --surface2:#eef5fb;
+  --card-bg:#ffffff;
+  --text-primary:#102033;
+  --text-secondary:#4b5f76;
+  --border:#d7e4f1;
+  --border-strong:#b7cde2;
+}
+
+html,
+body{
+  background:var(--surface) !important;
+}
+
+body,
+main,
+.tab-content{
+  color:var(--text-primary) !important;
+}
+
+main{
+  padding-top:18px !important;
+}
+
+.tab-content,
+.tab-content.active,
+.card,
+.dashboard-panel,
+.dashboard-hero{
+  margin-top:0 !important;
+  min-height:0 !important;
+}
+
+.card,
+.dashboard-panel,
+.dashboard-kpi,
+.dashboard-date-card,
+.home-card,
+.remesas-summary,
+.historial-section,
+.collapsible-section{
+  background:var(--card-bg) !important;
+  border:1px solid var(--border) !important;
+  border-radius:14px !important;
+  box-shadow:0 12px 30px rgba(16,32,51,.07) !important;
+}
+
+.card-header,
+.dashboard-panel-head,
+.historial-header,
+.collapsible-header{
+  background:linear-gradient(180deg,#ffffff,var(--surface2)) !important;
+  color:var(--text-primary) !important;
+  border-bottom:1px solid var(--border) !important;
+}
+
+.card-header span,
+.dashboard-panel-head h3,
+.remesas-title,
+.sec-title,
+.dashboard-hero h2{
+  color:var(--text-primary) !important;
+}
+
+.dashboard-eyebrow,
+.dashboard-hero p,
+.dashboard-kpi span,
+.dashboard-kpi small,
+.dashboard-panel-head span{
+  color:var(--text-secondary) !important;
+}
+
+.dashboard-kpis{
+  gap:14px !important;
+  grid-template-columns:repeat(5,minmax(170px,1fr)) !important;
+}
+
+.dashboard-kpi{
+  align-items:center !important;
+  gap:14px !important;
+  min-height:112px !important;
+  padding:16px !important;
+  overflow:visible !important;
+}
+
+.dashboard-kpi-icon{
+  width:50px !important;
+  height:50px !important;
+  min-width:50px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  padding:0 !important;
+  border-radius:50% !important;
+  font-size:1.22rem !important;
+  line-height:1 !important;
+  color:#ffffff !important;
+  overflow:visible !important;
+}
+
+.dashboard-kpi strong{
+  color:var(--text-primary) !important;
+  font-size:1.35rem !important;
+  letter-spacing:0 !important;
+  white-space:nowrap !important;
+}
+
+table,
+.tbl,
+.ctrl-table,
+.dist-matrix-table,
+.venta-digitar-table,
+.warehouse-balance-table,
+.cda-balance-table,
+.bank-report-table,
+.report-summary-table,
+#tbl-devoluciones{
+  border-collapse:separate !important;
+  border-spacing:0 !important;
+  background:var(--card-bg) !important;
+  border:1px solid var(--border) !important;
+  color:var(--text-primary) !important;
+}
+
+table th,
+table thead th,
+.tbl th,
+.tbl thead th,
+.ctrl-table th,
+.dist-matrix-table th,
+.venta-digitar-table th,
+.warehouse-balance-table th,
+.cda-balance-table th,
+.bank-report-table th,
+.bank-report-table thead th,
+.bank-report-table thead tr:nth-child(2) th,
+.bank-report-table thead tr:nth-child(3) th,
+.report-summary-table th,
+#tbl-devoluciones th,
+.ctrl-table th.th-grp,
+.ctrl-table th.th-prod,
+.ctrl-table th[style]{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+  border-color:rgba(255,255,255,.18) !important;
+  text-align:center !important;
+  vertical-align:middle !important;
+}
+
+table td,
+.tbl td,
+.ctrl-table td,
+.dist-matrix-table td,
+.venta-digitar-table td,
+.warehouse-balance-table td,
+.cda-balance-table td,
+.bank-report-table td,
+.report-summary-table td,
+#tbl-devoluciones td{
+  background:#ffffff !important;
+  color:var(--text-primary) !important;
+  border-color:var(--border) !important;
+  vertical-align:middle !important;
+}
+
+table tbody tr:hover td,
+.tbl tbody tr:hover td,
+.ctrl-table tbody tr:hover td,
+.dist-matrix-table tbody tr:hover td,
+.venta-digitar-table tbody tr:hover td,
+.warehouse-balance-table tbody tr:hover td,
+.cda-balance-table tbody tr:hover td,
+.bank-report-table tbody tr:hover td,
+.report-summary-table tbody tr:hover td{
+  background:var(--surface2) !important;
+}
+
+.venta-digitar-table .venta-municipio-cell,
+.venta-digitar-table .venta-agro-cell,
+.venta-digitar-table th.venta-municipio-col,
+.venta-digitar-table th.venta-agromercado-col{
+  text-align:center !important;
+  vertical-align:middle !important;
+}
+
+.venta-digitar-table .venta-agro-cell{
+  padding:8px 10px !important;
+}
+
+.venta-matrix-table .venta-agro-name{
+  display:flex !important;
+  min-height:34px !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  white-space:normal !important;
+  line-height:1.22 !important;
+  color:var(--text-primary) !important;
+  font-size:.78rem !important;
+}
+
+.venta-matrix-table .venta-agro-type{
+  background:var(--brand-soft) !important;
+  color:var(--brand) !important;
+  border:1px solid var(--border) !important;
+}
+
+.venta-digitar-table input.venta-cell,
+.dist-matrix-table input.dist-qty,
+.ctrl-table input.ci,
+input.ci{
+  height:36px !important;
+  min-height:36px !important;
+  line-height:normal !important;
+  padding:6px 8px !important;
+  border:1px solid var(--border-strong) !important;
+  border-radius:9px !important;
+  background:#fffaf7 !important;
+  color:var(--text-primary) !important;
+  font-size:.86rem !important;
+  font-weight:700 !important;
+  text-align:center !important;
+  box-shadow:none !important;
+}
+
+.venta-digitar-table input.venta-cell,
+.dist-matrix-table input.dist-qty{
+  width:68px !important;
+  min-width:68px !important;
+}
+
+.venta-digitar-table input.venta-calc,
+.ctrl-table input.ci-calc,
+.ctrl-table input.ci-money{
+  background:#edf6ff !important;
+  color:var(--brand) !important;
+}
+
+input[type="number"]{
+  font-variant-numeric:tabular-nums !important;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  margin:0 !important;
+}
+
+.settings-overlay{
+  z-index:6000 !important;
+  align-items:flex-start !important;
+  justify-content:flex-end !important;
+}
+
+.settings-overlay.open{
+  display:flex !important;
+}
+
+.settings-panel{
+  background:var(--card-bg) !important;
+  color:var(--text-primary) !important;
+  border-left:1px solid var(--border) !important;
+  box-shadow:-20px 0 50px rgba(16,32,51,.16) !important;
+}
+
+.sp-head,
+.creator-notes-head{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+}
+
+.sp-btn.active{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+  border-color:var(--brand) !important;
+}
+
+@media (max-width:1200px){
+  .dashboard-kpis{
+    grid-template-columns:repeat(2,minmax(220px,1fr)) !important;
+  }
+}
+
+@media (max-width:700px){
+  main{
+    padding:10px !important;
+  }
+
+  .dashboard-hero{
+    align-items:stretch !important;
+    flex-direction:column !important;
+  }
+
+  .dashboard-kpis{
+    grid-template-columns:1fr !important;
+  }
+
+  .dashboard-kpi{
+    min-height:96px !important;
+  }
 }
