@@ -1,0 +1,63 @@
+AGROMERCADO | CLAVE
+Acajutla, mercado de Acajutla | ACAJUTLA2026
+Alcaldia de Mejicanos | ALCALDIA2026
+Anamoros calle cirilo bonilla umanzor | ANAMOROS2026
+Apastepeque | APASTEPEQUE2026
+Apopa, Parque Central Noe Canjura | APOPA2026
+Armenia, parque de Armenia | ARMENIA2026
+Av 5 de noviembre, contiguo a casa de la cultura de Atiquizaya | NOVIEMBRE2026
+Ayutuxtepeque, Plaza Municipal ( Parque Bonanza Agromercado) | AYUTUXTEPEQUE2026
+Barrio la cruz, km. 121 El Transito | CRUZ2026
+Bo el centro, 6a calle poniente, Juayua | CENTRO2026
+Campo de La Feria San Francisco Gotera | CAMPO2026
+Centro de Gobierno Municipal | CENTRO22026
+Chalchuapa parque central | CHALCHUAPA2026
+Chinameca, Parque Central | CHINAMECA2026
+Ciudad Arce, Parque Central | CIUDAD2026
+Ciudad barrios tiangue municipal | CIUDAD22026
+Ciudad Delgado, Plaza Monsenor Romero | CIUDAD32026
+Cojutepeque, parque Alamedas | COJUTEPEQUE2026
+Colonia El Palmar | COLONIA2026
+Corinto barrio las delicias | CORINTO2026
+Distrito 2 Nuevo Lourdes (centro lourdes, banco agricola) | DISTRITO2026
+El Paraiso, cancha techada de parque municipal | PARAISO2026
+Esquina Cancha Tacon | ESQUINA2026
+Frente a la Alcaldia de Suchitoto | FRENTE2026
+Frente a la parroquia Carlos Borromeo | FRENTE22026
+Ilobasco, Parque Central | ILOBASCO2026
+Ilopango, Esquina Polideportivo Altavista | ILOPANGO2026
+Ilopango, TICSA | ILOPANGO22026
+Izalco, Casa Barrientos | IZALCO2026
+Jiquilisco, esquina opuesta a la Alcaldia Municipal de Jiquilisco | JIQUILISCO2026
+Jocoaltique, supermercado los quebrachos | JOCOALTIQUE2026
+Jocoro Polideportivo Tierra de Fuego | JOCORO2026
+Km 12 Calle Alberto Masferrer , Santo Tomas | CALLE2026
+Mercado Municipal #5, Final 18 Ave Norte Mercado Municipal #5 | MERCADO2026
+Metapan (Mercado municipal exrastro) | METAPAN2026
+Nueva Concepcion parque municipal | NUEVA2026
+Parque Berlin de Ex injuve de Berlin | BERLIN2026
+Parque Central Aguilares | CENTRAL2026
+Parque Concordia | CONCORDIA2026
+Parque de Alcaldia Municipal del Triunfo | ALCALDIA22026
+Parque Ecologico Olocuilta | ECOLOGICO2026
+Parque Municipal Mario Molina | MUNICIPAL2026
+Parque Rafael Campos, 7a. Calle Poniente, 7a. Calle Oriente | RAFAEL2026
+Placita El Calvario | PLACITA2026
+Polideportivo El Congo | POLIDEPORTIVO2026
+Quezaltepeque, Plaza Centenario | QUEZALTEPEQUE2026
+San Francisco Menendez (Colonia La Palma) | SAN2026
+San Juan Opico, Parque Central | SAN22026
+San Marcos, Parque Joyas de Esperanza y Paz | SAN32026
+San Martin, Alcaldia de San Martin | SAN42026
+San Miguel Centro (Barraza) | SAN52026
+San Rafael Cedro | SAN62026
+San Vicente, Parque Central | SAN72026
+Santa Rosa de Lima, Terminal de Buses Santa Rosa de Lima | SANTA2026
+Santa Tecla 2 | SANTA22026
+Santa Tecla, Parque Daniel Hernandez ( frente a mezon goya) | SANTA32026
+Sensuntepeque, Parque Central | SENSUNTEPEQUE2026
+Skate Park colonia IVU | SKATE2026
+Soyapango, Redondel de Unicentro | SOYAPANGO2026
+Zacatecoluca, Plaza Civica | ZACATECOLUCA2026
+Zaragoza | ZARAGOZA2026
+Zona verde, colonia Las Mercedes 1ra salida hacia el Triunfo( SANTIAGO DE MARIA) | ZONA2026
