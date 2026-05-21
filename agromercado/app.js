@@ -66,8 +66,8 @@ var AGROMERCADOS = [
   'Zacatecoluca, Plaza Civica',
   'Zaragoza',
   'Zona verde, colonia Las Mercedes 1ra salida hacia el Triunfo( SANTIAGO DE MARIA)'
-].map(function(nombre){
-  return { nombre: nombre, clave: generarClaveAgromercado(nombre, AGROMERCADOS.indexOf(nombre)) };
+].map(function(nombre, index){
+  return { nombre: nombre, clave: generarClaveAgromercado(nombre, index) };
 });
 
 var PRODUCTOS = [
