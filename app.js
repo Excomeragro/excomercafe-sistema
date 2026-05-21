@@ -142,20 +142,48 @@ function leerPersonasSistema(){
   }
 }
 
-function encargadoPorAgromercado(agromercado){
+async function leerPersonasSistemaSupabase(){
+  try{
+    var response = await fetch(SUPABASE_CONFIG.url + '/rest/v1/personas_sistema?select=nombre,cargo,telefono,agromercado,payload&order=actualizado_en.desc&limit=1000', {
+      headers: {
+        apikey: SUPABASE_CONFIG.key,
+        Authorization: 'Bearer ' + SUPABASE_CONFIG.key
+      }
+    });
+    if(!response.ok) return [];
+    var rows = await response.json();
+    return (rows || []).map(function(row){
+      return Object.assign({}, row.payload || {}, {
+        nombre: row.nombre || (row.payload && row.payload.nombre) || '',
+        cargo: row.cargo || (row.payload && row.payload.cargo) || '',
+        telefono: row.telefono || (row.payload && row.payload.telefono) || '',
+        agromercado: row.agromercado || (row.payload && row.payload.agromercado) || ''
+      });
+    });
+  }catch(e){
+    return [];
+  }
+}
+
+function buscarEncargadoEnPersonas(personas, agromercado){
   var objetivo = normalizarTexto(agromercado);
   if(!objetivo) return '';
-  var personas = leerPersonasSistema();
   var match = personas.find(function(persona){
     return normalizarTexto(persona.agromercado || persona.agromercadoAsignado || persona.mercado) === objetivo;
   });
   return match ? String(match.nombre || '').trim() : '';
 }
 
-function aplicarEncargadoAgromercado(agromercado){
+async function encargadoPorAgromercado(agromercado){
+  var local = buscarEncargadoEnPersonas(leerPersonasSistema(), agromercado);
+  if(local) return local;
+  return buscarEncargadoEnPersonas(await leerPersonasSistemaSupabase(), agromercado);
+}
+
+async function aplicarEncargadoAgromercado(agromercado){
   var input = document.getElementById('encargado');
   if(!input) return;
-  var encargado = encargadoPorAgromercado(agromercado);
+  var encargado = await encargadoPorAgromercado(agromercado);
   input.value = encargado;
   input.placeholder = encargado ? 'Encargado asignado' : 'Sin encargado asignado en Personas';
 }
@@ -229,7 +257,7 @@ function calcularTotales(){
   document.getElementById('total-remesa').textContent = money(total - gastos);
 }
 
-function validarAcceso(){
+async function validarAcceso(){
   var agromercado = document.getElementById('access-agromercado').value;
   var clave = String(document.getElementById('access-clave').value || '').trim().toUpperCase();
   var match = AGROMERCADOS.find(function(a){
@@ -244,7 +272,7 @@ function validarAcceso(){
   document.getElementById('sales-form').classList.remove('hidden');
   document.getElementById('agromercado-label').textContent = match.nombre;
   document.getElementById('fecha').value = hoy();
-  aplicarEncargadoAgromercado(match.nombre);
+  await aplicarEncargadoAgromercado(match.nombre);
   calcularTotales();
 }
 

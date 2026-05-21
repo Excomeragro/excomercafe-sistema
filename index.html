@@ -9383,8 +9383,35 @@ window.eliminarCDA = function(index){
 };
 
 // ── PERSONAS ──
+function personaLocalId(persona){
+  return String(persona && (persona.local_id || persona.id) || '');
+}
+
+function asegurarIdsPersonas(personas){
+  var changed = false;
+  (personas || []).forEach(function(persona){
+    if(!persona) return;
+    if(!persona.local_id){
+      persona.local_id = 'persona-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+      changed = true;
+    }
+    if(typeof persona.supabase_synced === 'undefined') {
+      persona.supabase_synced = false;
+      changed = true;
+    }
+  });
+  if(changed) localStorage.setItem('personas-data', JSON.stringify(personas || []));
+  return personas || [];
+}
+
+function leerPersonasLocales(){
+  var personas = [];
+  try { personas = JSON.parse(localStorage.getItem('personas-data') || '[]'); } catch(e) { personas = []; }
+  return asegurarIdsPersonas(Array.isArray(personas) ? personas : []);
+}
+
 window.cargarPersonas = function(){
-  var personas = JSON.parse(localStorage.getItem('personas-data')||'[]');
+  var personas = leerPersonasLocales();
   var tbody = document.getElementById('tabla-personas');
   
   if(personas.length === 0){
@@ -9418,8 +9445,15 @@ window.agregarPersona = function(){
     return;
   }
   
-  var personas = JSON.parse(localStorage.getItem('personas-data')||'[]');
-  personas.push({nombre: nombre, cargo: cargo, telefono: telefono, agromercado: agromercado});
+  var personas = leerPersonasLocales();
+  personas.push({
+    local_id: 'persona-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+    nombre: nombre,
+    cargo: cargo,
+    telefono: telefono,
+    agromercado: agromercado,
+    supabase_synced: false
+  });
   localStorage.setItem('personas-data', JSON.stringify(personas));
   
   // Limpiar formulario
@@ -9429,11 +9463,14 @@ window.agregarPersona = function(){
   document.getElementById('nueva-persona-agromercado').value = '';
   
   cargarPersonas();
+  if(typeof window.sincronizarPersonasSupabase === 'function') {
+    window.sincronizarPersonasSupabase().catch(function(error){ console.warn('Personas pendiente:', error); });
+  }
   showAlert('datos', '✅ Persona agregada correctamente', 'ok');
 };
 
 window.editarPersona = function(index){
-  var personas = JSON.parse(localStorage.getItem('personas-data')||'[]');
+  var personas = leerPersonasLocales();
   var persona = personas[index];
   
   var nuevoNombre = prompt('Editar nombre:', persona.nombre);
@@ -9445,8 +9482,12 @@ window.editarPersona = function(index){
     if(nuevoTelefono !== null) personas[index].telefono = nuevoTelefono.trim();
     var nuevoAgromercado = prompt('Editar agromercado asignado:', personas[index].agromercado || '');
     if(nuevoAgromercado !== null) personas[index].agromercado = nuevoAgromercado.trim();
+    personas[index].supabase_synced = false;
     localStorage.setItem('personas-data', JSON.stringify(personas));
     cargarPersonas();
+    if(typeof window.sincronizarPersonasSupabase === 'function') {
+      window.sincronizarPersonasSupabase().catch(function(error){ console.warn('Personas pendiente:', error); });
+    }
     showAlert('datos', '✅ Persona actualizada', 'ok');
   }
 };
@@ -9454,9 +9495,16 @@ window.editarPersona = function(index){
 window.eliminarPersona = function(index){
   if(!confirm('¿Está seguro de eliminar esta persona?')) return;
   
-  var personas = JSON.parse(localStorage.getItem('personas-data')||'[]');
+  var personas = leerPersonasLocales();
+  var persona = personas[index];
   personas.splice(index, 1);
   localStorage.setItem('personas-data', JSON.stringify(personas));
+  if(persona && persona.local_id && window.supabaseRequest && window.haySesionSupabase && window.haySesionSupabase()) {
+    window.supabaseRequest('/rest/v1/personas_sistema?local_id=eq.' + encodeURIComponent(persona.local_id), {
+      method: 'DELETE',
+      prefer: 'return=minimal'
+    }).catch(function(error){ console.warn('No se pudo eliminar persona en Supabase:', error); });
+  }
   cargarPersonas();
   showAlert('datos', '✅ Persona eliminada', 'ok');
 };
@@ -15574,6 +15622,20 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
+  function personaToSupabase(record){
+    var id = localId(record);
+    if(!record.local_id) record.local_id = id;
+    return {
+      local_id: id,
+      nombre: record.nombre || '',
+      cargo: record.cargo || '',
+      telefono: record.telefono || '',
+      agromercado: record.agromercado || '',
+      payload: record,
+      actualizado_en: new Date().toISOString()
+    };
+  }
+
   async function uploadLocalTable(config){
     if (!window.supabaseRequest) return;
     window.supabaseRlsBlockedTables = window.supabaseRlsBlockedTables || {};
@@ -15637,26 +15699,42 @@ document.addEventListener('DOMContentLoaded', function() {
     var rows = await window.supabaseRequest('/rest/v1/' + config.table + '?select=local_id,payload,creado_en&order=creado_en.desc&limit=1000');
     var local = readLocalList(config.storageKey);
     var existing = {};
-    local.forEach(function(record){ existing[localId(record)] = true; });
+    local.forEach(function(record, index){ existing[localId(record)] = index; });
     var added = 0;
+    var updated = 0;
 
     (rows || []).reverse().forEach(function(row){
       if (!row || !row.payload) return;
       var id = String(row.local_id || localId(row.payload));
-      if (existing[id]) return;
+      if (Object.prototype.hasOwnProperty.call(existing, id)) {
+        var currentIndex = existing[id];
+        var currentRecord = local[currentIndex] || {};
+        if (config.storageKey === 'personas-data' && currentRecord.supabase_synced !== false) {
+          var remoteRecord = row.payload;
+          remoteRecord.local_id = id;
+          remoteRecord.supabase_synced = true;
+          remoteRecord.supabase_synced_at = row.creado_en || row.actualizado_en || new Date().toISOString();
+          if (JSON.stringify(currentRecord) !== JSON.stringify(remoteRecord)) {
+            local[currentIndex] = remoteRecord;
+            updated++;
+          }
+        }
+        return;
+      }
       var record = row.payload;
+      record.local_id = id;
       if (config.storageKey === 'inventario-data') {
         record.total = num(record.total) || Math.abs(num(record.arroz)) + Math.abs(num(record.precocido)) + Math.abs(num(record.frijol1)) + Math.abs(num(record.frijol4)) + Math.abs(num(record.aceite)) + Math.abs(num(record.harina));
       }
       record.supabase_synced = true;
-      record.supabase_synced_at = row.creado_en || new Date().toISOString();
+      record.supabase_synced_at = row.creado_en || row.actualizado_en || new Date().toISOString();
       local.unshift(record);
-      existing[id] = true;
+      existing[id] = 0;
       added++;
     });
 
-    if (added) writeLocalList(config.storageKey, local);
-    return added;
+    if (added || updated) writeLocalList(config.storageKey, local);
+    return added + updated;
   }
 
   async function uploadCuadreObject(storageKey, tipo){
@@ -15724,7 +15802,8 @@ document.addEventListener('DOMContentLoaded', function() {
     { table: 'ventas_agromercado', storageKey: 'exc_agro_hist', toSupabase: ventaToSupabase },
     { table: 'inventario_movimientos', storageKey: 'inventario-data', toSupabase: inventarioToSupabase },
     { table: 'distribucion_tiendona', storageKey: 'descargas-data', toSupabase: distribucionTiendonaToSupabase },
-    { table: 'distribucion_cda', storageKey: 'distribucion-cda-data', toSupabase: distribucionCdaToSupabase }
+    { table: 'distribucion_cda', storageKey: 'distribucion-cda-data', toSupabase: distribucionCdaToSupabase },
+    { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase }
   ];
 
   function reloadLocalCaches(){
@@ -15758,6 +15837,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderBancos === 'function') renderBancos();
     if (typeof renderCuadreBodegas === 'function') renderCuadreBodegas();
     if (typeof renderCuadreCDA === 'function') renderCuadreCDA();
+    if (typeof cargarPersonas === 'function') cargarPersonas();
     if (typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
   }
 
@@ -15801,6 +15881,10 @@ document.addEventListener('DOMContentLoaded', function() {
       uploaded: tiendona.uploaded + cda.uploaded,
       downloaded: tiendona.downloaded + cda.downloaded
     };
+  };
+
+  window.sincronizarPersonasSupabase = async function(){
+    return window.sincronizarTablaSupabase(SUPABASE_SYNC_CONFIGS[4]);
   };
 
   window.sincronizarCuadresSupabase = async function(){
