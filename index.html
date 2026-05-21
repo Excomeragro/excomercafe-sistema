@@ -4,9 +4,9 @@
 <title>EXCOMERCAFE — Reporte Agromercados</title>
 <link rel="icon" href="./favicon.ico">
 <link rel="apple-touch-icon" href="./favicon.png">
-<link href="./css/styles.css?v=20260519-phase61" rel="stylesheet">
+<link href="./css/styles.css?v=20260521-menu-actions" rel="stylesheet">
 <link href="./css/components.css?v=20260519-phase61" rel="stylesheet">
-<link href="./css/distribution-matrix.css?v=20260519-phase61" rel="stylesheet">
+<link href="./css/distribution-matrix.css?v=20260521-cuadre-bodegas" rel="stylesheet">
 <script>
   try {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -152,6 +152,38 @@
     color:#ffffff;
     font-size:.78rem;
     font-weight:800;
+  }
+  .settings-user-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:10px;
+    align-items:center;
+  }
+  .settings-user-row .auth-user-badge{
+    width:100%;
+    justify-content:center;
+    min-height:38px;
+    color:var(--text-primary,#102033);
+    background:var(--surface,#f4f7fb);
+    border:1px solid var(--border,#dbeafe);
+  }
+  body.smart-menu-collapsed .settings-user-row .auth-user-badge,
+  body.smart-menu-expanded .settings-user-row .auth-user-badge{
+    width:100% !important;
+    height:auto !important;
+    min-height:38px !important;
+    padding:8px 10px !important;
+    color:var(--text-primary,#102033) !important;
+    font-size:.82rem !important;
+    overflow:visible !important;
+  }
+  body.smart-menu-collapsed .settings-user-row .auth-user-badge::before,
+  body.smart-menu-expanded .settings-user-row .auth-user-badge::before{
+    content:none !important;
+  }
+  .sp-btn-danger{
+    background:#7f1d1d !important;
+    color:#ffffff !important;
   }
   .hbtn-logout{
     background:#7f1d1d !important;
@@ -629,12 +661,10 @@
     <div class="header-org">Sistema de Control de Ventas</div>
   </div>
   <div class="header-actions">
-    <button type="button" class="hbtn smart-menu-hide" onclick="hideSmartMenuNow()" title="Ocultar menu">Ocultar</button>
-    <span id="auth-user-badge" class="auth-user-badge" title="Usuario activo">Usuario</span>
+    <button type="button" class="hbtn smart-menu-hide" onclick="hideSmartMenuNow()" title="Ocultar menu"><span class="smart-menu-hide-text">Ocultar</span></button>
     <span id="online-indicator" class="online-indicator syncing" title="Estado de conexion">Sincronizando...</span>
     <button class="hbtn hbtn-chat" onclick="toggleChatPanel()" title="Usuarios conectados y chat">Chat <span id="online-users-count">0</span></button>
     <button class="hbtn hbtn-settings" onclick="openSettings()">⚙️ Ajustes</button>
-    <button class="hbtn hbtn-logout" onclick="logoutUsuarioSistema()" title="Cerrar sesión">Salir</button>
   </div>
 </header>
 
@@ -1682,7 +1712,7 @@
       <span>Cuadre de Bodegas</span>
       <div class="flex gap-8 items-center flex-wrap">
         <input type="date" id="cuadre-bodega-fecha" onchange="renderCuadreBodegas()" style="max-width:160px;">
-        <button type="button" class="btn btn-sm btn-primary" onclick="imprimirTablasPorTitulo('Cuadre de Bodegas', ['#tabla-cuadre-bodegas', '#tabla-nueva-mercaderia'])">Imprimir</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="imprimirTablasPorTitulo('Cuadre de Bodegas', ['#tabla-cuadre-bodegas'])">Imprimir</button>
         <button class="btn btn-sm btn-success" onclick="guardarCuadreBodegas()">Guardar Cuadre</button>
         <button class="btn btn-sm btn-secondary" onclick="renderCuadreBodegas()">Actualizar</button>
         <button class="btn btn-sm btn-secondary" onclick="toggleInventarioManual()">Ir al Registro</button>
@@ -1693,12 +1723,6 @@
         <table class="warehouse-balance-table" id="tabla-cuadre-bodegas">
           <thead id="thead-cuadre-bodegas"></thead>
           <tbody id="tbody-cuadre-bodegas"></tbody>
-        </table>
-      </div>
-      <div class="warehouse-table-wrap warehouse-bottom-wrap">
-        <table class="warehouse-balance-table warehouse-small-table" id="tabla-nueva-mercaderia">
-          <thead id="thead-nueva-mercaderia"></thead>
-          <tbody id="tbody-nueva-mercaderia"></tbody>
         </table>
       </div>
       <div id="alert-cuadre-bodegas" class="alert alert-ok"></div>
@@ -2197,6 +2221,15 @@
     </div>
     <div class="sp-body">
       <div class="sp-section">
+        <div class="sp-label">Usuario</div>
+        <div class="settings-user-row">
+          <span id="auth-user-badge" class="auth-user-badge" title="Usuario activo">Usuario</span>
+          <button class="sp-btn sp-btn-danger" onclick="logoutUsuarioSistema(); closeSettings();" title="Cerrar sesion">Salir</button>
+        </div>
+        <div class="sp-sub" style="margin-top:8px;">El nombre visible del chat se cambia desde el panel de chat.</div>
+      </div>
+
+      <div class="sp-section">
         <div class="sp-label">Respaldo de Datos</div>
         <div class="sp-btn-row">
           <button class="sp-btn" onclick="backupCrearRespaldoCompletoUI()">💾 Crear Respaldo Completo</button>
@@ -2236,6 +2269,10 @@
       <div class="sp-section">
         <div class="sp-label">Resumen Guardado</div>
         <div id="settings-data-summary" style="font-size:0.76rem;color:var(--text-primary);line-height:1.7;">Calculando datos...</div>
+        <div class="sp-btn-row" style="margin-top:10px;">
+          <button class="sp-btn sp-btn-danger" onclick="limpiarDatosPruebaLocales()">Borrar datos de prueba</button>
+        </div>
+        <div class="sp-sub" style="margin-top:8px;">Borra ventas, inventario, distribuciones, devoluciones, remesas, recibos, chat local y cuadres guardados en este navegador.</div>
       </div>
 
       <div class="sp-section">
@@ -2243,8 +2280,10 @@
         <div class="sp-btn-row">
           <button class="sp-btn" onclick="probarSupabase()">Probar Supabase</button>
           <button class="sp-btn" onclick="sincronizarPendientesSupabase()">Sincronizar Pendientes</button>
+          <button class="sp-btn" onclick="revisarSincronizacionVentas()">Revisar Ventas</button>
         </div>
         <div class="sp-sub" id="supabase-status" style="margin-top:8px;">Proyecto conectado: hfijlpjeqagxyvgirkwk.supabase.co</div>
+        <div class="sp-sub" id="sync-check-status" style="margin-top:8px;">Sin revision reciente.</div>
       </div>
 
       <div class="sp-section">
@@ -2378,6 +2417,26 @@ function authToken(){
   return sesionAuthVigente(window.authSession) ? window.authSession.access_token : '';
 }
 
+function authJwtPayload(){
+  try {
+    var token = authToken();
+    if(!token || token.split('.').length < 2) return null;
+    var base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    var json = decodeURIComponent(atob(base64).split('').map(function(c){
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(json);
+  } catch(error) {
+    return null;
+  }
+}
+
+function authUserId(){
+  var payload = authJwtPayload();
+  if(payload && payload.sub) return payload.sub;
+  return window.authSession && window.authSession.user ? window.authSession.user.id : '';
+}
+
 window.haySesionSupabase = function(){
   if(authToken()) return true;
   var session = leerSesionAuth();
@@ -2404,6 +2463,8 @@ window.mostrarLoginUsuario = function(){
 
 function aplicarSesionAuth(session){
   guardarSesionAuth(session);
+  window.presenceRlsBlocked = false;
+  if(typeof actualizarChatClientIdSesion === 'function') actualizarChatClientIdSesion();
   var nombre = authUserNameFromSession(session);
   localStorage.setItem('chat_username', nombre);
   var badge = document.getElementById('auth-user-badge');
@@ -2598,7 +2659,11 @@ window.supabaseRequest = async function(table, options){
   var result = await sendRequest();
   var response = result.response;
   var data = result.data;
-  var message = (data && data.message) ? data.message : response.status + ' ' + response.statusText;
+  function supabaseErrorMessage(data, response){
+    if(!data) return response.status + ' ' + response.statusText;
+    return data.message || data.details || data.hint || data.code || (response.status + ' ' + response.statusText);
+  }
+  var message = supabaseErrorMessage(data, response);
   if (response.status === 401 && /jwt expired/i.test(message)) {
     var refreshed = await refrescarSesionAuth(true);
     if(refreshed && authToken()) {
@@ -2606,7 +2671,7 @@ window.supabaseRequest = async function(table, options){
       result = await sendRequest();
       response = result.response;
       data = result.data;
-      message = (data && data.message) ? data.message : response.status + ' ' + response.statusText;
+      message = supabaseErrorMessage(data, response);
     }
   }
   if (!response.ok) {
@@ -2645,8 +2710,122 @@ window.probarSupabase = async function(){
   }
 };
 
+window.revisarSincronizacionVentas = async function(){
+  var status = document.getElementById('sync-check-status') || document.getElementById('supabase-status');
+  var today = (typeof resumenVentasFechaHoy === 'function')
+    ? resumenVentasFechaHoy()
+    : new Date().toISOString().slice(0,10);
+  var local = [];
+  try { local = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(error) { local = []; }
+  var localesHoy = local.filter(function(row){
+    return String(row && row.fecha || '').slice(0,10) === today;
+  });
+  var pendientes = local.filter(function(row){
+    return row && !row.supabase_synced;
+  });
+  var pendientesHoy = pendientes.filter(function(row){
+    return String(row && row.fecha || '').slice(0,10) === today;
+  });
+
+  if(status) {
+    status.textContent = 'Revisando... Local hoy: ' + localesHoy.length
+      + ', pendientes hoy: ' + pendientesHoy.length + '.';
+  }
+
+  if(!window.haySesionSupabase || !window.haySesionSupabase()) {
+    if(status) status.textContent = 'Sin sesion activa. Local hoy: ' + localesHoy.length
+      + ', pendientes hoy: ' + pendientesHoy.length
+      + ', pendientes totales: ' + pendientes.length + '. Inicia sesion y sincroniza.';
+    return;
+  }
+
+  try {
+    if(pendientes.length && typeof window.sincronizarTablaSupabase === 'function') {
+      await window.sincronizarVentasSupabase();
+      try { local = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(error) { local = []; }
+      pendientes = local.filter(function(row){ return row && !row.supabase_synced; });
+      pendientesHoy = pendientes.filter(function(row){ return String(row && row.fecha || '').slice(0,10) === today; });
+    }
+    var query = '/rest/v1/ventas_agromercado?select=id,local_id,fecha&fecha=gte.'
+      + encodeURIComponent(today)
+      + '&fecha=lte.' + encodeURIComponent(today)
+      + '&limit=5000';
+    var remotasHoy = await window.supabaseRequest(query);
+    if(Array.isArray(remotasHoy) && !remotasHoy.length && localesHoy.length && !pendientesHoy.length) {
+      var localActual = local.map(function(row){
+        if(String(row && row.fecha || '').slice(0,10) === today) {
+          row.supabase_synced = false;
+          delete row.supabase_synced_at;
+        }
+        return row;
+      });
+      localStorage.setItem('exc_agro_hist', JSON.stringify(localActual));
+      await window.sincronizarVentasSupabase();
+      local = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]');
+      pendientes = local.filter(function(row){ return row && !row.supabase_synced; });
+      pendientesHoy = pendientes.filter(function(row){ return String(row && row.fecha || '').slice(0,10) === today; });
+      remotasHoy = await window.supabaseRequest(query);
+    }
+    if(status) status.textContent = 'Ventas hoy - local: ' + localesHoy.length
+      + ', Supabase: ' + (Array.isArray(remotasHoy) ? remotasHoy.length : 0)
+      + ', pendientes hoy: ' + pendientesHoy.length
+      + ', pendientes totales: ' + pendientes.length + '.';
+  } catch(error) {
+    if(status) status.textContent = 'No se pudo revisar Supabase: ' + (error.message || error)
+      + '. Local hoy: ' + localesHoy.length
+      + ', pendientes hoy: ' + pendientesHoy.length
+      + ', pendientes totales: ' + pendientes.length + '.';
+  }
+};
+
+window.limpiarDatosPruebaLocales = function(){
+  if(!confirm('Borrar todos los datos de prueba guardados en este navegador? Esta accion no se puede deshacer.')) return;
+  var keys = [
+    'exc_agro_hist',
+    'exc_agro_form',
+    'inventario-data',
+    'agro-inventario-final',
+    'descargas-data',
+    'descargas-tiendona-historial',
+    'distribucion-cda-data',
+    'devoluciones-data',
+    'ingresar-datos-historial',
+    'recibos-historial',
+    'cuadre-bodegas-data',
+    'cuadre-cda-data',
+    'bancos-data',
+    'exc_backup_logs_v1',
+    'exc_backup_history_v1'
+  ];
+  keys.forEach(function(key){ localStorage.removeItem(key); });
+  Object.keys(localStorage).forEach(function(key){
+    if(/^exc_backup_blob_/.test(key)) localStorage.removeItem(key);
+  });
+
+  try { if(typeof renderHistorial === 'function') renderHistorial(); } catch(error) {}
+  try { if(typeof renderBancos === 'function') renderBancos(); } catch(error) {}
+  try { if(typeof renderInventarioTable === 'function') renderInventarioTable(); } catch(error) {}
+  try { if(typeof renderDistribucionTable === 'function') renderDistribucionTable(); } catch(error) {}
+  try { if(typeof actualizarHistorialDescargas === 'function') actualizarHistorialDescargas(); } catch(error) {}
+  try { if(typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo(); } catch(error) {}
+  try { if(typeof renderCuadreBodegas === 'function') renderCuadreBodegas(); } catch(error) {}
+  try { if(typeof renderCuadreCDA === 'function') renderCuadreCDA(); } catch(error) {}
+  try { if(typeof actualizarSettingsSummary === 'function') actualizarSettingsSummary(); } catch(error) {}
+
+  if(typeof showToast === 'function') showToast('Datos de prueba borrados.');
+  else alert('Datos de prueba borrados.');
+};
+
 window.chatClientId = localStorage.getItem('chat_client_id') || ('client-' + Date.now() + '-' + Math.random().toString(16).slice(2));
 localStorage.setItem('chat_client_id', window.chatClientId);
+window.chatClientBaseId = window.chatClientId;
+
+function actualizarChatClientIdSesion(){
+  var userId = authUserId();
+  window.chatClientId = (userId ? userId + '|' : '') + window.chatClientBaseId;
+}
+
+actualizarChatClientIdSesion();
 
 function chatName(){
   if(window.authSession) return authUserNameFromSession(window.authSession);
@@ -2898,26 +3077,33 @@ window.guardarChatUsuario = function(){
 };
 
 async function registrarPresenciaOnline(){
+  if(window.presenceRlsBlocked) return;
   if(!window.haySesionSupabase || !window.haySesionSupabase()) return;
   if(!window.supabaseRequest) return;
   try{
+    if(!authToken()) await refrescarSesionAuth();
+    actualizarChatClientIdSesion();
+    var userId = authUserId();
+    if(!userId) return;
     await window.supabaseRequest('presence_online?on_conflict=client_id', {
       method:'POST',
       prefer:'resolution=merge-duplicates,return=minimal',
       body:[{
         client_id: window.chatClientId,
-        user_id: window.authSession && window.authSession.user ? window.authSession.user.id : null,
+        user_id: userId,
         nombre: chatName(),
         pagina: location.pathname || 'index',
         ultimo_visto: new Date().toISOString()
       }]
     });
   }catch(e){
+    if(/row-level security|violates/i.test(e.message || '')) window.presenceRlsBlocked = true;
     console.warn('Presencia pendiente:', e.message);
   }
 }
 
 async function cargarChatOnline(){
+  if(window.presenceRlsBlocked) return;
   if(!window.haySesionSupabase || !window.haySesionSupabase()) return;
   if(!window.supabaseRequest) return;
   try{
@@ -3009,7 +3195,9 @@ window.enviarChatMensaje = async function(){
     var payload = target
       ? 'CHATDM:' + JSON.stringify({ to_client_id:target.client_id, to_user_id:target.user_id, to_name:target.nombre, text:mensaje })
       : mensaje;
-    var row = { client_id: window.chatClientId, nombre: chatName(), mensaje: payload };
+    if(!authToken()) await refrescarSesionAuth();
+    actualizarChatClientIdSesion();
+    var row = { client_id: window.chatClientId, user_id: authUserId() || null, nombre: chatName(), mensaje: payload };
     if(target) {
       row.privado = true;
       row.destinatario_client_id = target.client_id;
@@ -3042,7 +3230,9 @@ window.enviarChatImagen = async function(input){
     var payload = target
       ? 'CHATDM:' + JSON.stringify({ type:'image', to_client_id:target.client_id, to_user_id:target.user_id, to_name:target.nombre, src:dataUrl, name:file.name || 'imagen' })
       : 'CHATIMG:' + JSON.stringify({ src:dataUrl, name:file.name || 'imagen' });
-    var row = { client_id: window.chatClientId, nombre: chatName(), mensaje: payload };
+    if(!authToken()) await refrescarSesionAuth();
+    actualizarChatClientIdSesion();
+    var row = { client_id: window.chatClientId, user_id: authUserId() || null, nombre: chatName(), mensaje: payload };
     if(target) {
       row.privado = true;
       row.destinatario_client_id = target.client_id;
@@ -6404,12 +6594,10 @@ window.obtenerUbicacionesInventarioParaDestino = function(destino, tipo){
 
 window.obtenerUbicacionesInventarioGenerales = function(){
   return [
-    { value:'bodega-local', text:'BODEGA TIENDONA' },
     { value:'descargas-tiendona-abajo', text:'INGRESO TIENDONA - ABAJO (PLATANERA)' },
     { value:'descargas-tiendona-arriba', text:'INGRESO TIENDONA - ARRIBA (AFUERA)' },
     { value:'distribucion-cda-soyapango', text:'CDA SOYAPANGO' },
     { value:'distribucion-cda-usulutan', text:'CDA USULUTÁN' },
-    { value:'otros', text:'OTROS' }
   ];
 };
 
@@ -6451,6 +6639,7 @@ window.actualizarCampoOtrosInventario = function(){
   var ubicacion = document.getElementById('inventario-ubicacion');
   var otrosContainer = document.getElementById('inventario-otros-container');
   if (!ubicacion || !otrosContainer) return;
+  if (ubicacion.value === 'otros' || ubicacion.value === 'bodega-local') ubicacion.value = '';
   otrosContainer.style.display = ubicacion.value === 'otros' ? 'block' : 'none';
 };
 window.guardarInventario = function(){
@@ -14232,21 +14421,15 @@ document.addEventListener('DOMContentLoaded', function() {
   ];
 
   var TOP_ROWS = [
-    { key:'inventarioAnteriorTiendona', label:'INVENTARIO ANTERIOR TIENDONA', editable:true },
-    { key:'ingresoTiendona', label:'INGRESO TIENDONA', calc:true },
+    { key:'inventarioAnteriorTiendona', label:'INVENTARIO ANTERIOR', editable:true },
+    { key:'ingresoTiendonaAbajo', label:'INGRESO TIENDONA - ABAJO', calc:true },
+    { key:'ingresoTiendonaArriba', label:'INGRESO TIENDONA - ARRIBA', calc:true },
     { key:'cdaUsulutanEntrada', label:'CDA USULUTAN', editable:true },
     { key:'sumasInventario', label:'SUMAS INVENTARIO', calc:true, highlight:true },
     { key:'recibidoAgromercados', label:'Recibido Agromercados', calc:true },
-    { key:'bodegaTiendona', label:'BODEGA TIENDONA', calc:true },
     { key:'cdaSoyapango', label:'CDA SOYAPANGO', calc:true },
     { key:'cdaUsulutan', label:'CDA USULUTAN', calc:true },
     { key:'diferencias', label:'Diferencias', calc:true, diff:true }
-  ];
-
-  var BOTTOM_ROWS = [
-    { key:'inventarioPedido', label:'Inventario', calc:true },
-    { key:'pedido', label:'Pedido', editable:true },
-    { key:'nuevaMercaderia', label:'Nueva Mercaderia', calc:true, total:true }
   ];
 
   var emptyProducts = function(){
@@ -14345,14 +14528,16 @@ document.addEventListener('DOMContentLoaded', function() {
     var rows = {};
 
     rows.inventarioAnteriorTiendona = getManualRow(saved, 'inventarioAnteriorTiendona');
-    rows.ingresoTiendona = sumByLocation(['descargas-tiendona','descargas-tiendona-abajo','descargas-tiendona-arriba'], fecha, true);
+    rows.ingresoTiendonaAbajo = sumByLocation(['descargas-tiendona-abajo'], fecha, true);
+    rows.ingresoTiendonaArriba = sumByLocation(['descargas-tiendona-arriba'], fecha, true);
     rows.cdaUsulutanEntrada = getManualRow(saved, 'cdaUsulutanEntrada');
 
     rows.sumasInventario = emptyProducts();
     BODEGA_PRODUCTS.forEach(function(p){
       rows.sumasInventario[p.key] =
         rows.inventarioAnteriorTiendona[p.key] +
-        rows.ingresoTiendona[p.key] +
+        rows.ingresoTiendonaAbajo[p.key] +
+        rows.ingresoTiendonaArriba[p.key] +
         rows.cdaUsulutanEntrada[p.key];
     });
 
@@ -14371,16 +14556,8 @@ document.addEventListener('DOMContentLoaded', function() {
       rows.diferencias[p.key] =
         rows.sumasInventario[p.key] -
         rows.recibidoAgromercados[p.key] -
-        rows.bodegaTiendona[p.key] -
         rows.cdaSoyapango[p.key] -
         rows.cdaUsulutan[p.key];
-    });
-
-    rows.inventarioPedido = rows.bodegaTiendona;
-    rows.pedido = getManualRow(saved, 'pedido');
-    rows.nuevaMercaderia = emptyProducts();
-    BODEGA_PRODUCTS.forEach(function(p){
-      rows.nuevaMercaderia[p.key] = rows.inventarioPedido[p.key] + rows.pedido[p.key];
     });
 
     return rows;
@@ -14397,7 +14574,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return '<tr' + className + '><td>' + rowDef.label + '</td>' + BODEGA_PRODUCTS.map(function(p){
       var value = num(values[p.key]);
       if (rowDef.editable) {
-        return '<td><input class="warehouse-input" type="number" placeholder="0" value="' + (value === 0 ? '' : value) + '" data-row="' + rowDef.key + '" data-prod="' + p.key + '"></td>';
+        return '<td><input class="warehouse-input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="' + (value === 0 ? '' : value) + '" data-row="' + rowDef.key + '" data-prod="' + p.key + '"></td>';
       }
       var status = rowDef.diff ? (value === 0 ? ' warehouse-ok' : ' warehouse-bad') : '';
       return '<td class="warehouse-value' + status + '">' + value + '</td>';
@@ -14406,28 +14583,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   window.renderCuadreBodegas = function(){
     var fechaInput = document.getElementById('cuadre-bodega-fecha');
-    if (fechaInput && !fechaInput.value) fechaInput.value = today();
+    if (fechaInput) fechaInput.value = today();
     var fecha = fechaInput ? fechaInput.value : today();
     var rows = calculateRows(fecha);
 
     renderHeader('thead-cuadre-bodegas');
-    renderHeader('thead-nueva-mercaderia');
 
     var topBody = document.getElementById('tbody-cuadre-bodegas');
     if (topBody) {
       topBody.innerHTML = TOP_ROWS.map(function(rowDef){ return renderRow(rowDef, rows[rowDef.key]); }).join('');
     }
-
-    var bottomBody = document.getElementById('tbody-nueva-mercaderia');
-    if (bottomBody) {
-      bottomBody.innerHTML = BOTTOM_ROWS.map(function(rowDef){ return renderRow(rowDef, rows[rowDef.key]); }).join('');
-    }
   };
 
-  window.guardarCuadreBodegas = function(){
+  function leerCuadreBodegasDesdeInputs(){
     var fecha = document.getElementById('cuadre-bodega-fecha')?.value || today();
     var data = getSavedCuadre(fecha);
-    ['inventarioAnteriorTiendona','ingresoTiendona','cdaUsulutanEntrada','pedido'].forEach(function(rowKey){
+    ['inventarioAnteriorTiendona','cdaUsulutanEntrada'].forEach(function(rowKey){
       data[rowKey] = data[rowKey] || {};
       BODEGA_PRODUCTS.forEach(function(p){ data[rowKey][p.key] = 0; });
     });
@@ -14438,6 +14609,11 @@ document.addEventListener('DOMContentLoaded', function() {
       data[row][prod] = num(input.value);
     });
     saveCuadre(fecha, data);
+    return data;
+  }
+
+  window.guardarCuadreBodegas = function(){
+    leerCuadreBodegasDesdeInputs();
     renderCuadreBodegas();
     if (typeof showAlert === 'function') showAlert('alert-cuadre-bodegas', 'Cuadre de bodegas guardado.', 'ok');
   };
@@ -14450,7 +14626,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('input', function(event){
     if (event.target && event.target.classList && event.target.classList.contains('warehouse-input')) {
-      window.guardarCuadreBodegas();
+      leerCuadreBodegasDesdeInputs();
     }
   });
 
@@ -14652,7 +14828,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (envio) envio.innerHTML = renderEnvio(rows, grupo);
   };
 
-  window.guardarCuadreCDA = function(){
+  function leerCuadreCdaDesdeInputs(){
     var fecha = currentFecha();
     var grupo = currentGrupo();
     var saved = getSaved(fecha, grupo);
@@ -14666,13 +14842,18 @@ document.addEventListener('DOMContentLoaded', function() {
       saved[row][prod] = n(input.value);
     });
     saveSaved(fecha, grupo, saved);
+    return saved;
+  }
+
+  window.guardarCuadreCDA = function(){
+    leerCuadreCdaDesdeInputs();
     window.renderCuadreCDA();
     if (typeof showAlert === 'function') showAlert('alert-cuadre-cda', 'Cuadre CDA guardado.', 'ok');
   };
 
   document.addEventListener('input', function(event){
     if (event.target && event.target.classList && event.target.classList.contains('cda-balance-input')) {
-      window.guardarCuadreCDA();
+      leerCuadreCdaDesdeInputs();
     }
     if (event.target && event.target.classList && event.target.classList.contains('dist-qty')) {
       window.renderCuadreCDA();
@@ -14924,6 +15105,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function inventarioToSupabase(record){
     return {
       local_id: localId(record),
+      user_id: authUserId() || null,
       fecha: record.fecha || null,
       ubicacion: record.ubicacion || record.destino || '',
       lugar: record.lugar || record.lugarEspecifico || record.destino || '',
@@ -14983,10 +15165,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function flattenCuadreObject(storageKey, tipo){
     var data = readLocalObject(storageKey);
+    var userId = authUserId();
     return Object.keys(data).map(function(key){
       var parts = key.split('|');
       return {
-        local_id: tipo + '|' + key,
+        local_id: (userId ? userId + '|' : '') + tipo + '|' + key,
+        user_id: userId || null,
         tipo: tipo,
         fecha: parts[0] || key,
         grupo: parts[1] || '',
@@ -15022,6 +15206,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function uploadLocalTable(config){
     if (!window.supabaseRequest) return;
+    window.supabaseRlsBlockedTables = window.supabaseRlsBlockedTables || {};
+    if(window.supabaseRlsBlockedTables[config.table]) return 0;
     var local = readLocalList(config.storageKey);
     var pendientes = local.filter(function(record){
       return record && !record.supabase_synced;
@@ -15030,11 +15216,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!pendientes.length) return 0;
 
     var payload = pendientes.map(config.toSupabase);
-    var inserted = await window.supabaseRequest(config.table + '?on_conflict=local_id', {
-      method: 'POST',
-      prefer: 'resolution=merge-duplicates,return=representation',
-      body: payload
-    });
+    var inserted;
+    try {
+      inserted = await window.supabaseRequest(config.table + '?on_conflict=local_id', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=representation',
+        body: payload
+      });
+    } catch(error) {
+      if(!/user_id|schema cache|column/i.test(error.message || '')) throw error;
+      try {
+        inserted = await window.supabaseRequest(config.table + '?on_conflict=local_id', {
+          method: 'POST',
+          prefer: 'resolution=merge-duplicates,return=representation',
+          body: payload.map(function(row){
+            var copy = Object.assign({}, row);
+            delete copy.user_id;
+            return copy;
+          })
+        });
+      } catch(fallbackError) {
+        if(/row-level security|violates/i.test(fallbackError.message || '')) {
+          window.supabaseRlsBlockedTables[config.table] = true;
+          currentOnlineStatus('Supabase requiere corregir politicas RLS en ' + config.table + '. Los datos quedaron guardados localmente.');
+          return 0;
+        }
+        throw fallbackError;
+      }
+    }
 
     var syncedIds = {};
     pendientes.forEach(function(record){
@@ -15082,19 +15291,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function uploadCuadreObject(storageKey, tipo){
     if (!window.supabaseRequest) return 0;
+    if(!authToken()) await refrescarSesionAuth();
     var rows = flattenCuadreObject(storageKey, tipo);
     if (!rows.length) return 0;
-    var inserted = await window.supabaseRequest('estado_cuadres?on_conflict=local_id', {
-      method: 'POST',
-      prefer: 'resolution=merge-duplicates,return=representation',
-      body: rows
-    });
+    var inserted;
+    try {
+      inserted = await window.supabaseRequest('estado_cuadres?on_conflict=local_id', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=representation',
+        body: rows
+      });
+    } catch(error) {
+      if(!/user_id/i.test(error.message || '')) throw error;
+      var userId = authUserId();
+      inserted = await window.supabaseRequest('estado_cuadres?on_conflict=local_id', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=representation',
+        body: rows.map(function(row){
+          var copy = Object.assign({}, row);
+          delete copy.user_id;
+          if(userId && copy.local_id.indexOf(userId + '|') === 0) {
+            copy.local_id = copy.local_id.slice(userId.length + 1);
+          }
+          return copy;
+        })
+      });
+    }
     return inserted ? inserted.length : rows.length;
   }
 
   async function downloadCuadreObject(storageKey, tipo){
     if (!window.supabaseRequest) return 0;
-    var rows = await window.supabaseRequest('/rest/v1/estado_cuadres?select=local_id,tipo,fecha,grupo,payload&tipo=eq.' + encodeURIComponent(tipo));
+    var userId = authUserId();
+    var query = '/rest/v1/estado_cuadres?select=local_id,tipo,fecha,grupo,payload&tipo=eq.' + encodeURIComponent(tipo);
+    if(userId) query += '&user_id=eq.' + encodeURIComponent(userId);
+    var rows;
+    try {
+      rows = await window.supabaseRequest(query);
+    } catch(error) {
+      if(!/user_id/i.test(error.message || '')) throw error;
+      rows = await window.supabaseRequest('/rest/v1/estado_cuadres?select=local_id,tipo,fecha,grupo,payload&tipo=eq.' + encodeURIComponent(tipo));
+    }
     var data = readLocalObject(storageKey);
     var changed = 0;
 
