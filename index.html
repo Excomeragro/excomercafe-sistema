@@ -2156,7 +2156,7 @@
         </div>
       </div>
       <div class="card-body">
-        <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;">
+        <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:12px;">
           <div class="fg">
             <label>Nombre</label>
             <input type="text" id="nueva-persona-nombre" placeholder="Nombre completo...">
@@ -2169,6 +2169,10 @@
             <label>Teléfono</label>
             <input type="text" id="nueva-persona-telefono" placeholder="Número de teléfono...">
           </div>
+          <div class="fg">
+            <label>Agromercado</label>
+            <input type="text" id="nueva-persona-agromercado" list="dl-agromercados-master" placeholder="Agromercado asignado...">
+          </div>
         </div>
         <div style="max-height:300px;overflow-y:auto;">
           <table class="tbl">
@@ -2177,11 +2181,12 @@
                 <th>Nombre</th>
                 <th>Cargo</th>
                 <th>Teléfono</th>
+                <th>Agromercado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="tabla-personas">
-              <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Cargando personas...</td></tr>
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Cargando personas...</td></tr>
             </tbody>
           </table>
         </div>
@@ -9383,7 +9388,7 @@ window.cargarPersonas = function(){
   var tbody = document.getElementById('tabla-personas');
   
   if(personas.length === 0){
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">No hay personas registradas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No hay personas registradas</td></tr>';
     return;
   }
   
@@ -9393,6 +9398,7 @@ window.cargarPersonas = function(){
     tr.innerHTML = '<td>' + persona.nombre + '</td>' +
       '<td>' + (persona.cargo || '') + '</td>' +
       '<td>' + (persona.telefono || '') + '</td>' +
+      '<td>' + (persona.agromercado || '') + '</td>' +
       '<td>' +
         '<button class="btn btn-sm btn-secondary" onclick="editarPersona(' + index + ')">✏️</button> ' +
         '<button class="btn btn-sm btn-danger" onclick="eliminarPersona(' + index + ')">🗑️</button>' +
@@ -9405,6 +9411,7 @@ window.agregarPersona = function(){
   var nombre = document.getElementById('nueva-persona-nombre').value.trim();
   var cargo = document.getElementById('nueva-persona-cargo').value.trim();
   var telefono = document.getElementById('nueva-persona-telefono').value.trim();
+  var agromercado = document.getElementById('nueva-persona-agromercado').value.trim();
   
   if(!nombre){
     showAlert('datos', 'Por favor ingrese el nombre de la persona', 'err');
@@ -9412,13 +9419,14 @@ window.agregarPersona = function(){
   }
   
   var personas = JSON.parse(localStorage.getItem('personas-data')||'[]');
-  personas.push({nombre: nombre, cargo: cargo, telefono: telefono});
+  personas.push({nombre: nombre, cargo: cargo, telefono: telefono, agromercado: agromercado});
   localStorage.setItem('personas-data', JSON.stringify(personas));
   
   // Limpiar formulario
   document.getElementById('nueva-persona-nombre').value = '';
   document.getElementById('nueva-persona-cargo').value = '';
   document.getElementById('nueva-persona-telefono').value = '';
+  document.getElementById('nueva-persona-agromercado').value = '';
   
   cargarPersonas();
   showAlert('datos', '✅ Persona agregada correctamente', 'ok');
@@ -9431,6 +9439,12 @@ window.editarPersona = function(index){
   var nuevoNombre = prompt('Editar nombre:', persona.nombre);
   if(nuevoNombre && nuevoNombre.trim()){
     personas[index].nombre = nuevoNombre.trim();
+    var nuevoCargo = prompt('Editar cargo:', personas[index].cargo || '');
+    if(nuevoCargo !== null) personas[index].cargo = nuevoCargo.trim();
+    var nuevoTelefono = prompt('Editar telefono:', personas[index].telefono || '');
+    if(nuevoTelefono !== null) personas[index].telefono = nuevoTelefono.trim();
+    var nuevoAgromercado = prompt('Editar agromercado asignado:', personas[index].agromercado || '');
+    if(nuevoAgromercado !== null) personas[index].agromercado = nuevoAgromercado.trim();
     localStorage.setItem('personas-data', JSON.stringify(personas));
     cargarPersonas();
     showAlert('datos', '✅ Persona actualizada', 'ok');
