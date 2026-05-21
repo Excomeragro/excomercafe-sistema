@@ -4,7 +4,7 @@
 <title>EXCOMERCAFE — Reporte Agromercados</title>
 <link rel="icon" href="./favicon.ico">
 <link rel="apple-touch-icon" href="./favicon.png">
-<link href="./css/styles.css?v=20260521-menu-actions" rel="stylesheet">
+<link href="./css/styles.css?v=20260521-dashboard-pro" rel="stylesheet">
 <link href="./css/components.css?v=20260519-phase61" rel="stylesheet">
 <link href="./css/distribution-matrix.css?v=20260521-cuadre-bodegas" rel="stylesheet">
 <script>
@@ -403,6 +403,22 @@
     font-size:.78rem;
     color:#475569;
   }
+  .review-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .review-list{display:grid;gap:12px;}
+  .review-card{border:1px solid var(--border,#dbeafe);border-radius:8px;background:#fff;padding:14px;box-shadow:0 6px 18px rgba(15,23,42,.07);}
+  .review-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+  .review-head strong{display:block;font-size:1rem;}
+  .review-head small{display:block;margin-top:3px;color:var(--muted,#64748b);font-weight:700;}
+  .review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0;}
+  .review-pill{border:1px solid var(--border,#dbeafe);border-radius:6px;padding:8px;background:#f8fafc;}
+  .review-pill span{display:block;color:var(--muted,#64748b);font-size:.72rem;font-weight:800;text-transform:uppercase;}
+  .review-pill b{display:block;margin-top:3px;font-size:.98rem;}
+  .review-actions{display:flex;flex-wrap:wrap;gap:8px;}
+  .review-detail{margin-top:10px;overflow:auto;}
+  .review-detail table{width:100%;min-width:680px;border-collapse:collapse;font-size:.82rem;}
+  .review-detail th{background:#17456b;color:#fff;}
+  .review-detail th,.review-detail td{border:1px solid #dbeafe;padding:7px;text-align:center;}
+  .review-detail td:first-child{text-align:left;font-weight:800;}
   @media(max-width:520px){
     .chat-panel{
       top:62px;
@@ -684,6 +700,7 @@
     <button class="tab-btn" onclick="switchTab('tab-bancos', this); closeMobileSidebar()">🏦 Reporte Banco</button>
     <button class="tab-btn" onclick="switchTab('tab-datos', this); closeMobileSidebar()">📍 Datos y Ubicación</button>
     <button class="tab-btn" onclick="switchTab('tab-recibos', this); closeMobileSidebar()">🧾 Comprobantes</button>
+    <button class="tab-btn" onclick="switchTab('tab-revision', this); closeMobileSidebar()">✅ Revisión</button>
   </nav>
 </aside>
 
@@ -727,6 +744,7 @@
   <button class="tab-btn" onclick="switchTab(&#39;tab-bancos&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">🏦 Reporte Banco</button>
   <button class="tab-btn" onclick="switchTab(&#39;tab-datos&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">📍 Datos y Ubicación</button>
   <button class="tab-btn" onclick="switchTab(&#39;tab-recibos&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">🧾 Comprobantes</button>
+  <button class="tab-btn" onclick="switchTab(&#39;tab-revision&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">✅ Revisión</button>
 </nav>
 
 <!-- ══ MAIN ══ -->
@@ -736,9 +754,9 @@
 <div class="tab-content active" id="tab-inicio">
   <section class="dashboard-hero">
     <div>
-      <div class="dashboard-eyebrow">Inicio / Dashboard</div>
-      <h2>Dashboard</h2>
-      <p>Resumen operativo de ventas, inventario, remesas y distribucion.</p>
+      <div class="dashboard-eyebrow">Inicio / Panel de control</div>
+      <h2>Dashboard operativo</h2>
+      <p>Accesos principales y resumen diario de ventas, inventario, remesas y distribucion.</p>
     </div>
     <div class="dashboard-date-card">
       <span>Fecha de trabajo</span>
@@ -788,44 +806,60 @@
       </div>
     </article>
   </section>
-  <div class="sec-title">📋 Panel Principal</div>
+  <div class="dashboard-section-head">
+    <div>
+      <span>Accesos</span>
+      <h3>Panel principal</h3>
+    </div>
+    <button type="button" class="dashboard-portal-link" onclick="window.open('agromercado/', '_blank')">Portal vendedores</button>
+  </div>
   <div class="home-grid">
-    <div class="home-card" onclick="switchTab(&#39;tab-agro&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[1])">
+    <div class="home-card" onclick="switchTab('tab-agro', document.querySelector('.tab-btn[onclick*=tab-agro]'))">
       <div class="home-card-icon">🌾🔴🟡🌽</div>
       <div class="home-card-title">Control de Venta Agromercado</div>
       <div class="home-card-desc">Registro diario de inventario, ventas, faltantes y remesa por producto.</div>
     </div>
-    <div class="home-card" onclick="switchTab(&#39;tab-descargas&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[2])">
+    <div class="home-card home-card-review" onclick="switchTab('tab-revision', document.querySelector('.tab-btn[onclick*=tab-revision]'))">
+      <div class="home-card-icon">✅</div>
+      <div class="home-card-title">Revisión de Envíos</div>
+      <div class="home-card-desc">Ventas enviadas por agromercados pendientes de revisar y aprobar.</div>
+    </div>
+    <div class="home-card home-card-portal" onclick="window.open('agromercado/', '_blank')">
+      <div class="home-card-icon">📲</div>
+      <div class="home-card-title">Portal Vendedores</div>
+      <div class="home-card-desc">Formulario externo para que vendedores reporten sin entrar al sistema.</div>
+    </div>
+    <div class="home-card" onclick="switchTab('tab-descargas', document.querySelector('.tab-btn[onclick*=tab-descargas]'))">
       <div class="home-card-icon">📦🚚📋</div>
       <div class="home-card-title">Distribución Tiendona</div>
       <div class="home-card-desc">Registro de distribución de productos por municipio y agromercado.</div>
     </div>
-    <div class="home-card" onclick="switchTab(&#39;tab-distribucion&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[3])">
+    <div class="home-card" onclick="switchTab('tab-distribucion', document.querySelector('.tab-btn[onclick*=tab-distribucion]'))">
       <div class="home-card-icon">🚚📦🏢</div>
       <div class="home-card-title">Distribución CDA</div>
       <div class="home-card-desc">Control de distribución a Centros de Distribución Agropecuaria.</div>
     </div>
-    <div class="home-card" onclick="switchTab(&#39;tab-devoluciones&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[4])">
+    <div class="home-card" onclick="switchTab('tab-devoluciones', document.querySelector('.tab-btn[onclick*=tab-devoluciones]'))">
       <div class="home-card-icon">🔄📥📤</div>
       <div class="home-card-title">Devoluciones</div>
       <div class="home-card-desc">Gestión de devoluciones de productos procesadas desde Excel.</div>
     </div>
-    <div class="home-card" onclick="switchTab(&#39;tab-inventario&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[5])">
+    <div class="home-card" onclick="switchTab('tab-inventario', document.querySelector('.tab-btn[onclick*=tab-inventario]'))">
       <div class="home-card-icon">📦📊</div>
       <div class="home-card-title">Control de Inventario</div>
       <div class="home-card-desc">Gestión y control de existencias de productos en almacén.</div>
     </div>
-    <div class="home-card" onclick="switchTab(&#39;tab-bancos&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[6])">
+    <div class="home-card" onclick="switchTab('tab-bancos', document.querySelector('.tab-btn[onclick*=tab-bancos]'))">
       <div class="home-card-icon">🏦💳📊</div>
       <div class="home-card-title">Reporte Banco</div>
       <div class="home-card-desc">Historial de remesas por banco, distrito, municipio y agromercado. Exportable a Excel.</div>
     </div>
-    <div class="home-card" onclick="switchTab(&#39;tab-datos&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[7])">
+    <div class="home-card" onclick="switchTab('tab-datos', document.querySelector('.tab-btn[onclick*=tab-datos]'))">
       <div class="home-card-icon">📍🗺️</div>
       <div class="home-card-title">Datos y Ubicación</div>
       <div class="home-card-desc">Información geográfica y datos de ubicación de agromercados.</div>
     </div>
-    <div class="home-card" onclick="switchTab(&#39;tab-recibos&#39;, document.querySelectorAll(&#39;.tab-btn&#39;)[8])">
+    <div class="home-card" onclick="switchTab('tab-recibos', document.querySelector('.tab-btn[onclick*=tab-recibos]'))">
       <div class="home-card-icon">🧾✍️</div>
       <div class="home-card-title">Comprobantes</div>
       <div class="home-card-desc">Crea comprobantes de entrega y documentos con sugerencias automáticas de tus datos.</div>
@@ -884,6 +918,30 @@
   </div>
 </div>
 
+
+<!-- ── TAB REVISION ── -->
+<div class="tab-content" id="tab-revision">
+  <div class="card">
+    <div class="card-header">
+      <span>✅ Revisión de Envíos de Agromercado</span>
+      <div class="flex gap-8 items-center flex-wrap">
+        <button type="button" class="btn btn-sm btn-primary" onclick="cargarVentasPendientes()">Actualizar</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="review-toolbar">
+        <div>
+          <strong>Envíos pendientes</strong>
+          <div style="color:var(--muted);font-size:.82rem;">Los vendedores envían aquí; sólo al aprobar pasan al reporte oficial.</div>
+        </div>
+        <span id="revision-status" class="badge badge--info">Sin cargar</span>
+      </div>
+      <div id="revision-list" class="review-list">
+        <div class="review-card">Presiona Actualizar para cargar envíos.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 <!-- ── TAB AGROMERCADO ── -->
@@ -2815,6 +2873,178 @@ window.limpiarDatosPruebaLocales = function(){
   if(typeof showToast === 'function') showToast('Datos de prueba borrados.');
   else alert('Datos de prueba borrados.');
 };
+
+window.ventasPendientesCache = [];
+
+function revisionMoney(value){
+  return '$' + (Number(value || 0) || 0).toFixed(2);
+}
+
+function revisionPayload(row){
+  return row && row.payload ? row.payload : {};
+}
+
+function revisionProductosHtml(payload){
+  var productos = [
+    ['arroz','Arroz'],
+    ['precocido','Arroz precocido'],
+    ['frijol1','Frijol 1 lb'],
+    ['frijol4','Frijol 4 lb'],
+    ['aceite','Aceite'],
+    ['harina','Harina']
+  ];
+  var unidades = payload.ventas_unidades || {};
+  var inicio = payload.inventario_inicio || {};
+  var nuevo = payload.mercaderia_nueva || {};
+  var final = payload.inventario_final || {};
+  var danado = payload.danado || {};
+  var dinero = payload.dinero_productos || {};
+  return '<div class="review-detail"><table><thead><tr>'
+    + '<th>Producto</th><th>Anterior</th><th>Nuevo</th><th>Final</th><th>Dañado</th><th>Vendido</th><th>Dinero</th>'
+    + '</tr></thead><tbody>'
+    + productos.map(function(item){
+      var key = item[0];
+      return '<tr><td>' + item[1] + '</td>'
+        + '<td>' + (Number(inicio[key] || 0) || 0) + '</td>'
+        + '<td>' + (Number(nuevo[key] || 0) || 0) + '</td>'
+        + '<td>' + (Number(final[key] || 0) || 0) + '</td>'
+        + '<td>' + (Number(danado[key] || 0) || 0) + '</td>'
+        + '<td>' + (Number(unidades[key] || 0) || 0) + '</td>'
+        + '<td>' + revisionMoney(dinero[key] || 0) + '</td></tr>';
+    }).join('')
+    + '</tbody></table></div>';
+}
+
+function renderVentasPendientes(rows){
+  var list = document.getElementById('revision-list');
+  var status = document.getElementById('revision-status');
+  if(status) status.textContent = (rows || []).length + ' pendiente(s)';
+  if(!list) return;
+  if(!rows || !rows.length){
+    list.innerHTML = '<div class="review-card">No hay envíos pendientes.</div>';
+    return;
+  }
+  list.innerHTML = rows.map(function(row, index){
+    var payload = revisionPayload(row);
+    return '<article class="review-card">'
+      + '<div class="review-head"><div><strong>' + (row.agromercado || payload.agromercado || 'Agromercado') + '</strong>'
+      + '<small>' + (row.fecha || payload.fecha || '') + ' · Encargado: ' + (row.encargado || payload.encargado || 'Sin nombre') + '</small></div>'
+      + '<span class="badge badge--warning">' + (row.estado || 'pendiente') + '</span></div>'
+      + '<div class="review-grid">'
+      + '<div class="review-pill"><span>Ventas</span><b>' + revisionMoney(row.ventas || payload.ventas) + '</b></div>'
+      + '<div class="review-pill"><span>Gastos</span><b>' + revisionMoney(row.gastos || payload.gastos) + '</b></div>'
+      + '<div class="review-pill"><span>Remesa</span><b>' + revisionMoney(row.remesa || payload.remesa) + '</b></div>'
+      + '<div class="review-pill"><span>Banco</span><b>' + (payload.banco || 'Pendiente') + '</b></div>'
+      + '</div>'
+      + revisionProductosHtml(payload)
+      + '<div class="review-actions">'
+      + '<button class="btn btn-sm btn-success" onclick="aprobarVentaPendiente(' + index + ')">Aprobar</button>'
+      + '<button class="btn btn-sm btn-danger" onclick="rechazarVentaPendiente(' + index + ')">Rechazar</button>'
+      + '</div>'
+      + '</article>';
+  }).join('');
+}
+
+window.cargarVentasPendientes = async function(){
+  var status = document.getElementById('revision-status');
+  if(status) status.textContent = 'Cargando...';
+  try {
+    var rows = await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?select=*&estado=eq.pendiente&order=creado_en.desc&limit=100');
+    window.ventasPendientesCache = rows || [];
+    renderVentasPendientes(window.ventasPendientesCache);
+  } catch(error) {
+    if(status) status.textContent = 'Error';
+    var list = document.getElementById('revision-list');
+    if(list) list.innerHTML = '<div class="review-card">No se pudieron cargar pendientes: ' + (error.message || error) + '</div>';
+  }
+};
+
+window.aprobarVentaPendiente = async function(index){
+  var row = window.ventasPendientesCache[index];
+  if(!row || !confirm('Aprobar este envío y pasarlo al reporte oficial?')) return;
+  var payload = Object.assign({}, revisionPayload(row));
+  payload.id = payload.id || row.local_id || ('aprobado-' + Date.now());
+  payload.local_id = payload.local_id || payload.id;
+  var originalUnits = payload.ventas_unidades || {};
+  payload.ventas_unidades = Object.assign({}, originalUnits, {
+    ab1: Number(originalUnits.ab1 || originalUnits.arroz || 0) || 0,
+    ap1: Number(originalUnits.ap1 || originalUnits.precocido || 0) || 0,
+    fr1: Number(originalUnits.fr1 || originalUnits.frijol1 || 0) || 0,
+    fr4: Number(originalUnits.fr4 || originalUnits.frijol4 || 0) || 0,
+    ac: Number(originalUnits.ac || originalUnits.aceite || 0) || 0,
+    ha: Number(originalUnits.ha || originalUnits.harina || 0) || 0
+  });
+  payload.supabase_synced = true;
+  payload.supabase_synced_at = new Date().toISOString();
+  try {
+    await window.supabaseRequest('ventas_agromercado?on_conflict=local_id', {
+      method:'POST',
+      prefer:'resolution=merge-duplicates,return=representation',
+      body:[{
+        local_id: payload.local_id,
+        fecha: payload.fecha || row.fecha || null,
+        dia: payload.dia || '',
+        distrito: payload.distrito || '',
+        municipio: payload.municipio || '',
+        agromercado: payload.agromercado || row.agromercado || '',
+        arroz: Number(payload.ventas_unidades && payload.ventas_unidades.ab1 || 0) || 0,
+        arroz_precocido: Number(payload.ventas_unidades && payload.ventas_unidades.ap1 || 0) || 0,
+        frijol_1lb: Number(payload.ventas_unidades && payload.ventas_unidades.fr1 || 0) || 0,
+        frijol_4lb: Number(payload.ventas_unidades && payload.ventas_unidades.fr4 || 0) || 0,
+        aceite_750ml: Number(payload.ventas_unidades && payload.ventas_unidades.ac || 0) || 0,
+        harina_820grs: Number(payload.ventas_unidades && payload.ventas_unidades.ha || 0) || 0,
+        ventas: Number(payload.ventas || row.ventas || 0) || 0,
+        gastos: Number(payload.gastos || row.gastos || 0) || 0,
+        remesa: Number(payload.remesa || row.remesa || 0) || 0,
+        dinero_remesado: Number(payload.dineroRemesado || payload.remesa || row.remesa || 0) || 0,
+        banco: payload.banco || '',
+        observaciones: payload.observaciones || '',
+        payload: payload
+      }]
+    });
+    await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?id=eq.' + encodeURIComponent(row.id), {
+      method:'PATCH',
+      prefer:'return=minimal',
+      body:{ estado:'aprobado', revisado_por: authUserNameFromSession(window.authSession), revisado_en: new Date().toISOString() }
+    });
+    var hist = [];
+    try { hist = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(error) {}
+    hist.unshift(payload);
+    localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
+    if(typeof showToast === 'function') showToast('Envío aprobado.');
+    cargarVentasPendientes();
+    if(typeof renderHistorial === 'function') renderHistorial();
+  } catch(error) {
+    alert('No se pudo aprobar: ' + (error.message || error));
+  }
+};
+
+window.rechazarVentaPendiente = async function(index){
+  var row = window.ventasPendientesCache[index];
+  if(!row || !confirm('Rechazar este envío?')) return;
+  try {
+    await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?id=eq.' + encodeURIComponent(row.id), {
+      method:'PATCH',
+      prefer:'return=minimal',
+      body:{ estado:'rechazado', revisado_por: authUserNameFromSession(window.authSession), revisado_en: new Date().toISOString() }
+    });
+    if(typeof showToast === 'function') showToast('Envío rechazado.');
+    cargarVentasPendientes();
+  } catch(error) {
+    alert('No se pudo rechazar: ' + (error.message || error));
+  }
+};
+
+(function(){
+  var previousSwitchRevision = window.switchTab;
+  window.switchTab = function(tabId, btn){
+    var result = previousSwitchRevision ? previousSwitchRevision.apply(this, arguments) : undefined;
+    if(tabId === 'tab-revision' && typeof window.cargarVentasPendientes === 'function') {
+      window.cargarVentasPendientes();
+    }
+    return result;
+  };
+})();
 
 window.chatClientId = localStorage.getItem('chat_client_id') || ('client-' + Date.now() + '-' + Math.random().toString(16).slice(2));
 localStorage.setItem('chat_client_id', window.chatClientId);
