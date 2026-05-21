@@ -3,7 +3,7 @@ var SUPABASE_CONFIG = {
   key: 'sb_publishable_AIUqdFrAct3bR6y8Y6t1Qw_qNGJ5GHs'
 };
 
-var AGROMERCADOS = [
+var AGROMERCADO_NOMBRES = [
   'Acajutla, mercado de Acajutla',
   'Alcaldia de Mejicanos',
   'Anamoros calle cirilo bonilla umanzor',
@@ -66,7 +66,9 @@ var AGROMERCADOS = [
   'Zacatecoluca, Plaza Civica',
   'Zaragoza',
   'Zona verde, colonia Las Mercedes 1ra salida hacia el Triunfo( SANTIAGO DE MARIA)'
-].map(function(nombre, index){
+];
+
+var AGROMERCADOS = AGROMERCADO_NOMBRES.map(function(nombre, index){
   return { nombre: nombre, clave: generarClaveAgromercado(nombre, index) };
 });
 
@@ -94,7 +96,7 @@ function palabraClave(nombre){
 
 function generarClaveAgromercado(nombre, index){
   var base = palabraClave(nombre);
-  var repetidasAntes = AGROMERCADOS.slice(0, index).filter(function(item){
+  var repetidasAntes = AGROMERCADO_NOMBRES.slice(0, index).filter(function(item){
     return palabraClave(item) === base;
   }).length;
   return base + (repetidasAntes ? String(repetidasAntes + 1) : '') + '2026';
