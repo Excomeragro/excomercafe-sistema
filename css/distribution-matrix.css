@@ -484,7 +484,7 @@
 
 .warehouse-balance-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 980px;
   border-collapse: collapse;
   background: #fff;
   color: #071322;
@@ -501,8 +501,13 @@
 .warehouse-balance-table th:first-child,
 .warehouse-balance-table td:first-child {
   text-align: left;
-  min-width: 240px;
+  min-width: 250px;
   font-weight: 800;
+}
+
+.warehouse-balance-table th:not(:first-child),
+.warehouse-balance-table td:not(:first-child) {
+  min-width: 118px;
 }
 
 .warehouse-balance-table th {
@@ -511,13 +516,17 @@
 }
 
 .warehouse-input {
-  width: 74px;
-  height: 28px;
+  width: 96px;
+  height: 46px;
   text-align: center;
   border: 1px solid #94a3b8;
   border-radius: 4px;
   background: #fff7ed;
   font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  padding: 0 10px;
+  box-sizing: border-box;
 }
 
 .warehouse-sum-row td:first-child {
