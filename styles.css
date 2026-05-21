@@ -175,6 +175,18 @@ button.small{
   display:none;
 }
 
+.sales-form.is-locked input,
+.sales-form.is-locked select,
+.sales-form.is-locked textarea{
+  background:#eef4fb;
+  color:#475569;
+}
+
+.sales-form.is-locked button.primary{
+  background:#94a3b8;
+  cursor:not-allowed;
+}
+
 .message{
   margin:10px 0 0;
   color:var(--muted);
@@ -228,30 +240,10 @@ button.small{
   font-weight:900;
 }
 
-.signature-box{
-  margin-top:14px;
-}
-
-.signature-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:7px;
-}
-
-.signature-head label{
-  margin:0;
-}
-
-#firma-canvas{
-  display:block;
-  width:100%;
-  height:150px;
-  border:1px solid #bfd3ea;
-  border-radius:6px;
-  background:#fffaf7;
-  touch-action:none;
+.readonly-field{
+  background:#eef4fb;
+  color:#475569;
+  font-weight:800;
 }
 
 .totals{
@@ -429,10 +421,6 @@ button.small{
     font-size:.95rem;
   }
 
-  #firma-canvas{
-    height:130px;
-  }
-
   .totals{
     grid-template-columns:1fr;
   }
@@ -473,12 +461,12 @@ button.small{
 
   .sales-table{
     min-width:0;
-    font-size:.75rem;
+    font-size:.68rem;
   }
 
   .sales-table th,
   .sales-table td{
-    padding:5px;
+    padding:3px;
   }
 
   input,
