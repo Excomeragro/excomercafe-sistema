@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EXCOMERCAFE - Control Agromercado</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="./styles.css?v=20260521-portal-v8">
+  <link rel="stylesheet" href="./styles.css?v=20260521-portal-v10">
 </head>
 <body>
   <main class="portal-shell">
@@ -28,7 +28,7 @@
         </label>
         <label>
           Clave
-          <input id="access-clave" type="password" placeholder="Clave del agromercado">
+          <input id="access-clave" type="password" placeholder="Clave del agromercado" onkeydown="if(event.key==='Enter') validarAcceso()">
         </label>
       </div>
       <button type="button" class="primary" onclick="validarAcceso()">Entrar</button>
@@ -78,7 +78,7 @@
       <section class="form-card payment-card">
         <div class="form-grid compact">
           <label>Banco<select id="banco"><option value="">Pendiente</option><option>Agricola</option><option>Cuscatlan</option><option>Hipotecario</option><option>BAC</option><option>Promerica</option></select></label>
-          <label>Gastos<input id="gastos" type="number" min="0" step="0.01" value="0" oninput="calcularTotales()"></label>
+          <label>Gastos<input id="gastos" type="number" min="0" step="0.01" value="0" inputmode="decimal" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></label>
         </div>
       </section>
 
@@ -90,20 +90,12 @@
 
       <section class="form-card">
         <label>Observaciones<textarea id="observaciones" rows="4" placeholder="Notas del dia"></textarea></label>
-        <div class="signature-box">
-          <div class="signature-head">
-            <label>Firma digital</label>
-            <button type="button" class="ghost small" onclick="limpiarFirma()">Limpiar</button>
-          </div>
-          <canvas id="firma-canvas" width="900" height="220"></canvas>
-          <input type="hidden" id="firma-data">
-        </div>
         <button class="primary wide" type="submit">Enviar para revisión</button>
         <p class="message" id="submit-message"></p>
       </section>
     </form>
   </main>
 
-  <script src="./app.js?v=20260521-portal-v8"></script>
+  <script src="./app.js?v=20260521-portal-v10"></script>
 </body>
 </html>
