@@ -3006,8 +3006,10 @@ function revisionEscapeHtml(value){
 
 function revisionBancoNombre(nombre){
   var value = String(nombre || '').trim();
-  if(!value || value === '0') return '';
-  if(window.normalizarNombreBancoReporte) return window.normalizarNombreBancoReporte(value);
+  if(!value || value === '0' || /^pendiente$/i.test(value) || /^sin banco$/i.test(value)) return '';
+  if(window.normalizarNombreBancoReporte) value = window.normalizarNombreBancoReporte(value);
+  value = String(value || '').trim();
+  if(!value || value === '0' || /^pendiente$/i.test(value) || /^sin banco$/i.test(value)) return '';
   return value;
 }
 
@@ -3041,6 +3043,12 @@ function revisionBancoSelectHtml(index, selected){
   return '<select id="revision-banco-' + index + '" class="review-bank-select" aria-label="Banco del envio">'
     + options.join('')
     + '</select>';
+}
+
+function revisionBancoHtml(index, selected){
+  selected = revisionBancoNombre(selected);
+  if(!selected) return revisionBancoSelectHtml(index, '');
+  return '<b>' + revisionEscapeHtml(selected) + '</b>';
 }
 
 function revisionBancoSeleccionado(index, fallback){
@@ -3098,7 +3106,7 @@ function renderVentasPendientes(rows){
       + '<div class="review-pill"><span>Ventas</span><b>' + revisionMoney(row.ventas || payload.ventas) + '</b></div>'
       + '<div class="review-pill"><span>Gastos</span><b>' + revisionMoney(row.gastos || payload.gastos) + '</b></div>'
       + '<div class="review-pill"><span>Remesa</span><b>' + revisionMoney(row.remesa || payload.remesa) + '</b></div>'
-      + '<div class="review-pill"><span>Banco</span>' + revisionBancoSelectHtml(index, payload.banco || row.banco || '') + '</div>'
+      + '<div class="review-pill"><span>Banco</span>' + revisionBancoHtml(index, payload.banco || row.banco || '') + '</div>'
       + '</div>'
       + revisionProductosHtml(payload)
       + '<div class="review-actions">'
