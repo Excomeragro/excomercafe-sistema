@@ -4,7 +4,7 @@
 <title>EXCOMERCAFE — Reporte Agromercados</title>
 <link rel="icon" href="./favicon.ico">
 <link rel="apple-touch-icon" href="./favicon.png">
-<link href="./css/styles.css?v=20260521-sidebar-solid" rel="stylesheet">
+<link href="./css/styles.css?v=20260521-guia-ajustes" rel="stylesheet">
 <link href="./css/components.css?v=20260519-phase61" rel="stylesheet">
 <link href="./css/distribution-matrix.css?v=20260521-normal-theme" rel="stylesheet">
 <script>
@@ -2547,6 +2547,7 @@
           <button class="sp-btn" onclick="probarSupabase()">Probar Supabase</button>
           <button class="sp-btn" onclick="sincronizarPendientesSupabase()">Sincronizar Pendientes</button>
           <button class="sp-btn" onclick="revisarSincronizacionVentas()">Revisar Ventas</button>
+          <button class="sp-btn sp-btn-guide" onclick="openProgramGuide()">Guia</button>
         </div>
         <div class="sp-sub" id="supabase-status" style="margin-top:8px;">Proyecto conectado: hfijlpjeqagxyvgirkwk.supabase.co</div>
         <div class="sp-sub" id="sync-check-status" style="margin-top:8px;">Sin revision reciente.</div>
@@ -2606,6 +2607,33 @@
       <h5>Mensaje del creador</h5>
       <blockquote>"Cada linea de codigo en este sistema fue escrita con la vision de fortalecer la cadena agrocomercial y facilitar el trabajo de quienes hacen posible el movimiento de nuestros productos dia a dia."</blockquote>
       <p class="creator-signature">- Jorge Escobar, 2026</p>
+    </div>
+  </div>
+</div>
+<div class="creator-notes-overlay" id="program-guide-overlay" onclick="closeProgramGuideOutside(event)">
+  <div class="creator-notes-modal program-guide-modal" role="dialog" aria-modal="true" aria-labelledby="program-guide-title">
+    <div class="creator-notes-head">
+      <h3 id="program-guide-title">Guia de Uso del Programa</h3>
+      <button type="button" class="creator-notes-close" onclick="closeProgramGuide()">X</button>
+    </div>
+    <div class="creator-notes-body program-guide-body">
+      <h4>Flujo completo de trabajo</h4>
+      <ol class="program-guide-steps">
+        <li><strong>Inicio de sesion:</strong> entra con tu usuario. Si es un encargado de agromercado, usa el portal de vendedores.</li>
+        <li><strong>Gestion de datos:</strong> revisa agromercados, personas, bancos y productos antes de comenzar. Cada agromercado debe tener su encargado asignado.</li>
+        <li><strong>Control de inventario:</strong> registra o ajusta las existencias iniciales de bodega para que el sistema tenga una base correcta.</li>
+        <li><strong>Distribucion Tiendona y CDA:</strong> ingresa la mercaderia que sale hacia cada punto. Eso alimenta los inventarios visibles en los reportes.</li>
+        <li><strong>Control de venta por agromercado:</strong> verifica cada dia que todos los agromercados aparezcan con su estado: rojo sin reporte, amarillo pendiente y verde aprobado.</li>
+        <li><strong>Portal vendedores:</strong> el vendedor digita ventas, faltantes, danado, gastos, banco y observaciones. Inventario anterior y mercaderia nueva se calculan automaticamente.</li>
+        <li><strong>Envio del reporte:</strong> cuando el vendedor envia, el reporte queda bloqueado hasta que se apruebe o rechace en revision.</li>
+        <li><strong>Revision de envios:</strong> revisa cantidades, dinero, remesa y banco. Si el banco falta o esta equivocado, puedes corregirlo antes de aprobar.</li>
+        <li><strong>Aprobacion:</strong> al aprobar, el reporte pasa a la tabla de ventas y se actualiza el historial del dia.</li>
+        <li><strong>Banco y remesas:</strong> confirma que el dinero enviado coincida con ventas menos gastos. Usa Reporte Banco para controlar remesas.</li>
+        <li><strong>Impresion e historial:</strong> imprime desde los historiales cuando necesites respaldo fisico o PDF. Cada dia genera un reporte nuevo.</li>
+        <li><strong>Sincronizacion:</strong> usa Probar Supabase, Sincronizar Pendientes y Revisar Ventas si algun dato no aparece en linea.</li>
+        <li><strong>Respaldo:</strong> antes de borrar datos o hacer pruebas grandes, crea respaldo desde Ajustes.</li>
+      </ol>
+      <blockquote>Orden recomendado: datos configurados, inventario, distribucion, reporte del vendedor, revision, aprobacion, banco e impresion.</blockquote>
     </div>
   </div>
 </div>
@@ -5710,6 +5738,17 @@ window.closeCreatorNotes = function(){
 };
 window.closeCreatorNotesOutside = function(e){
   if(e.target === document.getElementById('creator-notes-overlay')) closeCreatorNotes();
+};
+window.openProgramGuide = function(){
+  var modal = document.getElementById('program-guide-overlay');
+  if(modal) modal.classList.add('open');
+};
+window.closeProgramGuide = function(){
+  var modal = document.getElementById('program-guide-overlay');
+  if(modal) modal.classList.remove('open');
+};
+window.closeProgramGuideOutside = function(e){
+  if(e.target === document.getElementById('program-guide-overlay')) closeProgramGuide();
 };
 
 function contarLocalStorage(key){
