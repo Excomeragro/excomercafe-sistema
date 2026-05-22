@@ -756,6 +756,28 @@ main {
 .creator-notes-body li{margin:4px 0;}
 .creator-notes-body blockquote{margin:8px 0 6px;padding:12px 14px;background:#f8fafc;border-left:4px solid #F59E0B;border-radius:6px;font-style:italic;color:#111827;}
 .creator-signature{font-weight:800;color:#1A3C5E;text-align:right;}
+.sp-btn-guide{
+  background:#0f766e !important;
+  color:#ffffff !important;
+  border-color:#0f766e !important;
+}
+.program-guide-modal{
+  width:min(820px,96vw);
+}
+.program-guide-body{
+  padding:18px 22px 20px;
+}
+.program-guide-steps{
+  margin:10px 0 14px;
+  padding-left:24px;
+}
+.program-guide-steps li{
+  margin:0 0 10px;
+  padding-left:4px;
+}
+.program-guide-steps strong{
+  color:#123a5c;
+}
 
 /* AUTOCOMPLETADO MODERNO */
 .autocomplete-container {
