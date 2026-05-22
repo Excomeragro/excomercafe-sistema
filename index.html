@@ -3276,6 +3276,24 @@ window.aprobarVentaPendiente = async function(index){
     ac: Number(originalUnits.ac || originalUnits.aceite || 0) || 0,
     ha: Number(originalUnits.ha || originalUnits.harina || 0) || 0
   });
+  var originalFaltantes = payload.faltante || payload.faltantes_unidades || {};
+  payload.faltantes_unidades = {
+    ab1: Number(originalFaltantes.ab1 || originalFaltantes.arroz || 0) || 0,
+    ap1: Number(originalFaltantes.ap1 || originalFaltantes.precocido || 0) || 0,
+    fr1: Number(originalFaltantes.fr1 || originalFaltantes.frijol1 || 0) || 0,
+    fr4: Number(originalFaltantes.fr4 || originalFaltantes.frijol4 || 0) || 0,
+    ac: Number(originalFaltantes.ac || originalFaltantes.aceite || 0) || 0,
+    ha: Number(originalFaltantes.ha || originalFaltantes.harina || 0) || 0
+  };
+  var originalDanadas = payload.danado || payload.danadas_unidades || {};
+  payload.danadas_unidades = {
+    ab1: Number(originalDanadas.ab1 || originalDanadas.arroz || 0) || 0,
+    ap1: Number(originalDanadas.ap1 || originalDanadas.precocido || 0) || 0,
+    fr1: Number(originalDanadas.fr1 || originalDanadas.frijol1 || 0) || 0,
+    fr4: Number(originalDanadas.fr4 || originalDanadas.frijol4 || 0) || 0,
+    ac: Number(originalDanadas.ac || originalDanadas.aceite || 0) || 0,
+    ha: Number(originalDanadas.ha || originalDanadas.harina || 0) || 0
+  };
   payload.supabase_synced = true;
   payload.supabase_synced_at = new Date().toISOString();
   try {
@@ -3313,6 +3331,24 @@ window.aprobarVentaPendiente = async function(index){
     try { hist = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(error) {}
     hist.unshift(payload);
     localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
+    if(typeof registrarMovimientoInventario === 'function') {
+      registrarMovimientoInventario({
+        id: 'salida-revision-' + payload.local_id,
+        fecha: payload.fecha || row.fecha || '',
+        ubicacion: 'agromercados',
+        lugar: payload.agromercado || row.agromercado || '',
+        tipo: 'salida-venta-aprobada',
+        referencia: 'Revision de envio aprobado',
+        arroz: -(payload.ventas_unidades.ab1 + payload.faltantes_unidades.ab1 + payload.danadas_unidades.ab1),
+        precocido: -(payload.ventas_unidades.ap1 + payload.faltantes_unidades.ap1 + payload.danadas_unidades.ap1),
+        frijol1: -(payload.ventas_unidades.fr1 + payload.faltantes_unidades.fr1 + payload.danadas_unidades.fr1),
+        frijol4: -(payload.ventas_unidades.fr4 + payload.faltantes_unidades.fr4 + payload.danadas_unidades.fr4),
+        aceite: -(payload.ventas_unidades.ac + payload.faltantes_unidades.ac + payload.danadas_unidades.ac),
+        harina: -(payload.ventas_unidades.ha + payload.faltantes_unidades.ha + payload.danadas_unidades.ha),
+        observaciones: 'Descuento automatico al aprobar reporte de vendedor',
+        timestamp: new Date().toISOString()
+      });
+    }
     if(typeof showToast === 'function') showToast('Envío aprobado.');
     await cargarVentasPendientes();
     if(typeof renderHistorial === 'function') renderHistorial();
@@ -14192,7 +14228,10 @@ document.addEventListener('DOMContentLoaded', function() {
       + '.venta-matrix-table .venta-agromercado-col,.venta-matrix-table .venta-agro-cell{position:sticky;left:0 !important;z-index:4;width:250px;min-width:250px;max-width:250px;}'
       + '.venta-matrix-table .venta-agromercado-col{z-index:7;background:#17456b !important;}'
       + '.venta-matrix-table .venta-agro-cell{text-align:center;vertical-align:middle;white-space:normal;line-height:1.12;padding:10px 12px;}'
-      + '.venta-matrix-table .venta-agro-name{display:block;max-width:220px;margin:0 auto;font-weight:900;overflow-wrap:anywhere;}';
+      + '.venta-matrix-table .venta-agro-name{display:block;max-width:220px;margin:0 auto;font-weight:900;overflow-wrap:anywhere;}'
+      + '.control-report-filters{display:grid;grid-template-columns:1fr 170px 190px auto;gap:8px;padding:12px;border-bottom:1px solid #dbeafe;background:#f8fbff;}'
+      + '.control-report-filters input,.control-report-filters select{min-height:36px;border:1px solid #bad3ea;border-radius:8px;padding:7px 9px;font-weight:700;}'
+      + '@media(max-width:760px){.control-report-filters{grid-template-columns:1fr;}}';
     document.head.appendChild(style);
   }
 
@@ -14290,6 +14329,12 @@ document.addEventListener('DOMContentLoaded', function() {
       + '<button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirTablaPorTitulo(&quot;Historial de reportes de venta&quot;, &quot;#control-venta-reportes-table&quot;)">Imprimir</button>'
       + '</div></div>'
       + '<div class="card-body" id="control-venta-reportes-content" style="overflow-x:auto;padding:0;">'
+      + '<div class="control-report-filters">'
+      + '<input type="search" id="control-reporte-buscar" placeholder="Buscar agromercado, encargado o banco" oninput="renderHistorialReportesVentaControl()">'
+      + '<input type="date" id="control-reporte-fecha" onchange="renderHistorialReportesVentaControl()">'
+      + '<select id="control-reporte-agro" onchange="renderHistorialReportesVentaControl()"><option value="">Todos los agromercados</option></select>'
+      + '<button type="button" class="btn btn-sm btn-secondary" onclick="limpiarFiltrosHistorialReportesVenta()">Limpiar</button>'
+      + '</div>'
       + '<table class="tbl" id="control-venta-reportes-table">'
       + '<thead><tr><th>Fecha</th><th>Estado</th><th>Agromercado</th><th>Encargado</th><th>Ventas</th><th>Gastos</th><th>Remesa</th><th>Banco</th><th>Observaciones</th><th>Acciones</th></tr></thead>'
       + '<tbody id="control-venta-reportes-body"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:18px;">Sin reportes.</td></tr></tbody>'
@@ -14301,6 +14346,33 @@ document.addEventListener('DOMContentLoaded', function() {
     var content = document.getElementById('control-venta-reportes-content');
     if (!content) return;
     content.style.display = content.style.display === 'none' ? 'block' : 'none';
+  };
+
+  function llenarFiltroAgromercadoHistorial(rows){
+    var select = document.getElementById('control-reporte-agro');
+    if(!select) return '';
+    var current = select.value || '';
+    var names = {};
+    (rows || []).forEach(function(row){
+      var name = row.agromercado || row.nombre || '';
+      if(name) names[name] = true;
+    });
+    var html = '<option value="">Todos los agromercados</option>' + Object.keys(names).sort().map(function(name){
+      return '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+    }).join('');
+    if(select.innerHTML !== html) select.innerHTML = html;
+    if(current && names[current]) select.value = current;
+    return select.value || '';
+  }
+
+  window.limpiarFiltrosHistorialReportesVenta = function(){
+    var buscar = document.getElementById('control-reporte-buscar');
+    var fecha = document.getElementById('control-reporte-fecha');
+    var agro = document.getElementById('control-reporte-agro');
+    if(buscar) buscar.value = '';
+    if(fecha) fecha.value = '';
+    if(agro) agro.value = '';
+    renderHistorialReportesVentaControl();
   };
 
   window.renderHistorialReportesVentaControl = function(){
@@ -14316,6 +14388,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     rows.sort(function(a, b){
       return String(b.fecha || '').localeCompare(String(a.fecha || '')) || String(b.timestamp || b.creado_en || '').localeCompare(String(a.timestamp || a.creado_en || ''));
+    });
+    var filtroAgro = llenarFiltroAgromercadoHistorial(rows);
+    var filtroFecha = (document.getElementById('control-reporte-fecha') || {}).value || '';
+    var busqueda = normText((document.getElementById('control-reporte-buscar') || {}).value || '');
+    rows = rows.filter(function(row){
+      var agro = row.agromercado || row.nombre || '';
+      if(filtroAgro && agro !== filtroAgro) return false;
+      if(filtroFecha && !fechaReporteIgual(row.fecha, filtroFecha)) return false;
+      if(busqueda){
+        var hay = normText([row.fecha, row.estado_revision || row.estado, agro, row.encargado || row.usuarioCierre || row.usuario, row.banco, row.observaciones].join(' '));
+        if(hay.indexOf(busqueda) < 0) return false;
+      }
+      return true;
     });
     if (status) status.textContent = rows.length + ' reportes';
     if (!rows.length) {
@@ -14369,10 +14454,7 @@ document.addEventListener('DOMContentLoaded', function() {
           });
           if(!exists) pendientesFecha.push(row);
         });
-        var pendientesSinFecha = (pendientes || []).filter(function(row){
-          return String(row && row.estado || '').toLowerCase() === 'pendiente';
-        });
-        window.controlVentaPendientesReportes = pendientesFecha.length ? pendientesFecha : pendientesSinFecha;
+        window.controlVentaPendientesReportes = pendientesFecha;
         (window.controlVentaPendientesReportes || []).forEach(function(row){
           marcarEstadoAgro(estados, row.agromercado || row.nombre || '', 'amarillo');
         });
