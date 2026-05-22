@@ -3253,10 +3253,12 @@ window.cargarVentasPendientes = async function(){
     renderVentasPendientes(window.ventasPendientesCache);
     if(typeof actualizarEstadoReportesAgromercado === 'function') actualizarEstadoReportesAgromercado();
     if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
+    return window.ventasPendientesCache;
   } catch(error) {
     if(status) status.textContent = 'Error';
     var list = document.getElementById('revision-list');
     if(list) list.innerHTML = '<div class="review-card">No se pudieron cargar pendientes: ' + (error.message || error) + '</div>';
+    return [];
   }
 };
 
@@ -14454,7 +14456,17 @@ document.addEventListener('DOMContentLoaded', function() {
           });
           if(!exists) pendientesFecha.push(row);
         });
-        window.controlVentaPendientesReportes = pendientesFecha;
+        var pendientesSinFecha = (pendientes || []).filter(function(row){
+          return String(row && row.estado || '').toLowerCase() === 'pendiente';
+        });
+        (window.ventasPendientesCache || []).forEach(function(row){
+          if(String(row && row.estado || '').toLowerCase() !== 'pendiente') return;
+          var exists = pendientesSinFecha.some(function(item){
+            return String(item.local_id || item.id || '') === String(row.local_id || row.id || '');
+          });
+          if(!exists) pendientesSinFecha.push(row);
+        });
+        window.controlVentaPendientesReportes = pendientesSinFecha;
         (window.controlVentaPendientesReportes || []).forEach(function(row){
           marcarEstadoAgro(estados, row.agromercado || row.nombre || '', 'amarillo');
         });
@@ -14834,7 +14846,15 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('DOMContentLoaded', function(){
     setTimeout(function(){
       renderControlVentaMatrix();
-      actualizarEstadoReportesAgromercado();
+      if (typeof window.cargarVentasPendientes === 'function') {
+        window.cargarVentasPendientes().then(function(){
+          actualizarEstadoReportesAgromercado();
+        }).catch(function(){
+          actualizarEstadoReportesAgromercado();
+        });
+      } else {
+        actualizarEstadoReportesAgromercado();
+      }
     }, 350);
   });
 
@@ -14844,7 +14864,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tabId === 'tab-agro') {
       setTimeout(function(){
         renderControlVentaMatrix();
-        actualizarEstadoReportesAgromercado();
+        if (typeof window.cargarVentasPendientes === 'function') {
+          window.cargarVentasPendientes().then(function(){
+            actualizarEstadoReportesAgromercado();
+          }).catch(function(){
+            actualizarEstadoReportesAgromercado();
+          });
+        } else {
+          actualizarEstadoReportesAgromercado();
+        }
       }, 60);
     }
     return result;
