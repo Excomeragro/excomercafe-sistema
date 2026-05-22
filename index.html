@@ -126,6 +126,15 @@
     color:#64748b;
     line-height:1.35;
   }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  input[type="number"]{
+    -moz-appearance:textfield;
+    appearance:textfield;
+  }
   .auth-remember{
     display:flex;
     align-items:center;
@@ -5119,6 +5128,8 @@ window.eliminarRegistro = function(index){
   
   refrescarInventarioEnTiempoReal();
   renderHistorial();
+  if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
+  if(typeof actualizarEstadoReportesAgromercado === 'function') actualizarEstadoReportesAgromercado();
   renderBancos();
   
   showToast('🗑️ Registro eliminado');
@@ -5131,6 +5142,8 @@ window.limpiarHistorial = function(){
   localStorage.removeItem('exc_agro_hist');
   if(typeof refrescarInventarioEnTiempoReal === 'function') refrescarInventarioEnTiempoReal();
   renderHistorial();
+  if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
+  if(typeof actualizarEstadoReportesAgromercado === 'function') actualizarEstadoReportesAgromercado();
   renderBancos();
   showToast('🗑️ Historial eliminado');
 };
@@ -5252,6 +5265,8 @@ window.guardarEdicionInline = function(index){
   
   // Refrescar tabla
   renderHistorial();
+  if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
+  if(typeof actualizarEstadoReportesAgromercado === 'function') actualizarEstadoReportesAgromercado();
   renderBancos();
   
   showToast('✅ Registro actualizado correctamente');
@@ -5259,6 +5274,7 @@ window.guardarEdicionInline = function(index){
 
 window.cancelarEdicionInline = function(index){
   renderHistorial();
+  if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
 };
 
 window.cancelarTodasLasEdiciones = function(){
@@ -5729,6 +5745,14 @@ function expandirHistorialControlVenta(){
   if(cont) cont.style.display = 'block';
   if(icon) icon.textContent = '▲';
 }
+
+window.editarRegistroDesdeReporte = function(index){
+  if(typeof renderHistorial === 'function') renderHistorial();
+  expandirHistorialControlVenta();
+  if(typeof editarRegistro === 'function') editarRegistro(index);
+  var cont = document.getElementById('historial-registros-content');
+  if(cont) cont.scrollIntoView({ behavior:'smooth', block:'start' });
+};
 
 function backupPermiteAccionAdmin(){
   try{
@@ -14019,7 +14043,10 @@ document.addEventListener('DOMContentLoaded', function() {
       + '.venta-reporte-badge.amarillo{background:#fef3c7;color:#92400e;}'
       + '.venta-reporte-badge.verde{background:#dcfce7;color:#166534;}'
       + '.control-report-history .card-header{align-items:center;}'
-      + '.control-report-history table td,.control-report-history table th{white-space:nowrap;}';
+      + '.control-report-history table td,.control-report-history table th{white-space:nowrap;}'
+      + '.venta-matrix-table .venta-cell,.venta-matrix-table .venta-row-total{width:76px;min-width:76px;max-width:76px;text-align:center;padding-left:6px;padding-right:6px;}'
+      + '.venta-matrix-table th.venta-sub-head{min-width:76px;}'
+      + '.venta-matrix-table .venta-agromercado-col,.venta-matrix-table .venta-agro-cell{min-width:230px;}';
     document.head.appendChild(style);
   }
 
@@ -14066,8 +14093,8 @@ document.addEventListener('DOMContentLoaded', function() {
       + '</div></div>'
       + '<div class="card-body" id="control-venta-reportes-content" style="overflow-x:auto;padding:0;">'
       + '<table class="tbl" id="control-venta-reportes-table">'
-      + '<thead><tr><th>Fecha</th><th>Estado</th><th>Agromercado</th><th>Encargado</th><th>Ventas</th><th>Gastos</th><th>Remesa</th><th>Banco</th><th>Observaciones</th></tr></thead>'
-      + '<tbody id="control-venta-reportes-body"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px;">Sin reportes.</td></tr></tbody>'
+      + '<thead><tr><th>Fecha</th><th>Estado</th><th>Agromercado</th><th>Encargado</th><th>Ventas</th><th>Gastos</th><th>Remesa</th><th>Banco</th><th>Observaciones</th><th>Acciones</th></tr></thead>'
+      + '<tbody id="control-venta-reportes-body"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:18px;">Sin reportes.</td></tr></tbody>'
       + '</table></div>';
     target.parentNode.insertBefore(card, target.nextSibling);
   }
@@ -14083,12 +14110,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var tbody = document.getElementById('control-venta-reportes-body');
     var status = document.getElementById('control-venta-reportes-status');
     if (!tbody) return;
-    var rows = leerHistorialVentaLocal().slice().sort(function(a, b){
+    var rows = leerHistorialVentaLocal().map(function(row, index){
+      return Object.assign({ __histIndex:index }, row || {});
+    }).sort(function(a, b){
       return String(b.fecha || '').localeCompare(String(a.fecha || '')) || String(b.timestamp || b.creado_en || '').localeCompare(String(a.timestamp || a.creado_en || ''));
     });
     if (status) status.textContent = rows.length + ' reportes';
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px;">Sin reportes de venta guardados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:18px;">Sin reportes de venta guardados.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(function(row){
@@ -14103,6 +14132,8 @@ document.addEventListener('DOMContentLoaded', function() {
         + '<td>' + money(row.remesa) + '</td>'
         + '<td>' + esc(row.banco || 'Pendiente') + '</td>'
         + '<td>' + esc(row.observaciones || '') + '</td>'
+        + '<td><button type="button" class="btn btn-sm btn-primary" onclick="editarRegistroDesdeReporte(' + row.__histIndex + ')">Editar</button> '
+        + '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarRegistro(' + row.__histIndex + ')">Borrar</button></td>'
         + '</tr>';
     }).join('');
   };
@@ -14199,7 +14230,7 @@ document.addEventListener('DOMContentLoaded', function() {
       + '<div class="dist-table-wrap venta-table-wrap"> '
       + '<table class="dist-matrix-table venta-matrix-table venta-digitar-table">'
       + '<thead>'
-      + '<tr><th class="dist-destino-col venta-municipio-col" rowspan="2">Municipio</th><th class="dist-destino-col venta-agromercado-col" rowspan="2">Agromercado</th>' + productHeaders + '<th class="venta-total-head" rowspan="2">Total Venta</th></tr>'
+      + '<tr><th class="dist-destino-col venta-agromercado-col" rowspan="2">Agromercado</th>' + productHeaders + '<th class="venta-total-head" rowspan="2">Total Venta</th></tr>'
       + '<tr>' + fieldHeaders + '</tr>'
       + '</thead>'
       + '<tbody id="tbody-control-venta-fija"></tbody>'
@@ -14247,7 +14278,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }).join('');
 
       return '<tr class="' + estadoReporteClass(estado) + '" data-agro="' + esc(agro.nombre) + '" data-tipo="' + esc(agro.tipo) + '" data-distrito="' + esc(meta.distrito) + '" data-municipio="' + esc(meta.municipio) + '">'
-        + '<td class="dist-destino-cell venta-municipio-cell"><span>' + esc(meta.distrito || agro.tipo) + '</span></td>'
         + '<td class="dist-destino-cell venta-agro-cell"><span class="venta-agro-name">' + esc(agro.nombre) + '</span><span class="venta-reporte-badge ' + (estado === 'verde' ? 'verde' : (estado === 'amarillo' ? 'amarillo' : 'rojo')) + '">' + estadoReporteLabel(estado) + '</span></td>'
         + productCells
         + '<td><input class="dist-qty venta-row-total" readonly value="0"></td>'
