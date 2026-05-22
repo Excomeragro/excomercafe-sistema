@@ -14213,6 +14213,25 @@ document.addEventListener('DOMContentLoaded', function() {
     return (window.controlVentaEstadoAgros && window.controlVentaEstadoAgros[key]) || 'rojo';
   }
 
+  function buscarKeyEstadoAgro(estados, nombre){
+    var key = normText(nombre);
+    if(!key) return '';
+    if(estados[key] !== undefined) return key;
+    var keys = Object.keys(estados || {});
+    for(var i = 0; i < keys.length; i++){
+      if(keys[i] === key || keys[i].indexOf(key) >= 0 || key.indexOf(keys[i]) >= 0) return keys[i];
+    }
+    return '';
+  }
+
+  function marcarEstadoAgro(estados, nombre, estado){
+    var key = buscarKeyEstadoAgro(estados, nombre);
+    if(!key) return false;
+    if(estados[key] === 'verde' && estado !== 'verde') return true;
+    estados[key] = estado;
+    return true;
+  }
+
   function fechaReporteControl(){
     return document.getElementById('agro-fecha')?.value || (typeof fechaHoy === 'function' ? fechaHoy() : fechaISOActualSistema());
   }
@@ -14333,7 +14352,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     leerHistorialVentaLocal().forEach(function(row){
       var nombre = row.agromercado || row.nombre || '';
-      if (fechaReporteIgual(row.fecha, fecha) && estados[normText(nombre)]) estados[normText(nombre)] = 'verde';
+      if (fechaReporteIgual(row.fecha, fecha)) marcarEstadoAgro(estados, nombre, 'verde');
     });
 
     try {
@@ -14350,24 +14369,24 @@ document.addEventListener('DOMContentLoaded', function() {
           });
           if(!exists) pendientesFecha.push(row);
         });
-        window.controlVentaPendientesReportes = pendientesFecha;
-        pendientesFecha.forEach(function(row){
-          var key = normText(row.agromercado || '');
-          if (key && estados[key] !== 'verde') estados[key] = 'amarillo';
+        var pendientesSinFecha = (pendientes || []).filter(function(row){
+          return String(row && row.estado || '').toLowerCase() === 'pendiente';
+        });
+        window.controlVentaPendientesReportes = pendientesFecha.length ? pendientesFecha : pendientesSinFecha;
+        (window.controlVentaPendientesReportes || []).forEach(function(row){
+          marcarEstadoAgro(estados, row.agromercado || row.nombre || '', 'amarillo');
         });
         var aprobados = await window.supabaseRequest('/rest/v1/ventas_agromercado?select=agromercado,fecha&fecha=eq.' + encodeURIComponent(fecha) + '&limit=1000');
         (aprobados || []).forEach(function(row){
-          var key = normText(row.agromercado || '');
-          if (key) estados[key] = 'verde';
+          marcarEstadoAgro(estados, row.agromercado || '', 'verde');
         });
       }
     } catch(error) {
       window.controlVentaPendientesReportes = (window.ventasPendientesCache || []).filter(function(row){
-        return fechaReporteIgual(row && row.fecha, fecha) && String(row && row.estado || '').toLowerCase() === 'pendiente';
+        return String(row && row.estado || '').toLowerCase() === 'pendiente';
       });
       window.controlVentaPendientesReportes.forEach(function(row){
-        var key = normText(row.agromercado || '');
-        if (key && estados[key] !== 'verde') estados[key] = 'amarillo';
+        marcarEstadoAgro(estados, row.agromercado || row.nombre || '', 'amarillo');
       });
     }
 
