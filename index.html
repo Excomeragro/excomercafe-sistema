@@ -3251,6 +3251,8 @@ window.cargarVentasPendientes = async function(){
     var rows = await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?select=*&estado=eq.pendiente&order=creado_en.desc&limit=100');
     window.ventasPendientesCache = rows || [];
     renderVentasPendientes(window.ventasPendientesCache);
+    if(typeof actualizarEstadoReportesAgromercado === 'function') actualizarEstadoReportesAgromercado();
+    if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
   } catch(error) {
     if(status) status.textContent = 'Error';
     var list = document.getElementById('revision-list');
@@ -3312,12 +3314,12 @@ window.aprobarVentaPendiente = async function(index){
     hist.unshift(payload);
     localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
     if(typeof showToast === 'function') showToast('Envío aprobado.');
-    cargarVentasPendientes();
+    await cargarVentasPendientes();
     if(typeof renderHistorial === 'function') renderHistorial();
     if(typeof expandirHistorialControlVenta === 'function') expandirHistorialControlVenta();
-    if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
-    if(typeof actualizarEstadoReportesAgromercado === 'function') actualizarEstadoReportesAgromercado();
+    if(typeof actualizarEstadoReportesAgromercado === 'function') await actualizarEstadoReportesAgromercado();
     if(typeof renderControlVentaMatrix === 'function') renderControlVentaMatrix();
+    if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
   } catch(error) {
     alert('No se pudo aprobar: ' + (error.message || error));
   }
@@ -14215,6 +14217,30 @@ document.addEventListener('DOMContentLoaded', function() {
     return document.getElementById('agro-fecha')?.value || (typeof fechaHoy === 'function' ? fechaHoy() : fechaISOActualSistema());
   }
 
+  function fechaReporteIgual(rowFecha, fecha){
+    return String(rowFecha || '').slice(0, 10) === String(fecha || '').slice(0, 10);
+  }
+
+  function pendingRowToHist(row){
+    row = row || {};
+    var payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    return Object.assign({}, payload, {
+      id: payload.id || row.local_id || row.id || '',
+      local_id: payload.local_id || row.local_id || '',
+      fecha: payload.fecha || row.fecha || '',
+      agromercado: payload.agromercado || row.agromercado || '',
+      nombre: payload.nombre || payload.agromercado || row.agromercado || '',
+      encargado: payload.encargado || row.encargado || '',
+      ventas: payload.ventas !== undefined ? payload.ventas : row.ventas,
+      gastos: payload.gastos !== undefined ? payload.gastos : row.gastos,
+      remesa: payload.remesa !== undefined ? payload.remesa : row.remesa,
+      banco: payload.banco || row.banco || '',
+      observaciones: payload.observaciones || row.observaciones || '',
+      estado_revision: row.estado || 'pendiente',
+      timestamp: row.creado_en || payload.timestamp || ''
+    });
+  }
+
   function leerHistorialVentaLocal(){
     try { return JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(e) { return []; }
   }
@@ -14256,7 +14282,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!tbody) return;
     var rows = leerHistorialVentaLocal().map(function(row, index){
       return Object.assign({ __histIndex:index }, row || {});
-    }).sort(function(a, b){
+    });
+    (window.controlVentaPendientesReportes || []).forEach(function(row){
+      rows.push(Object.assign({ __histIndex:-1 }, pendingRowToHist(row)));
+    });
+    rows.sort(function(a, b){
       return String(b.fecha || '').localeCompare(String(a.fecha || '')) || String(b.timestamp || b.creado_en || '').localeCompare(String(a.timestamp || a.creado_en || ''));
     });
     if (status) status.textContent = rows.length + ' reportes';
@@ -14276,8 +14306,10 @@ document.addEventListener('DOMContentLoaded', function() {
         + '<td>' + money(row.remesa) + '</td>'
         + '<td>' + esc(row.banco || 'Pendiente') + '</td>'
         + '<td>' + esc(row.observaciones || '') + '</td>'
-        + '<td><button type="button" class="btn btn-sm btn-primary" onclick="editarRegistroDesdeReporte(' + row.__histIndex + ')">Editar</button> '
-        + '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarRegistro(' + row.__histIndex + ')">Borrar</button></td>'
+        + '<td>' + (row.__histIndex >= 0
+          ? '<button type="button" class="btn btn-sm btn-primary" onclick="editarRegistroDesdeReporte(' + row.__histIndex + ')">Editar</button> '
+            + '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarRegistro(' + row.__histIndex + ')">Borrar</button>'
+          : '<button type="button" class="btn btn-sm btn-secondary" onclick="switchTab(&quot;tab-revision&quot;, document.querySelector(&quot;.tab-btn[onclick*=tab-revision]&quot;))">Revisar</button>') + '</td>'
         + '</tr>';
     }).join('');
   };
@@ -14292,12 +14324,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     leerHistorialVentaLocal().forEach(function(row){
       var nombre = row.agromercado || row.nombre || '';
-      if (row.fecha === fecha && estados[normText(nombre)]) estados[normText(nombre)] = 'verde';
+      if (fechaReporteIgual(row.fecha, fecha) && estados[normText(nombre)]) estados[normText(nombre)] = 'verde';
     });
 
     try {
       if (typeof window.supabaseRequest === 'function') {
-        var pendientes = await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?select=agromercado,fecha,estado&fecha=eq.' + encodeURIComponent(fecha) + '&estado=eq.pendiente&limit=1000');
+        var pendientes = await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?select=*&fecha=eq.' + encodeURIComponent(fecha) + '&estado=eq.pendiente&limit=1000');
+        window.controlVentaPendientesReportes = pendientes || [];
         (pendientes || []).forEach(function(row){
           var key = normText(row.agromercado || '');
           if (key && estados[key] !== 'verde') estados[key] = 'amarillo';
@@ -14308,10 +14341,19 @@ document.addEventListener('DOMContentLoaded', function() {
           if (key) estados[key] = 'verde';
         });
       }
-    } catch(error) {}
+    } catch(error) {
+      window.controlVentaPendientesReportes = (window.ventasPendientesCache || []).filter(function(row){
+        return fechaReporteIgual(row && row.fecha, fecha) && String(row && row.estado || '').toLowerCase() === 'pendiente';
+      });
+      window.controlVentaPendientesReportes.forEach(function(row){
+        var key = normText(row.agromercado || '');
+        if (key && estados[key] !== 'verde') estados[key] = 'amarillo';
+      });
+    }
 
     window.controlVentaEstadoAgros = estados;
     aplicarEstadosReportesAgromercado();
+    if (typeof window.renderHistorialReportesVentaControl === 'function') window.renderHistorialReportesVentaControl();
   };
 
   function aplicarEstadosReportesAgromercado(){
