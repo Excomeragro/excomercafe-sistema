@@ -1783,3 +1783,206 @@ input[type="number"]::-webkit-inner-spin-button{
     min-height:96px !important;
   }
 }
+
+/* Tema oscuro: contraste final despues de reglas globales con !important */
+body.theme-oscuro,
+body.theme-oscuro main{
+  background:#111827 !important;
+  color:#f8fafc !important;
+}
+
+body.theme-oscuro .card,
+body.theme-oscuro .dashboard-card,
+body.theme-oscuro .dashboard-kpi,
+body.theme-oscuro .dashboard-panel,
+body.theme-oscuro .home-card,
+body.theme-oscuro .report-summary-kpi,
+body.theme-oscuro .remesas-summary,
+body.theme-oscuro .tbl-wrap,
+body.theme-oscuro .table-wrap,
+body.theme-oscuro .dist-table-wrap,
+body.theme-oscuro .bank-report-wrap,
+body.theme-oscuro .modal-content{
+  background:#1f2937 !important;
+  color:#f8fafc !important;
+  border-color:#374151 !important;
+  box-shadow:0 16px 40px rgba(0,0,0,.22) !important;
+}
+
+body.theme-oscuro .card-header,
+body.theme-oscuro .dashboard-panel-head{
+  background:#111827 !important;
+  color:#f8fafc !important;
+  border-color:#374151 !important;
+}
+
+body.theme-oscuro .home-card-title,
+body.theme-oscuro .home-card-desc,
+body.theme-oscuro .sec-title,
+body.theme-oscuro .card-header span,
+body.theme-oscuro .dashboard-panel-head h3{
+  color:#f8fafc !important;
+}
+
+body.theme-oscuro .home-card-icon{
+  background:#263244 !important;
+  color:#86efac !important;
+}
+
+body.theme-oscuro table,
+body.theme-oscuro .tbl,
+body.theme-oscuro .ctrl-table,
+body.theme-oscuro .dist-matrix-table,
+body.theme-oscuro .venta-digitar-table,
+body.theme-oscuro .warehouse-balance-table,
+body.theme-oscuro .cda-balance-table,
+body.theme-oscuro .bank-report-table,
+body.theme-oscuro .report-summary-table{
+  background:#1f2937 !important;
+  color:#f8fafc !important;
+  border-color:#374151 !important;
+}
+
+body.theme-oscuro table td,
+body.theme-oscuro .tbl td,
+body.theme-oscuro .ctrl-table td,
+body.theme-oscuro .dist-matrix-table td,
+body.theme-oscuro .venta-digitar-table td,
+body.theme-oscuro .warehouse-balance-table td,
+body.theme-oscuro .cda-balance-table td,
+body.theme-oscuro .bank-report-table td,
+body.theme-oscuro .report-summary-table td,
+body.theme-oscuro #tbl-devoluciones td{
+  background:#1f2937 !important;
+  color:#f8fafc !important;
+  border-color:#374151 !important;
+}
+
+body.theme-oscuro table tbody tr:hover td,
+body.theme-oscuro .tbl tbody tr:hover td,
+body.theme-oscuro .dist-matrix-table tbody tr:hover td,
+body.theme-oscuro .venta-digitar-table tbody tr:hover td{
+  background:#263244 !important;
+}
+
+body.theme-oscuro #tbody-control-venta-fija tr.venta-reporte-rojo td{
+  background:#2a2024 !important;
+}
+
+body.theme-oscuro #tbody-control-venta-fija tr.venta-reporte-amarillo td{
+  background:#2b281c !important;
+}
+
+body.theme-oscuro #tbody-control-venta-fija tr.venta-reporte-verde td{
+  background:#17281f !important;
+}
+
+body.theme-oscuro #tbody-control-venta-fija tr.venta-reporte-rojo input,
+body.theme-oscuro #tbody-control-venta-fija tr.venta-reporte-amarillo input,
+body.theme-oscuro #tbody-control-venta-fija tr.venta-reporte-verde input,
+body.theme-oscuro .venta-digitar-table input.venta-cell,
+body.theme-oscuro .dist-matrix-table input.dist-qty,
+body.theme-oscuro .ctrl-table input.ci,
+body.theme-oscuro input.ci,
+body.theme-oscuro input,
+body.theme-oscuro select,
+body.theme-oscuro textarea,
+body.theme-oscuro .selector-moderno{
+  background:#111827 !important;
+  color:#f8fafc !important;
+  border-color:#4b5563 !important;
+}
+
+body.theme-oscuro input::placeholder,
+body.theme-oscuro textarea::placeholder{
+  color:#9ca3af !important;
+}
+
+body.theme-oscuro .settings-overlay{
+  background:rgba(0,0,0,.72) !important;
+}
+
+body.theme-oscuro .settings-panel{
+  background:#1f2937 !important;
+  color:#f8fafc !important;
+  border-left-color:#374151 !important;
+}
+
+body.theme-oscuro .settings-panel,
+body.theme-oscuro .settings-panel *{
+  color:#f8fafc !important;
+}
+
+body.theme-oscuro .settings-panel .sp-head{
+  background:linear-gradient(90deg,#07140d,#14532d) !important;
+}
+
+body.theme-oscuro .settings-panel .sp-section{
+  background:#111827 !important;
+  border-color:#374151 !important;
+}
+
+body.theme-oscuro .settings-panel .sp-sub,
+body.theme-oscuro .settings-panel small{
+  color:#d1d5db !important;
+}
+
+body.theme-oscuro .settings-panel .sp-btn{
+  background:#263244 !important;
+  color:#f8fafc !important;
+  border-color:#4b5563 !important;
+}
+
+body.theme-oscuro .settings-panel .sp-btn:hover,
+body.theme-oscuro .settings-panel .sp-btn.active{
+  background:#166534 !important;
+  color:#ffffff !important;
+  border-color:#22c55e !important;
+}
+
+body.theme-oscuro .settings-panel .sp-btn[style]{
+  background:#263244 !important;
+  color:#f8fafc !important;
+  border-color:#4b5563 !important;
+}
+
+body:not(.theme-oscuro) table td,
+body:not(.theme-oscuro) .tbl td,
+body:not(.theme-oscuro) .dist-matrix-table td,
+body:not(.theme-oscuro) .venta-digitar-table td,
+body:not(.theme-oscuro) .home-card-title,
+body:not(.theme-oscuro) .home-card-desc{
+  color:#102033 !important;
+}
+
+/* Tema unico normal: neutraliza temas antiguos guardados en el navegador */
+body.theme-verde,
+body.theme-oscuro,
+body.theme-verde main,
+body.theme-oscuro main{
+  background:var(--bg-primary) !important;
+  color:var(--text-primary) !important;
+}
+
+body.theme-verde .settings-panel,
+body.theme-oscuro .settings-panel{
+  background:#ffffff !important;
+  color:var(--text-primary) !important;
+  border-left-color:#d1d5db !important;
+}
+
+body.theme-verde .settings-panel *,
+body.theme-oscuro .settings-panel *{
+  color:var(--text-primary) !important;
+}
+
+body.theme-verde .settings-panel .sp-head,
+body.theme-oscuro .settings-panel .sp-head{
+  background:var(--brand) !important;
+  color:#ffffff !important;
+}
+
+body.theme-verde .settings-panel .sp-head *,
+body.theme-oscuro .settings-panel .sp-head *{
+  color:#ffffff !important;
+}
