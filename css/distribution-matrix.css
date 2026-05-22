@@ -388,16 +388,18 @@
 
 .venta-digitar-table .venta-municipio-col,
 .venta-digitar-table .venta-municipio-cell {
+  display: none !important;
   left: 0;
-  min-width: 150px;
-  width: 150px;
+  min-width: 0;
+  width: 0;
 }
 
 .venta-digitar-table .venta-agromercado-col,
 .venta-digitar-table .venta-agro-cell {
-  left: 150px;
-  min-width: 270px;
-  width: 270px;
+  left: 0 !important;
+  min-width: 250px;
+  width: 250px;
+  max-width: 250px;
 }
 
 .venta-digitar-table .venta-municipio-cell {
@@ -443,18 +445,19 @@
 
 .venta-digitar-table th.venta-municipio-col,
 .venta-digitar-table td.venta-municipio-cell {
+  display: none !important;
   left: 0 !important;
-  min-width: 118px !important;
-  width: 118px !important;
-  max-width: 118px !important;
+  min-width: 0 !important;
+  width: 0 !important;
+  max-width: 0 !important;
 }
 
 .venta-digitar-table th.venta-agromercado-col,
 .venta-digitar-table td.venta-agro-cell {
-  left: 118px !important;
-  min-width: 260px !important;
-  width: 260px !important;
-  max-width: 260px !important;
+  left: 0 !important;
+  min-width: 250px !important;
+  width: 250px !important;
+  max-width: 250px !important;
 }
 
 .venta-matrix-note {
