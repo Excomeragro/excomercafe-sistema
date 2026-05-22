@@ -902,7 +902,7 @@
     <button class="tab-btn" onclick="switchTab('tab-inventario', this); closeMobileSidebar()">📦 Control de Inventario</button>
     <button class="tab-btn" onclick="switchTab('tab-bancos', this); closeMobileSidebar()">🏦 Reporte Banco</button>
     <button class="tab-btn" onclick="switchTab('tab-datos', this); closeMobileSidebar()">📍 Datos y Ubicación</button>
-    <button class="tab-btn" onclick="switchTab('tab-recibos', this); closeMobileSidebar()">🧾 Comprobantes</button>
+    <button class="tab-btn" onclick="switchTab('tab-recibos', this); closeMobileSidebar()">📊 Reportes</button>
     <button class="tab-btn" onclick="switchTab('tab-revision', this); closeMobileSidebar()">✅ Revisión</button>
   </nav>
 </aside>
@@ -944,7 +944,7 @@
   <button class="tab-btn" onclick="switchTab(&#39;tab-inventario&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">📦 Control de Inventario</button>
   <button class="tab-btn" onclick="switchTab(&#39;tab-bancos&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">🏦 Reporte Banco</button>
   <button class="tab-btn" onclick="switchTab(&#39;tab-datos&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">📍 Datos y Ubicación</button>
-  <button class="tab-btn" onclick="switchTab(&#39;tab-recibos&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">🧾 Comprobantes</button>
+  <button class="tab-btn" onclick="switchTab(&#39;tab-recibos&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">📊 Reportes</button>
   <button class="tab-btn" onclick="switchTab(&#39;tab-revision&#39;,this)" style="padding:8px 12px;font-size:0.85rem;">✅ Revisión</button>
 </nav>
 
@@ -1062,8 +1062,8 @@
     </div>
     <div class="home-card" onclick="switchTab('tab-recibos', document.querySelector('.tab-btn[onclick*=tab-recibos]'))">
       <div class="home-card-icon">🧾✍️</div>
-      <div class="home-card-title">Comprobantes</div>
-      <div class="home-card-desc">Crea comprobantes de entrega y documentos con sugerencias automáticas de tus datos.</div>
+      <div class="home-card-title">Reportes</div>
+      <div class="home-card-desc">Acceso rápido a los reportes imprimibles de ventas, bancos, distribución, inventario y vendedores.</div>
     </div>
   </div>
 
@@ -2390,14 +2390,24 @@
 <input type="file" id="import-excel-distritos" accept=".xlsx,.xls" style="display:none;" onchange="importarDatosDesdeExcel(this)">
 
 
-<!-- ── TAB COMPROBANTES ── -->
+<!-- ── TAB REPORTES ── -->
 <div class="tab-content" id="tab-recibos">
-  <div class="sec-title">🧾 Comprobantes</div>
+  <div class="sec-title">📊 Reportes</div>
+
+  <div class="card reportes-hub-card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <span>📌 Reportes del sistema</span>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="renderPanelReportes()">Actualizar lista</button>
+    </div>
+    <div class="card-body">
+      <div id="panel-reportes-botones" class="reportes-grid"></div>
+    </div>
+  </div>
 
   <!-- TIPO DE DOCUMENTO -->
   <div class="card" id="recibos-tipo-card" style="margin-bottom:16px;">
     <div class="card-header">
-      <span>📄 Tipo de Documento</span>
+      <span>📄 Documentos y comprobantes</span>
       <div class="flex gap-8 items-center flex-wrap">
         <button class="btn btn-sm btn-primary" onclick="nuevoRecibo()">➕ Nuevo Comprobante</button>
         <button class="btn btn-sm btn-accent" onclick="imprimirRecibo()">Imprimir Comprobante</button>
@@ -7087,18 +7097,60 @@ window.obtenerDestinosInventarioPorTipo = function(){
     nombre = String(nombre || '').trim();
     if (!nombre) return;
     tipo = tipo === 'CDA' ? 'CDA' : 'TIENDONA';
+    if (tipo === 'CDA') {
+      var oficiales = agromercadosOficialesCdaPara(nombre);
+      if (oficiales.length && esNombreGrupoCda(nombre)) {
+        oficiales.forEach(function(oficial){ agregar(oficial.nombre, 'CDA'); });
+        return;
+      }
+    }
     var key = normalizarNombre(nombre);
     if (vistos[tipo][key]) return;
     vistos[tipo][key] = true;
     grupos[tipo].push(nombre);
   }
 
+  function esNombreGrupoCda(nombre){
+    var key = normalizarNombre(nombre);
+    return typeof LISTA_CDA !== 'undefined' && LISTA_CDA.some(function(cda){
+      return normalizarNombre(cda) === key;
+    });
+  }
+
+  function agromercadosOficialesCdaPara(nombre){
+    var key = normalizarNombre(nombre);
+    var lista = [];
+    var vistosOficiales = {};
+    if (!key || typeof AGROMERCADOS_DATA === 'undefined') return lista;
+    Object.keys(AGROMERCADOS_DATA).forEach(function(distrito){
+      (AGROMERCADOS_DATA[distrito] || []).forEach(function(item){
+        if (!item) return;
+        var agro = item.a || item.nombre || item.agromercado || '';
+        var municipio = item.m || item.municipio || '';
+        var esCda = esAgromercadoCDA(agro) || esAgromercadoCDA(municipio);
+        if (!esCda) return;
+        if (normalizarNombre(municipio) !== key && normalizarNombre(agro) !== key) return;
+        var agroKey = normalizarNombre(agro);
+        if (!agro || vistosOficiales[agroKey]) return;
+        vistosOficiales[agroKey] = true;
+        lista.push({ nombre: agro, municipio: municipio, distrito: distrito });
+      });
+    });
+    return lista;
+  }
+
+  function tipoAgromercado(item, nombre){
+    if (item && item.tipo) return String(item.tipo).toUpperCase() === 'CDA' ? 'CDA' : 'TIENDONA';
+    if (esAgromercadoCDA(nombre)) return 'CDA';
+    if (item && esAgromercadoCDA(item.m || item.municipio || '')) return 'CDA';
+    return 'TIENDONA';
+  }
+
   try {
     var agrosGuardados = JSON.parse(localStorage.getItem('agromercados-data') || '[]');
     agrosGuardados.forEach(function(a){
       var nombre = a && (a.nombre || a.agromercado || a.a || a.name);
-      var tipo = a && a.tipo ? a.tipo : (esAgromercadoCDA(nombre) ? 'CDA' : 'TIENDONA');
-      agregar(nombre, tipo);
+      agregar(nombre, tipoAgromercado(a, nombre));
     });
   } catch(e) {}
 
@@ -7106,25 +7158,102 @@ window.obtenerDestinosInventarioPorTipo = function(){
     Object.keys(AGROMERCADOS_DATA).forEach(function(distrito){
       (AGROMERCADOS_DATA[distrito] || []).forEach(function(item){
         var nombre = item && (item.a || item.nombre || item.agromercado);
-        agregar(nombre, esAgromercadoCDA(nombre) ? 'CDA' : 'TIENDONA');
+        agregar(nombre, tipoAgromercado(item, nombre));
       });
     });
   }
-
-  if (typeof LISTA_CDA !== 'undefined') {
-    LISTA_CDA.forEach(function(nombre){ agregar(nombre, 'CDA'); });
-  }
-
-  try {
-    var cdaGuardados = JSON.parse(localStorage.getItem('cda-data') || '[]');
-    cdaGuardados.forEach(function(nombre){ agregar(nombre && (nombre.nombre || nombre), 'CDA'); });
-  } catch(e) {}
 
   Object.keys(grupos).forEach(function(tipo){
     grupos[tipo].sort(function(a,b){ return a.localeCompare(b, 'es', { sensitivity: 'base' }); });
   });
 
   return grupos;
+};
+
+window.buscarAgromercadoOficial = function(nombre){
+  var needle = normalizarNombre(nombre || '');
+  if (!needle || typeof AGROMERCADOS_DATA === 'undefined') return null;
+  var encontrado = null;
+
+  Object.keys(AGROMERCADOS_DATA).some(function(distrito){
+    return (AGROMERCADOS_DATA[distrito] || []).some(function(item){
+      if (!item) return false;
+      var agro = item.a || item.nombre || item.agromercado || '';
+      var muni = item.m || item.municipio || '';
+      var agroNorm = normalizarNombre(agro);
+      var muniNorm = normalizarNombre(muni);
+      var esCda = esAgromercadoCDA(agro) || esAgromercadoCDA(muni);
+      if (!esCda) return false;
+      if (agroNorm === needle || muniNorm === needle || agroNorm.indexOf(needle) >= 0 || needle.indexOf(agroNorm) >= 0) {
+        encontrado = { nombre: agro, municipio: muni, distrito: distrito };
+        return true;
+      }
+      return false;
+    });
+  });
+
+  return encontrado;
+};
+
+window.repararDestinosCDAAgromercado = function(){
+  var changedDist = false;
+  var changedInv = false;
+  var dist = [];
+  var inv = [];
+  try { dist = JSON.parse(localStorage.getItem('distribucion-cda-data') || '[]'); } catch(e) { dist = []; }
+  try { inv = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(e) { inv = []; }
+
+  dist.forEach(function(row){
+    if (!row) return;
+    var meta = window.buscarAgromercadoOficial(row.cda || row.agromercado || row.destino || '');
+    if (!meta || !meta.nombre) return;
+    if (row.cda !== meta.nombre || row.agromercado !== meta.nombre || row.municipio !== meta.municipio || row.distrito !== meta.distrito) {
+      row.cda = meta.nombre;
+      row.agromercado = meta.nombre;
+      row.destino = meta.nombre;
+      row.municipio = meta.municipio || row.municipio || '';
+      row.distrito = meta.distrito || row.distrito || '';
+      row.supabase_synced = false;
+      changedDist = true;
+    }
+  });
+
+  if (changedDist) {
+    localStorage.setItem('distribucion-cda-data', JSON.stringify(dist));
+    if (typeof distribucionData !== 'undefined') distribucionData = dist;
+  }
+
+  var porId = {};
+  dist.forEach(function(row){ if (row && row.id) porId[row.id] = row; });
+  inv.forEach(function(mov){
+    if (!mov || mov.tipo !== 'entrada-distribucion') return;
+    var id = String(mov.id || '').replace(/^entrada-/, '');
+    var row = porId[id];
+    var meta = row && row.cda ? { nombre: row.cda, municipio: row.municipio || '', distrito: row.distrito || '' } : window.buscarAgromercadoOficial(mov.agromercado || mov.destino || mov.lugar || mov.ubicacion || '');
+    if (!meta || !meta.nombre) return;
+    if (mov.ubicacion !== 'agromercados' || mov.lugar !== meta.nombre || mov.agromercado !== meta.nombre) {
+      mov.ubicacion = 'agromercados';
+      mov.lugar = meta.nombre;
+      mov.agromercado = meta.nombre;
+      mov.destino = meta.nombre;
+      mov.municipio = meta.municipio || mov.municipio || '';
+      mov.distrito = meta.distrito || mov.distrito || '';
+      mov.supabase_synced = false;
+      changedInv = true;
+    }
+  });
+
+  if (changedInv) {
+    localStorage.setItem('inventario-data', JSON.stringify(inv));
+    if (typeof inventarioData !== 'undefined') inventarioData = inv;
+  }
+
+  if (changedDist || changedInv) {
+    if (typeof renderDistribucionTable === 'function') renderDistribucionTable();
+    if (typeof refrescarInventarioEnTiempoReal === 'function') refrescarInventarioEnTiempoReal();
+    if (typeof renderControlVentaMatrix === 'function') renderControlVentaMatrix();
+  }
+  return changedDist || changedInv;
 };
 
 window.cargarDestinosInventario = function(){
@@ -10853,6 +10982,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Recibos
     if(tabId === 'tab-recibos'){
+      if(typeof renderPanelReportes === 'function'){
+        renderPanelReportes();
+      }
       if(typeof renderTablaRecibos === 'function'){
         renderTablaRecibos();
       }
@@ -10970,6 +11102,44 @@ document.addEventListener('DOMContentLoaded', function(){
       </html>
     `);
     w.document.close();
+  };
+
+  window.abrirReporteSistema = function(reporte){
+    var config = REPORTES_SISTEMA.find(function(item){ return item.id === reporte; });
+    if (!config) return;
+    if (config.tab) {
+      var btn = document.querySelector('.tab-btn[onclick*="' + config.tab + '"]');
+      if (typeof switchTab === 'function') switchTab(config.tab, btn || null);
+    }
+    setTimeout(function(){
+      if (typeof config.before === 'function') config.before();
+      if (typeof config.action === 'function') config.action();
+    }, 180);
+  };
+
+  var REPORTES_SISTEMA = [
+    { id:'ventas-periodo', icon:'📈', title:'Resumen de ventas', desc:'Reporte de ventas por periodo', tab:'tab-inicio', action:function(){ if (typeof imprimirResumenVentasPeriodo === 'function') imprimirResumenVentasPeriodo(); } },
+    { id:'control-venta', icon:'🌾', title:'Control de venta', desc:'Historial de ventas digitadas', tab:'tab-agro', before:function(){ if (typeof expandirHistorialControlVenta === 'function') expandirHistorialControlVenta(); }, action:function(){ imprimirTablaPorTitulo('Historial Control de Venta Agromercado', '#tbl-historial'); } },
+    { id:'reportes-vendedores', icon:'✅', title:'Reportes de vendedores', desc:'Envíos pendientes y aprobados', tab:'tab-agro', before:function(){ if (typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl(); }, action:function(){ imprimirTablaPorTitulo('Historial de reportes de venta', '#control-venta-reportes-table'); } },
+    { id:'bancos', icon:'🏦', title:'Reporte banco', desc:'Remesas, bancos y gastos', tab:'tab-bancos', action:function(){ imprimirTablaPorTitulo('Reporte de Bancos', '#tbl-bancos'); } },
+    { id:'tiendona', icon:'🚚', title:'Distribución Tiendona', desc:'Historial de envíos Tiendona', tab:'tab-descargas', action:function(){ if (typeof imprimirHistorialTiendona === 'function') imprimirHistorialTiendona(); } },
+    { id:'cda', icon:'🚚', title:'Distribución CDA', desc:'Historial de envíos CDA', tab:'tab-distribucion', action:function(){ if (typeof imprimirHistorialCDA === 'function') imprimirHistorialCDA(); } },
+    { id:'cuadre-cda', icon:'📋', title:'Cuadre CDA', desc:'Cuadre y envío CDA', tab:'tab-distribucion', action:function(){ imprimirTablasPorTitulo('Cuadre CDA', ['#tabla-cuadre-cda', '#tabla-envio-cda']); } },
+    { id:'devoluciones', icon:'🔄', title:'Devoluciones', desc:'Historial de devoluciones', tab:'tab-devoluciones', action:function(){ if (typeof imprimirHistorialDevoluciones === 'function') imprimirHistorialDevoluciones(); } },
+    { id:'inventario', icon:'📦', title:'Inventario', desc:'Historial de movimientos', tab:'tab-inventario', action:function(){ imprimirTablaPorTitulo('Historial de Inventario', '#tbl-inventario'); } },
+    { id:'cuadre-bodegas', icon:'📊', title:'Cuadre de bodegas', desc:'Tabla de cuadre diario', tab:'tab-inventario', action:function(){ imprimirTablasPorTitulo('Cuadre de Bodegas', ['#tabla-cuadre-bodegas']); } },
+    { id:'documentos', icon:'🧾', title:'Documentos', desc:'Historial de comprobantes', tab:'tab-recibos', action:function(){ imprimirTablaPorTitulo('Historial de Documentos', '#tabla-historial-documentos'); } }
+  ];
+
+  window.renderPanelReportes = function(){
+    var cont = document.getElementById('panel-reportes-botones');
+    if (!cont) return;
+    cont.innerHTML = REPORTES_SISTEMA.map(function(item){
+      return "<button type=\"button\" class=\"reporte-btn\" onclick=\"abrirReporteSistema('" + item.id + "')\">"
+        + '<span><strong>' + item.icon + ' ' + item.title + '</strong><small>' + item.desc + '</small></span>'
+        + '<span>Imprimir</span>'
+        + '</button>';
+    }).join('');
   };
 
   window.limpiarTitulo = limpiarTitulo;
@@ -13464,6 +13634,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var tbodyId = tipo === 'CDA' ? 'tbody-distribucion-cda-fija' : 'tbody-distribucion-tiendona-fija';
     var tbody = document.getElementById(tbodyId);
     if (!tbody) return;
+    if (tipo === 'CDA' && typeof window.repararDestinosCDAAgromercado === 'function') {
+      window.repararDestinosCDAAgromercado();
+    }
 
     var destinos = getDestinosDistribucion(tipo);
     if (!destinos.length) {
@@ -13740,6 +13913,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('DOMContentLoaded', function(){
     setTimeout(function(){
+      if (typeof window.repararDestinosCDAAgromercado === 'function') window.repararDestinosCDAAgromercado();
       if (typeof renderDistribucionMatrices === 'function') renderDistribucionMatrices();
     }, 250);
   });
@@ -13771,7 +13945,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var SOURCE_LOCATIONS_DIST = {
     TIENDONA: ['descargas-tiendona', 'descargas-tiendona-abajo', 'descargas-tiendona-arriba'],
-    CDA: ['distribucion-cda', 'distribucion-cda-soyapango', 'distribucion-cda-usulutan']
+    CDA: ['distribucion-cda', 'distribucion-cda-soyapango', 'distribucion-cda-usulutan', 'cda']
   };
 
   function emptyTotals(){
@@ -13792,12 +13966,13 @@ document.addEventListener('DOMContentLoaded', function() {
   function getInventoryTotals(locations){
     var totals = emptyTotals();
     var data = [];
+    var normalizedLocations = (locations || []).map(function(loc){ return normTxt(loc); });
     try {
       data = JSON.parse(localStorage.getItem('inventario-data') || '[]');
     } catch(e) {}
 
     data.forEach(function(item){
-      if (!locations.includes(item.ubicacion)) return;
+      if (normalizedLocations.indexOf(normTxt(item.ubicacion)) < 0) return;
       addTotals(totals, item, 1);
     });
 
@@ -13979,6 +14154,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof refrescarInventarioEnTiempoReal === 'function') refrescarInventarioEnTiempoReal();
     clearMatrixRows('TIENDONA');
     renderResumenInventarioTiendona();
+    if (typeof renderControlVentaMatrix === 'function') renderControlVentaMatrix();
     showAlert('alert-descargas', 'Distribución Tiendona guardada correctamente.', 'ok');
     return false;
   };
@@ -14026,6 +14202,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof refrescarInventarioEnTiempoReal === 'function') refrescarInventarioEnTiempoReal();
     clearMatrixRows('CDA');
     renderResumenInventarioCDA();
+    if (typeof renderControlVentaMatrix === 'function') renderControlVentaMatrix();
     showAlert('alert-distribucion', 'Distribución CDA guardada correctamente.', 'ok');
     return false;
   };
@@ -14226,6 +14403,15 @@ document.addEventListener('DOMContentLoaded', function() {
     return { arroz:0, precocido:0, frijol1:0, frijol4:0, aceite:0, harina:0 };
   }
 
+  function inventoryMovementBelongsToAgro(item, target){
+    if (!item || !target) return false;
+    return [item.agromercado, item.destino, item.lugar, item.ubicacion].some(function(value){
+      var text = normText(value || '');
+      if (!text) return false;
+      return text === target || text.indexOf(target) >= 0 || target.indexOf(text) >= 0;
+    });
+  }
+
   function getStockForAgro(nombre){
     var target = normText(nombre);
     var totals = zeroStock();
@@ -14233,11 +14419,7 @@ document.addEventListener('DOMContentLoaded', function() {
     try { data = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(e) {}
 
     data.forEach(function(item){
-      var itemPlace = normText(item.lugar || item.agromercado || '');
-      var itemLocation = normText(item.ubicacion || '');
-      var belongsToAgro = itemLocation === 'AGROMERCADOS' && (itemPlace === target || itemPlace.indexOf(target) >= 0);
-      var oldFormatAgro = itemLocation === target;
-      if (!belongsToAgro && !oldFormatAgro) return;
+      if (!inventoryMovementBelongsToAgro(item, target)) return;
       VENTA_PRODUCTS.forEach(function(p){
         totals[p.inv] += Number(item[p.inv] || 0);
       });
@@ -14280,6 +14462,10 @@ document.addEventListener('DOMContentLoaded', function() {
       + '.venta-matrix-table .venta-agro-name{display:block;max-width:220px;margin:0 auto;font-weight:900;overflow-wrap:anywhere;}'
       + '.control-report-filters{display:grid;grid-template-columns:1fr 170px 190px auto;gap:8px;padding:12px;border-bottom:1px solid #dbeafe;background:#f8fbff;}'
       + '.control-report-filters input,.control-report-filters select{min-height:36px;border:1px solid #bad3ea;border-radius:8px;padding:7px 9px;font-weight:700;}'
+      + '.reportes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;}'
+      + '.reporte-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;border:1px solid #cfe0f1;background:#f8fbff;color:#0b2239;border-radius:8px;padding:12px 14px;font-weight:900;box-shadow:0 1px 2px rgba(15,23,42,.05);cursor:pointer;}'
+      + '.reporte-btn small{display:block;margin-top:3px;color:#526a83;font-size:.72rem;font-weight:700;}'
+      + '.reporte-btn:hover{background:#edf6ff;border-color:#9cc7ea;}'
       + '.agro-date-indicator{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.72rem;font-weight:850;color:#48627c;}'
       + '.agro-date-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid #cfe0f1;border-radius:999px;background:#f8fbff;color:#17456b;padding:4px 8px;line-height:1;cursor:default;}'
       + '.agro-date-pill button{border:0;background:transparent;color:inherit;font:inherit;font-weight:900;cursor:pointer;padding:0;}'
@@ -16656,6 +16842,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof refrescarInventarioEnTiempoReal === 'function') refrescarInventarioEnTiempoReal();
     if (typeof renderResumenInventarioTiendona === 'function') renderResumenInventarioTiendona();
     if (typeof renderResumenInventarioCDA === 'function') renderResumenInventarioCDA();
+    if (typeof window.repararDestinosCDAAgromercado === 'function') window.repararDestinosCDAAgromercado();
+    if (typeof window.repararEntradasCDAInventario === 'function') window.repararEntradasCDAInventario();
+    if (typeof renderControlVentaMatrix === 'function') renderControlVentaMatrix();
     if (typeof renderVentasHistorial === 'function') renderVentasHistorial();
     if (typeof renderHistorialVentas === 'function') renderHistorialVentas();
     if (typeof renderBancos === 'function') renderBancos();
