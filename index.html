@@ -2,7 +2,7 @@
 <html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EXCOMERCAFE — Reporte Agromercados</title>
-<link rel="icon" href="./favicon.ico">
+<link rel="icon" href="./favicon.ico"> <!-- icon -->
 <link rel="apple-touch-icon" href="./favicon.png">
 <link href="./css/styles.css?v=20260521-guia-ajustes" rel="stylesheet">
 <link href="./css/components.css?v=20260519-phase61" rel="stylesheet">
@@ -2763,6 +2763,15 @@
 window.SUPABASE_CONFIG = {
   url: 'https://hfijlpjeqagxyvgirkwk.supabase.co',
   key: 'sb_publishable_AIUqdFrAct3bR6y8Y6t1Qw_qNGJ5GHs'
+};
+
+window.normTxt = window.normTxt || function(value){
+  return String(value || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
 window.AUTH_STORAGE_KEY = 'excomercafe_auth_session';
@@ -10959,7 +10968,7 @@ window.aplicarFechaActualATodosLosCampos = function(){
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', function(){
-  migrateOldRecords();
+  if (typeof migrateOldRecords === 'function') migrateOldRecords();
   sembrarDatosIniciales();
   window.MUNICIPIOS = JSON.parse(localStorage.getItem('municipios-data')||'[]').map(function(item){ return item && item.nombre ? item.nombre : item; });
   aplicarAjustes();
@@ -13783,12 +13792,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 (function(){
   function normTxt(value){
-    return String(value || '')
-      .toUpperCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return window.normTxt ? window.normTxt(value) : String(value || '').toUpperCase().trim();
   }
 
   function findDestinoMeta(nombre){
