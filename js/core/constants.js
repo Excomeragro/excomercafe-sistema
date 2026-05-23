@@ -4,7 +4,7 @@
 var PRODUCTOS = ['ab1','ap1','fr1','fr4','ac','ha'];
 
 // Nombres de productos para mostrar
-var PRODUCTOS_NOMBRES = ['AB 1lb', 'AP 1lb', 'FR 1lb', 'FR 4lb', 'Aceite', 'Harina'];
+var PRODUCTOS_NOMBRES = ['AB 1lb', 'AP 1lb', 'FR 1lb', 'FR 4lb', 'Aceite_TEMP', 'Harina'];
 
 // Claves de productos para formularios, precios e inventario
 var PRODUCTOS_KEYS = ['ab1', 'ap1', 'fr1', 'fr4', 'ac', 'ha'];
