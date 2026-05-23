@@ -455,10 +455,11 @@ function reporteCanvas(){
   var observaciones = document.getElementById('observaciones') ? document.getElementById('observaciones').value : '';
   var x = 42;
   var y = 36;
+  var contentW = 916;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#17456b';
-  ctx.fillRect(x, y, 916, 86);
+  ctx.fillRect(x, y, contentW, 86);
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 16px Arial';
   ctx.fillText('EXCOMERCAFE', x + 18, y + 25);
@@ -481,7 +482,7 @@ function reporteCanvas(){
   box('AGROMERCADO', accesoActual ? accesoActual.nombre : '', x, y, 330, 60);
   box('ENCARGADO', encargado, x + 338, y, 220, 60);
   box('BANCO', banco || 'Pendiente', x + 566, y, 170, 60);
-  box('GASTOS', money(gastos), x + 744, y, 214, 60);
+  box('GASTOS', money(gastos), x + 744, y, 172, 60);
 
   y += 82;
   var cols = [230, 105, 115, 85, 90, 90, 105, 96];
@@ -489,7 +490,7 @@ function reporteCanvas(){
   var rowH = 42;
   var cx = x;
   ctx.fillStyle = '#e8eef5';
-  ctx.fillRect(x, y, 916, rowH);
+  ctx.fillRect(x, y, contentW, rowH);
   ctx.strokeStyle = '#777';
   ctx.font = 'bold 13px Arial';
   headers.forEach(function(h, i){
@@ -513,7 +514,7 @@ function reporteCanvas(){
     y += rowH;
   });
 
-  var totalW = 916 / 3;
+  var totalW = contentW / 3;
   ['Ventas','Gastos','Remesa'].forEach(function(label, i){
     var id = i === 0 ? 'total-ventas' : (i === 1 ? 'total-gastos' : 'total-remesa');
     var value = document.getElementById(id).textContent;
@@ -527,7 +528,7 @@ function reporteCanvas(){
     ctx.fillText(value, bx + 10, y + 50);
   });
   y += 88;
-  box('OBSERVACIONES', observaciones || 'Sin observaciones', x, y, 916, 105);
+  box('OBSERVACIONES', observaciones || 'Sin observaciones', x, y, contentW, 105);
   return canvas;
 }
 
