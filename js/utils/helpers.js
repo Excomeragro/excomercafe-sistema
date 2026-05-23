@@ -194,9 +194,13 @@ window.removeNumbers = function(text){
 
 // ── FUNCIONES CSV ──
 window.parseCsvLine = function(line){
-  var result = [], cur = '', inQ = false;
+  var result = [];
+  var cur = '';
+  var inQ = false;
+
   for(var i = 0; i < line.length; i++){
     var c = line[i];
+
     if(c === '"'){
       if(inQ && line[i + 1] === '"'){
         cur += '"';
@@ -213,6 +217,7 @@ window.parseCsvLine = function(line){
       cur += c;
     }
   }
+
   result.push(cur.trim());
   return result;
 }
