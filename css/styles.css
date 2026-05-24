@@ -1,4 +1,4 @@
-/* SISTEMA DE VARIABLES CSS - PALETA MODERNA EXCOMERCAFE */
+﻿/* SISTEMA DE VARIABLES CSS - PALETA MODERNA EXCOMERCAFE */
 :root{
   --bg-primary:#f4f7fb;
   --bg-secondary:#eef4fb;
@@ -69,7 +69,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* TIPOGRAFÍA MEJORADA */
+/* TIPOGRAFÃA MEJORADA */
 h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
   font-weight: 700;
@@ -105,7 +105,7 @@ a:hover {
   padding: 0;
 }
 
-/* RESPONSIVE PARA MÓVIL - ELIMINADO */
+/* RESPONSIVE PARA MÃ“VIL - ELIMINADO */
 /* @media (max-width: 768px) { ... } */
 
 /* TABLETS - ELIMINADO */
@@ -337,7 +337,7 @@ main {
   box-shadow: 0 0 0 3px rgba(232,160,32,0.2);
 }
 
-/* CARD - PALETA CELESTE Y SALMÓN */
+/* CARD - PALETA CELESTE Y SALMÃ“N */
 .card {
   background: var(--card-bg);
   border-radius: var(--radius-lg);
@@ -408,7 +408,7 @@ main {
   color: var(--text-secondary);
 }
 
-/* Textos muted específicos */
+/* Textos muted especÃ­ficos */
 .text-muted {
   color: var(--text-muted);
 }
@@ -710,7 +710,7 @@ main {
 .save-toast{position:fixed;bottom:70px;right:18px;background:#1E293B;color:#fff;padding:9px 17px;border-radius:8px;font-size:0.82rem;font-weight:600;z-index:500;opacity:0;transition:opacity .3s;pointer-events:none;}
 .save-toast.show{opacity:1;}
 
-/* SETTINGS PANEL - FONDO SÓLIDO */
+/* SETTINGS PANEL - FONDO SÃ“LIDO */
 .settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:flex-start;justify-content:flex-end;}
 .settings-overlay.open{display:flex;}
 .settings-panel{background:#FFFFFF;width:330px;height:100vh;overflow-y:auto;box-shadow:-4px 0 30px rgba(0,0,0,0.15);display:flex;flex-direction:column;border-left:1px solid #d1d5db;}
@@ -2314,7 +2314,7 @@ select option{
   }
 
   body.smart-menu-collapsed .header::after{
-    content:"☰";
+    content:"â˜°";
     width:42px;
     height:42px;
     display:flex;
@@ -2349,9 +2349,9 @@ select option{
 
   body.smart-menu-collapsed .main-tabs{
     width:var(--smart-menu-rail) !important;
-    padding:10px 8px 12px !important;
+    padding:10px 8px 8px !important;
     align-items:center;
-    bottom:180px !important;
+    bottom:128px !important;
     gap:7px !important;
     overflow:hidden;
     box-shadow:6px 0 22px rgba(15,23,42,.12);
@@ -2403,9 +2403,9 @@ select option{
 
   body.smart-menu-collapsed .header-actions{
     left:8px !important;
-    bottom:10px !important;
+    bottom:8px !important;
     width:50px !important;
-    min-height:154px;
+    min-height:auto;
     padding:7px !important;
     display:grid !important;
     grid-template-columns:1fr !important;
@@ -2416,42 +2416,7 @@ select option{
     background:linear-gradient(180deg, rgba(11,32,51,.98), rgba(7,24,39,.98)) !important;
     box-shadow:0 12px 24px rgba(0,0,0,.16) !important;
   }
-
-  .smart-menu-hide{
-    min-height:32px;
-    padding:7px 10px !important;
-    font-size:.78rem !important;
-    border:1px solid rgba(255,255,255,.14) !important;
-    background:rgba(255,255,255,.08) !important;
-    color:#ffffff !important;
-  }
-
-  .smart-menu-hide:hover{
-    background:rgba(255,255,255,.16) !important;
-  }
-
-  body.smart-menu-collapsed .smart-menu-hide{
-    width:34px !important;
-    min-width:34px;
-    height:32px;
-    min-height:32px;
-    padding:0 !important;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:transparent !important;
-    font-size:0 !important;
-    overflow:hidden;
-  }
-
-  body.smart-menu-collapsed .smart-menu-hide::before{
-    content:"‹";
-    color:#ffffff;
-    font-size:1.25rem;
-    line-height:1;
-  }
-
-  body.smart-menu-collapsed .online-indicator,
+body.smart-menu-collapsed .online-indicator,
   body.smart-menu-collapsed .auth-user-badge{
     width:34px !important;
     height:32px;
@@ -2490,13 +2455,13 @@ select option{
   }
 
   body.smart-menu-collapsed .hbtn-chat::before{
-    content:"💬";
+    content:"ðŸ’¬";
     color:#ffffff;
     font-size:1rem;
   }
 
   body.smart-menu-collapsed .hbtn-settings::before{
-    content:"⚙";
+    content:"âš™";
     color:#ffffff;
     font-size:1rem;
   }
@@ -2516,7 +2481,7 @@ select option{
 
   body.smart-menu-expanded .header-actions{
     left:14px !important;
-    bottom:10px !important;
+    bottom:8px !important;
     width:226px !important;
     padding:8px !important;
     display:grid !important;
@@ -2525,8 +2490,6 @@ select option{
     align-items:stretch;
     border-radius:11px !important;
   }
-
-  body.smart-menu-expanded .smart-menu-hide,
   body.smart-menu-expanded .online-indicator,
   body.smart-menu-expanded .auth-user-badge{
     grid-column:1 / -1;
@@ -2561,21 +2524,9 @@ select option{
   body.smart-menu-expanded main{
     margin-left:var(--smart-menu-wide) !important;
   }
-
-  body.smart-menu-collapsed .header-actions{
-    min-height:154px !important;
-  }
-
-  body.smart-menu-collapsed .smart-menu-hide::before{
-    content:"\1F441" !important;
-    font-size:1rem !important;
-  }
-
-  body.smart-menu-expanded .header-actions{
+body.smart-menu-expanded .header-actions{
     grid-template-columns:1fr 1fr !important;
   }
-
-  body.smart-menu-expanded .smart-menu-hide,
   body.smart-menu-expanded .online-indicator{
     grid-column:1 / -1;
   }
@@ -2909,7 +2860,7 @@ body.theme-oscuro .settings-panel select option{
 /* Controles inferiores del menu lateral: estilo normal, limpio y sin tarjeta flotante */
 @media (min-width:901px){
   body.smart-menu-expanded .main-tabs{
-    bottom:126px !important;
+    bottom:100px !important;
     padding-bottom:12px !important;
   }
 
@@ -2928,8 +2879,6 @@ body.theme-oscuro .settings-panel select option{
     box-shadow:none !important;
     border-radius:0 !important;
   }
-
-  body.smart-menu-expanded .smart-menu-hide,
   body.smart-menu-expanded .online-indicator{
     grid-column:1 / -1 !important;
     width:100% !important;
@@ -2943,10 +2892,6 @@ body.theme-oscuro .settings-panel select option{
     justify-content:center !important;
     font-size:.76rem !important;
     font-weight:850 !important;
-  }
-
-  body.smart-menu-expanded .smart-menu-hide{
-    background:rgba(255,255,255,.05) !important;
   }
 
   body.smart-menu-expanded .online-indicator.syncing,
@@ -2994,7 +2939,7 @@ body.theme-oscuro .settings-panel select option{
   }
 
   body.smart-menu-collapsed .main-tabs{
-    bottom:158px !important;
+    bottom:128px !important;
   }
 
   body.smart-menu-collapsed .header-actions{
@@ -3010,8 +2955,6 @@ body.theme-oscuro .settings-panel select option{
     box-shadow:none !important;
     border-radius:0 !important;
   }
-
-  body.smart-menu-collapsed .smart-menu-hide,
   body.smart-menu-collapsed .online-indicator,
   body.smart-menu-collapsed .hbtn-chat,
   body.smart-menu-collapsed .hbtn-settings,
@@ -3034,3 +2977,14 @@ body.theme-oscuro .settings-panel select option{
     background:#17456b !important;
   }
 }
+
+@media (min-width:901px){
+  body.smart-menu-expanded .main-tabs{
+    bottom:100px !important;
+  }
+
+  body.smart-menu-collapsed .main-tabs{
+    bottom:146px !important;
+  }
+}
+
