@@ -17353,6 +17353,58 @@ document.addEventListener('DOMContentLoaded', function() {
     return true;
   }
 
+  window.excomercafeRefreshAll = refreshAfterOnlineSync;
+  window.excomercafeRefreshAllSeguro = refreshAfterOnlineSyncSeguro;
+
+  (function instalarRefrescoAutomaticoDatos(){
+    if (window.excomercafeAutoRefreshDatosInstalado) return;
+    window.excomercafeAutoRefreshDatosInstalado = true;
+    var keys = {
+      'exc_agro_hist': true,
+      'inventario-data': true,
+      'descargas-data': true,
+      'descargas-tiendona-historial': true,
+      'distribucion-cda-data': true,
+      'devoluciones-data': true,
+      'bancos-data': true,
+      'personas-data': true,
+      'agromercados-data': true,
+      'distritos-data': true,
+      'municipios-data': true,
+      'cuadre-bodegas-data': true,
+      'cuadre-cda-data': true
+    };
+    var timer = null;
+
+    function schedule(key){
+      if (!keys[key]) return;
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        if (typeof window.excomercafeRefreshAllSeguro === 'function') {
+          window.excomercafeRefreshAllSeguro();
+        }
+      }, 80);
+    }
+
+    var originalSetItem = localStorage.setItem.bind(localStorage);
+    var originalRemoveItem = localStorage.removeItem.bind(localStorage);
+    localStorage.setItem = function(key, value){
+      var before = localStorage.getItem(key);
+      var result = originalSetItem(key, value);
+      if (before !== String(value)) schedule(key);
+      return result;
+    };
+    localStorage.removeItem = function(key){
+      var existed = localStorage.getItem(key) !== null;
+      var result = originalRemoveItem(key);
+      if (existed) schedule(key);
+      return result;
+    };
+    window.addEventListener('storage', function(event){
+      if (event && event.key) schedule(event.key);
+    });
+  })();
+
   function aplicarRefreshPendiente(){
     if (!window.excomercafePendingSyncRefresh || usuarioDigitando()) return;
     refreshAfterOnlineSyncSeguro();
