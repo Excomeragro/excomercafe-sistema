@@ -10269,6 +10269,15 @@ function textoClaveAgromercado(row){
   return 'Agromercado: ' + row.agromercado + '\nClave: ' + row.clave + '\nPortal: https://skobar31sv-pixel.github.io/excomercafe-sistema/agromercado/';
 }
 
+function htmlClaveSeguro(value){
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function copiarTextoSistema(texto, okMsg){
   function done(){ if(typeof showAlert === 'function') showAlert('datos', okMsg || 'Copiado.', 'ok'); }
   if(navigator.clipboard && window.isSecureContext){
@@ -10296,8 +10305,8 @@ window.renderClavesAgromercado = function(){
   tbody.innerHTML = rows.map(function(row){
     var realIndex = data.indexOf(row);
     return '<tr>'
-      + '<td><strong>' + escapeHtml(row.agromercado) + '</strong></td>'
-      + '<td><code style="font-weight:900;font-size:0.95rem;">' + escapeHtml(row.clave) + '</code></td>'
+      + '<td><strong>' + htmlClaveSeguro(row.agromercado) + '</strong></td>'
+      + '<td><code style="font-weight:900;font-size:0.95rem;">' + htmlClaveSeguro(row.clave) + '</code></td>'
       + '<td style="white-space:nowrap;">'
       + '<button class="btn btn-sm btn-secondary" onclick="copiarClaveAgromercado(' + realIndex + ')">Clave</button> '
       + '<button class="btn btn-sm btn-secondary" onclick="copiarMensajeClaveAgromercado(' + realIndex + ')">Mensaje</button> '
