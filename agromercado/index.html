@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EXCOMERCAFE - Control Agromercado</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="./styles.css?v=20260523-portal-brand">
+  <link rel="stylesheet" href="./styles.css?v=20260523-portal-loading">
 </head>
 <body>
   <main class="portal-shell">
@@ -22,7 +22,12 @@
       <div class="portal-date" id="fecha-visible">--/--/----</div>
     </section>
 
-    <section class="access-panel" id="access-panel">
+    <section class="portal-loading" id="portal-loading">
+      <strong>Cargando acceso...</strong>
+      <span>Preparando hoja digital del vendedor</span>
+    </section>
+
+    <section class="access-panel hidden" id="access-panel">
       <h2>Acceso del agromercado</h2>
       <div class="form-grid">
         <label>
@@ -117,6 +122,6 @@
     </form>
   </main>
 
-  <script src="./app.js?v=20260523-portal-fecha-diaria"></script>
+  <script src="./app.js?v=20260523-portal-loading"></script>
 </body>
 </html>

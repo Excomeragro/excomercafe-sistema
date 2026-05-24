@@ -108,6 +108,28 @@ body{
   padding:18px;
 }
 
+.portal-loading{
+  margin-top:16px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:8px;
+  box-shadow:0 8px 24px rgba(15,23,42,.08);
+  padding:22px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  color:var(--ink);
+}
+
+.portal-loading strong{
+  font-size:1.05rem;
+}
+
+.portal-loading span{
+  color:var(--muted);
+  font-weight:700;
+}
+
 h2{
   margin:0 0 14px;
   font-size:1.05rem;
@@ -572,6 +594,7 @@ button.small{
   }
 
   .access-panel,
+  .portal-loading,
   .form-card,
   .totals{
     margin:10px 8px 0;
@@ -579,6 +602,7 @@ button.small{
   }
 
   .form-card,
+  .portal-loading,
   .access-panel{
     padding:12px;
   }
