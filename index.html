@@ -37,7 +37,7 @@
     align-items:center;
     justify-content:center;
     padding:18px;
-    background:linear-gradient(135deg, rgba(7,24,39,.98), rgba(11,32,51,.96));
+    background:linear-gradient(135deg, #071827, #0b2033);
   }
   .auth-overlay.auth-hidden,
   .auth-card.auth-hidden{display:none;}
@@ -187,6 +187,16 @@
     grid-template-columns:1fr auto;
     gap:10px;
     align-items:center;
+  }
+  body.auth-locked .header,
+  body.auth-locked .tabs,
+  body.auth-locked main,
+  body.auth-locked .codex-mini-dock,
+  body.auth-locked .chat-panel,
+  body.auth-locked .settings-overlay,
+  body.auth-locked .sidebar-mobile-toggle{
+    visibility:hidden !important;
+    pointer-events:none !important;
   }
   .settings-user-row .auth-user-badge{
     width:100%;
@@ -888,7 +898,7 @@
 </style>
 <script src="./index_files/xlsx.full.min.js"></script>
 </head>
-<body class="smart-menu-collapsed">
+<body class="smart-menu-collapsed auth-locked">
 
 <div class="auth-overlay" id="auth-overlay">
   <form class="auth-card" id="auth-login-card" onsubmit="loginUsuarioSistema(event)">
@@ -2953,6 +2963,7 @@ window.mostrarLoginUsuario = function(){
 
 function aplicarSesionAuth(session){
   guardarSesionAuth(session);
+  document.body.classList.toggle('auth-locked', !session);
   window.presenceRlsBlocked = false;
   if(typeof actualizarChatClientIdSesion === 'function') actualizarChatClientIdSesion();
   var nombre = authUserNameFromSession(session);
@@ -3111,6 +3122,7 @@ window.crearUsuarioSistema = async function(event){
 };
 
 window.logoutUsuarioSistema = function(){
+  document.body.classList.add('auth-locked');
   guardarSesionAuth(null);
   window.usuarioActual = { nombre:'Usuario', rol:'usuario', admin:false, dueno:false };
   actualizarRadioSupraVisible(null);
