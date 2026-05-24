@@ -3224,13 +3224,24 @@ window.solicitarCambioPassword = async function(event){
   }
   try{
     if(errorEl) errorEl.textContent = 'Creando solicitud...';
+    var emailSolicitud = usuarioToEmail(usuario);
+    var existentes = await fetch(window.SUPABASE_CONFIG.url + '/rest/v1/password_reset_requests?select=id,estado,creado_en&email=eq.' + encodeURIComponent(emailSolicitud) + '&estado=in.(pendiente,aprobada)&order=creado_en.desc&limit=1', {
+      headers:{
+        apikey: window.SUPABASE_CONFIG.key,
+        Authorization:'Bearer ' + window.SUPABASE_CONFIG.key
+      }
+    }).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+    if(existentes && existentes.length){
+      if(errorEl) errorEl.textContent = 'Ya existe una solicitud ' + existentes[0].estado + ' para este usuario. Revisa si ya fue aprobada.';
+      return false;
+    }
     var id = uuidSeguro();
     var token = uuidSeguro() + '-' + Date.now();
     var tokenHash = await sha256Hex(token);
     var row = {
       id: id,
       usuario: normalizarUsuarioRol(usuario),
-      email: usuarioToEmail(usuario),
+      email: emailSolicitud,
       token_hash: tokenHash,
       estado: 'pendiente'
     };
@@ -3386,7 +3397,14 @@ window.cargarSolicitudesPassword = async function(){
   }
   try{
     cont.textContent = 'Cargando solicitudes...';
-    var rows = await window.supabaseRequest('/rest/v1/password_reset_requests?select=id,usuario,email,estado,creado_en,aprobado_por,aprobado_en&estado=in.(pendiente,aprobada)&order=creado_en.desc&limit=30');
+    var rows = await window.supabaseRequest('/rest/v1/password_reset_requests?select=id,usuario,email,estado,creado_en,aprobado_por,aprobado_en&estado=in.(pendiente,aprobada)&order=estado.desc,creado_en.desc&limit=30');
+    var vistos = {};
+    rows = (rows || []).filter(function(row){
+      var key = String(row.email || row.usuario || '').toLowerCase();
+      if(row.estado === 'aprobada' && vistos[key]) return false;
+      vistos[key] = true;
+      return true;
+    });
     if(!rows || !rows.length){
       cont.textContent = 'No hay solicitudes pendientes.';
       return;
