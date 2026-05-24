@@ -3838,7 +3838,7 @@ window.toggleMobileSidebar = function(){
 
 (function initSmartDesktopMenu(){
   var collapseTimer = null;
-  var collapseDelay = 5000;
+  var collapseDelay = 160;
 
   function isDesktopMenu(){
     return window.matchMedia && window.matchMedia('(min-width: 901px)').matches;
@@ -3877,8 +3877,8 @@ window.toggleMobileSidebar = function(){
   }
 
   window.expandSmartMenu = function(){
+    clearTimeout(collapseTimer);
     setSmartMenuExpanded(true);
-    scheduleSmartMenuCollapse();
   };
 
   window.hideSmartMenuNow = function(){
@@ -3907,7 +3907,10 @@ window.toggleMobileSidebar = function(){
     });
 
     document.querySelectorAll('.main-tabs .tab-btn').forEach(function(btn){
-      btn.addEventListener('click', scheduleSmartMenuCollapse);
+      btn.addEventListener('click', function(){
+        clearTimeout(collapseTimer);
+        setSmartMenuExpanded(false);
+      });
     });
 
     window.addEventListener('resize', function(){
