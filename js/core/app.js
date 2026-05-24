@@ -44,6 +44,9 @@ window.mostrarSeccionDatos = function(seccion){
       case 'personas':
         if(window.renderPersonas) window.renderPersonas();
         break;
+      case 'claves':
+        if(window.renderClavesAgromercado) window.renderClavesAgromercado();
+        break;
       case 'transporte':
         if(window.renderTransporte) window.renderTransporte();
         break;
