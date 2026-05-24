@@ -16270,7 +16270,7 @@ document.addEventListener('DOMContentLoaded', function() {
   ];
 
   var TOP_ROWS = [
-    { key:'inventarioAnteriorTiendona', label:'INVENTARIO ANTERIOR', editable:true },
+    { key:'inventarioAnteriorTiendona', label:'INVENTARIO ANTERIOR', calc:true },
     { key:'ingresoTiendonaAbajo', label:'INGRESO TIENDONA - ABAJO', calc:true },
     { key:'ingresoTiendonaArriba', label:'INGRESO TIENDONA - ARRIBA', calc:true },
     { key:'cdaUsulutanEntrada', label:'CDA USULUTAN', editable:true },
@@ -16297,6 +16297,12 @@ document.addEventListener('DOMContentLoaded', function() {
     return String(value || '').slice(0,10) === fecha;
   }
 
+  function beforeDate(value, fecha){
+    if (!fecha) return false;
+    var rowDate = String(value || '').slice(0,10);
+    return rowDate && rowDate < fecha;
+  }
+
   function addTo(acc, item, sign){
     sign = sign == null ? 1 : sign;
     BODEGA_PRODUCTS.forEach(function(p){
@@ -16317,6 +16323,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (onlyPositive && value < 0) return;
         totals[p.key] += value;
       });
+    });
+    return totals;
+  }
+
+  function sumByLocationBefore(locations, fecha){
+    var totals = emptyProducts();
+    var inv = [];
+    try { inv = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(e) {}
+    inv.forEach(function(item){
+      if (!locations.includes(item.ubicacion)) return;
+      if (!beforeDate(item.fecha, fecha)) return;
+      addTo(totals, item, 1);
     });
     return totals;
   }
@@ -16376,7 +16394,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var saved = getSavedCuadre(fecha);
     var rows = {};
 
-    rows.inventarioAnteriorTiendona = getManualRow(saved, 'inventarioAnteriorTiendona');
+    rows.inventarioAnteriorTiendona = sumByLocationBefore(['descargas-tiendona','descargas-tiendona-abajo','descargas-tiendona-arriba'], fecha);
     rows.ingresoTiendonaAbajo = sumByLocation(['descargas-tiendona-abajo'], fecha, true);
     rows.ingresoTiendonaArriba = sumByLocation(['descargas-tiendona-arriba'], fecha, true);
     rows.cdaUsulutanEntrada = getManualRow(saved, 'cdaUsulutanEntrada');
