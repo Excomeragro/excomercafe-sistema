@@ -2088,6 +2088,16 @@ table tr:hover td,
   color:var(--brand2);
 }
 
+#tbl-inventario .inv-total-pos{
+  background:#ecfdf5 !important;
+  color:#047857 !important;
+}
+
+#tbl-inventario .inv-total-neg{
+  background:#fef2f2 !important;
+  color:#b91c1c !important;
+}
+
 .btn,
 .btn-sm,
 button{
