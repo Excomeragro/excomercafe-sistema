@@ -2043,6 +2043,51 @@ table tr:hover td,
   background:var(--surface) !important;
 }
 
+#tbl-inventario{
+  table-layout:fixed;
+  min-width:980px;
+}
+
+#tbl-inventario th,
+#tbl-inventario td{
+  padding:6px 7px !important;
+}
+
+#tbl-inventario th:nth-child(1),
+#tbl-inventario td:nth-child(1){width:86px;}
+
+#tbl-inventario th:nth-child(2),
+#tbl-inventario td:nth-child(2){width:82px;}
+
+#tbl-inventario th:nth-child(3),
+#tbl-inventario td:nth-child(3){width:190px;}
+
+#tbl-inventario th:nth-child(n+4):nth-child(-n+10),
+#tbl-inventario td:nth-child(n+4):nth-child(-n+10){
+  width:92px;
+  text-align:center;
+}
+
+#tbl-inventario th:nth-child(11),
+#tbl-inventario td:nth-child(11){width:180px;}
+
+#tbl-inventario th:nth-child(12),
+#tbl-inventario td:nth-child(12){width:78px;text-align:center;}
+
+#tbl-inventario .inv-location{
+  font-weight:700;
+  line-height:1.2;
+}
+
+#tbl-inventario .inv-num{
+  font-variant-numeric:tabular-nums;
+  text-align:center;
+}
+
+#tbl-inventario .inv-total{
+  color:var(--brand2);
+}
+
 .btn,
 .btn-sm,
 button{
