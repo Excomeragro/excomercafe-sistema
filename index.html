@@ -7874,12 +7874,28 @@ function claseTotalInventario(total){
 
 function inventarioVisibleEnHistorial(inv){
   if (!inv) return false;
+  if (typeof window.inventarioVisibleUsuario === 'function') return window.inventarioVisibleUsuario(inv);
   var tipo = String(inv.tipo || '').toLowerCase();
   return ['salida-distribucion', 'entrada-distribucion'].indexOf(tipo) < 0;
 }
 
+window.inventarioVisibleUsuario = window.inventarioVisibleUsuario || inventarioVisibleEnHistorial;
+
+function limpiarMovimientosAutomaticosInventarioVisible(){
+  var data = [];
+  try { data = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(error) { data = []; }
+  var limpia = (data || []).filter(inventarioVisibleEnHistorial);
+  if (limpia.length !== data.length) {
+    localStorage.setItem('inventario-data', JSON.stringify(limpia));
+    if (typeof inventarioData !== 'undefined') inventarioData = limpia;
+    return true;
+  }
+  return false;
+}
+
 window.renderInventarioTable = function(){
   var tbody = document.getElementById('tbody-inventario');
+  limpiarMovimientosAutomaticosInventarioVisible();
   var historialVisible = (inventarioData || []).filter(inventarioVisibleEnHistorial);
   
   if(historialVisible.length === 0){
@@ -8403,8 +8419,9 @@ window.toggleStockAgromercados = function(){
 // ── RESUMEN VISUAL DE INVENTARIO POR AGROMERCADO ──
 window.actualizarResumenVisual = function(){
   var container = document.getElementById('resumen-inventario-visual');
+  var inventarioResumenVisible = (inventarioData || []).filter(inventarioVisibleEnHistorial);
   
-  if(inventarioData.length === 0){
+  if(inventarioResumenVisible.length === 0){
     container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">No hay datos de inventario para mostrar.</div>';
     return;
   }
@@ -8419,7 +8436,7 @@ window.actualizarResumenVisual = function(){
     harina: 0
   };
   
-  inventarioData.forEach(function(inv){
+  inventarioResumenVisible.forEach(function(inv){
     if(inv.ubicacion === 'bodega-local' || inv.ubicacion === 'Bodega Local'){
       stockBodegaLocal.arroz += inv.arroz || 0;
       stockBodegaLocal.precocido += inv.precocido || 0;
@@ -8433,7 +8450,7 @@ window.actualizarResumenVisual = function(){
   // Agrupar agromercados por lugar con fallbacks
   var stockAgromercados = {};
   
-  inventarioData.forEach(function(inv){
+  inventarioResumenVisible.forEach(function(inv){
     // Excluir Bodega Local
     if(inv.ubicacion === 'bodega-local' || inv.ubicacion === 'Bodega Local') return;
     
@@ -8577,7 +8594,8 @@ window.actualizarResumenVisual = function(){
 };
 
 window.exportarInventarioExcel = function(){
-  if(inventarioData.length === 0){
+  var inventarioExportable = (inventarioData || []).filter(inventarioVisibleEnHistorial);
+  if(inventarioExportable.length === 0){
     showAlert('alert-inventario', 'No hay datos para exportar', 'err');
     return;
   }
@@ -8585,7 +8603,7 @@ window.exportarInventarioExcel = function(){
   var ws_data = [];
   ws_data.push(['FECHA', 'UBICACIÓN / GRUPO', 'ARROZ', 'ARROZ PRECOCIDO', 'FRIJOL 1 LB', 'FRIJOL 4 LB', 'ACEITE 750 ML', 'HARINA 820 GRS', 'TOTAL', 'OBSERVACIONES']);
   
-  inventarioData.forEach(function(inv){
+  inventarioExportable.forEach(function(inv){
     var ubicacionTexto = '';
     switch(inv.ubicacion){
       case 'bodega-local': ubicacionTexto = 'Bodega Tiendona'; break;
@@ -11383,6 +11401,9 @@ document.addEventListener('DOMContentLoaded', function(){
   if(savedInventario){
     try{
       inventarioData = JSON.parse(savedInventario);
+      if (typeof limpiarMovimientosAutomaticosInventarioVisible === 'function') {
+        limpiarMovimientosAutomaticosInventarioVisible();
+      }
       renderInventarioTable();
     }catch(e){
       inventarioData = [];
@@ -11404,6 +11425,7 @@ document.addEventListener('DOMContentLoaded', function(){
     };
 
     data.forEach(function(r){
+      if (typeof window.inventarioVisibleUsuario === 'function' && !window.inventarioVisibleUsuario(r)) return;
       if (!ubicaciones.includes(r.ubicacion)) return;
 
       resumen.arroz += Number(r.arroz || 0);
@@ -14564,6 +14586,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e) {}
 
     data.forEach(function(item){
+      if (typeof window.inventarioVisibleUsuario === 'function' && !window.inventarioVisibleUsuario(item)) return;
       if (normalizedLocations.indexOf(normTxt(item.ubicacion)) < 0) return;
       addTotals(totals, item, 1);
     });
@@ -17352,6 +17375,11 @@ document.addEventListener('DOMContentLoaded', function() {
     (rows || []).reverse().forEach(function(row){
       if (!row || !row.payload) return;
       var id = String(row.local_id || localId(row.payload));
+      if (config.storageKey === 'inventario-data'
+          && typeof window.inventarioVisibleUsuario === 'function'
+          && !window.inventarioVisibleUsuario(row.payload)) {
+        return;
+      }
       if (inventarioClearBefore && row.creado_en && String(row.creado_en) <= String(inventarioClearBefore)) {
         return;
       }
