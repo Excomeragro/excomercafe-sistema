@@ -425,6 +425,7 @@
     border-bottom:1px solid #cfe0f1;
   }
   .codex-mini-dock.radio-visible{display:flex;}
+  .radio-player,
   .radio-supra-player{
     display:flex;
     align-items:center;
@@ -438,6 +439,18 @@
     font-size:.75rem;
     font-weight:900;
   }
+  .radio-player select{
+    min-height:28px;
+    max-width:190px;
+    border:1px solid #bfdbfe;
+    border-radius:7px;
+    background:#f8fbff;
+    color:#0f2f4d;
+    font-size:.74rem;
+    font-weight:900;
+    padding:4px 7px;
+  }
+  .radio-player button,
   .radio-supra-player button{
     border:0;
     border-radius:7px;
@@ -448,6 +461,7 @@
     font-weight:900;
     cursor:pointer;
   }
+  .radio-player a,
   .radio-supra-player a{
     color:#17456b;
     font-weight:900;
@@ -503,6 +517,7 @@
   }
   @media(max-width:720px){
     .codex-mini-dock{padding:7px 8px;}
+    .radio-player,
     .radio-supra-player{justify-content:space-between;}
   }
   .review-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px;}
@@ -979,11 +994,12 @@
   </div>
 </header>
 <div class="codex-mini-dock" id="codex-mini-dock">
-  <div class="radio-supra-player">
-    <span>Radio Supra 90.5</span>
-    <button type="button" id="radio-supra-btn" onclick="toggleRadioSupra()">Play</button>
-    <a href="https://radiosupra905.com/" target="_blank" rel="noopener">Abrir</a>
-    <audio id="radio-supra-audio" preload="none"></audio>
+  <div class="radio-player">
+    <span>Radio</span>
+    <select id="radio-station-select" onchange="cambiarRadioDock()"></select>
+    <button type="button" id="radio-play-btn" onclick="toggleRadioDock()">Play</button>
+    <a id="radio-open-link" href="https://radios.com.sv/" target="_blank" rel="noopener">Abrir</a>
+    <audio id="radio-dock-audio" preload="none"></audio>
   </div>
 </div>
 <input type="file" id="logo-input" accept="image/*" onchange="cambiarLogo(this)" style="display:none;">
@@ -2873,8 +2889,8 @@ function actualizarRadioSupraVisible(session){
   var visible = usuarioPuedeVerRadio(session || window.authSession);
   dock.classList.toggle('radio-visible', visible);
   if(!visible) {
-    var audio = document.getElementById('radio-supra-audio');
-    var btn = document.getElementById('radio-supra-btn');
+    var audio = document.getElementById('radio-dock-audio');
+    var btn = document.getElementById('radio-play-btn');
     if(audio) audio.pause();
     if(btn) btn.textContent = 'Play';
   }
@@ -3664,13 +3680,69 @@ window.insertarEmojiChat = function(emoji){
   try { input.setSelectionRange(next, next); } catch(e) {}
 };
 
-window.toggleRadioSupra = function(){
-  var audio = document.getElementById('radio-supra-audio');
-  var btn = document.getElementById('radio-supra-btn');
-  if(!audio || !btn) return;
-  if(!audio.src) {
-    audio.src = 'https://stream-52.zeno.fm/cpoqmejvb7ftv?zs=r9mYF1zHSD-C0In5SO_XUg';
+window.RADIO_DOCK_STATIONS = [
+  { id:'supra', name:'Radio Supra 90.5', url:'https://stream-52.zeno.fm/cpoqmejvb7ftv?zs=r9mYF1zHSD-C0In5SO_XUg', page:'https://radiosupra905.com/' },
+  { id:'scan', name:'Scan 96.1', url:'http://158.69.200.1:8022/stream', page:'https://radios.com.sv/scan/' },
+  { id:'yxy', name:'YXY 105.7', url:'http://158.69.200.1:8020/stream', page:'https://radios.com.sv/yxy/' },
+  { id:'yskl', name:'YSKL', url:'https://media.dominiocreativo.com:8000/stream/1/', page:'https://radios.com.sv/yskl/' },
+  { id:'bautista', name:'Radio Bautista', url:'https://s2.radio.co/s3a7dc3d82/listen', page:'https://radios.com.sv/bautista/' },
+  { id:'pop', name:'Pop FM', url:'', page:'https://radios.com.sv/pop989/' },
+  { id:'cool', name:'Cool 89.3', url:'http://media.dominiocreativo.com:8006/coolfm', page:'https://radios.com.sv/cool/' },
+  { id:'vox', name:'Vox FM', url:'https://cast3.asurahosting.com/proxy/gabriel/stream', page:'https://radios.com.sv/vox/' },
+  { id:'globo', name:'FM Globo 93.3', url:'http://158.69.219.162:8026/stream', page:'https://radios.com.sv/globo/' },
+  { id:'club', name:'Radio Club 92.5', url:'http://158.69.200.1:8030/stream', page:'https://radios.com.sv/club/' },
+  { id:'laser-es', name:'Laser Español', url:'https://sp4.colombiatelecom.com.co/8030/stream', page:'https://radios.com.sv/laser-san-salvador/' },
+  { id:'laser-en', name:'Laser Inglés', url:'https://sp4.colombiatelecom.com.co/8032/stream', page:'https://radios.com.sv/laser/' }
+];
+
+function radioDockSelected(){
+  var select = document.getElementById('radio-station-select');
+  var id = select ? select.value : '';
+  return (window.RADIO_DOCK_STATIONS || []).find(function(station){ return station.id === id; }) || window.RADIO_DOCK_STATIONS[0];
+}
+
+function inicializarRadioDock(){
+  var select = document.getElementById('radio-station-select');
+  var link = document.getElementById('radio-open-link');
+  if(!select || !window.RADIO_DOCK_STATIONS) return;
+  if(!select.options.length) {
+    select.innerHTML = window.RADIO_DOCK_STATIONS.map(function(station){
+      return '<option value="' + station.id + '">' + station.name + '</option>';
+    }).join('');
   }
+  var saved = localStorage.getItem('radio-dock-selected') || 'supra';
+  if(window.RADIO_DOCK_STATIONS.some(function(station){ return station.id === saved; })) {
+    select.value = saved;
+  }
+  if(link) link.href = radioDockSelected().page || 'https://radios.com.sv/';
+}
+
+window.cambiarRadioDock = function(){
+  var audio = document.getElementById('radio-dock-audio');
+  var btn = document.getElementById('radio-play-btn');
+  var link = document.getElementById('radio-open-link');
+  var station = radioDockSelected();
+  if(station) localStorage.setItem('radio-dock-selected', station.id);
+  if(audio) {
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+  }
+  if(btn) btn.textContent = 'Play';
+  if(link) link.href = (station && station.page) || 'https://radios.com.sv/';
+};
+
+window.toggleRadioDock = function(){
+  var audio = document.getElementById('radio-dock-audio');
+  var btn = document.getElementById('radio-play-btn');
+  var station = radioDockSelected();
+  if(!audio || !btn || !station) return;
+  if(!station.url) {
+    if(typeof showToast === 'function') showToast('Abre esta radio en su pagina web.');
+    if(station.page) window.open(station.page, '_blank', 'noopener');
+    return;
+  }
+  if(!audio.src) audio.src = station.url;
   if(audio.paused) {
     audio.play().then(function(){
       btn.textContent = 'Pausa';
@@ -3683,6 +3755,14 @@ window.toggleRadioSupra = function(){
     btn.textContent = 'Play';
   }
 };
+
+window.toggleRadioSupra = window.toggleRadioDock;
+
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inicializarRadioDock);
+} else {
+  inicializarRadioDock();
+}
 
 function chatEscape(value){
   return String(value == null ? '' : value)
