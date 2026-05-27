@@ -16869,13 +16869,17 @@ document.addEventListener('DOMContentLoaded', function() {
     return totals;
   }
 
-  function sumWarehouseDistributions(config, fecha){
+  function sumWarehouseDistributions(config, fecha, mode){
     var totals = emptyProducts();
     var data = [];
     try { data = JSON.parse(localStorage.getItem(config.distributionKey || '') || '[]'); } catch(e) {}
     data.forEach(function(row){
       if (!row) return;
-      if (fecha && !sameDate(row.fecha, fecha)) return;
+      if (mode === 'before') {
+        if (!beforeDate(row.fecha, fecha)) return;
+      } else if (fecha && !sameDate(row.fecha, fecha)) {
+        return;
+      }
       if (typeof config.distributionFilter === 'function' && !config.distributionFilter(row)) return;
       BODEGA_PRODUCTS.forEach(function(p){
         totals[p.key] += Math.max(0, num(row[p.key]));
@@ -16886,12 +16890,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function calculateWarehouseBalance(config, fecha){
     var anterior = sumManualInventoryByLocation(config.locations, fecha, 'before');
+    var enviadoAnterior = sumWarehouseDistributions(config, fecha, 'before');
     var nuevo = sumManualInventoryByLocation(config.locations, fecha, 'same');
-    var enviado = sumWarehouseDistributions(config, fecha);
+    var enviado = sumWarehouseDistributions(config, fecha, 'same');
     var suma = emptyProducts();
     var final = emptyProducts();
     var diferencia = emptyProducts();
     BODEGA_PRODUCTS.forEach(function(p){
+      anterior[p.key] = anterior[p.key] - enviadoAnterior[p.key];
       suma[p.key] = anterior[p.key] + nuevo[p.key];
       final[p.key] = suma[p.key] - enviado[p.key];
       diferencia[p.key] = suma[p.key] - enviado[p.key] - final[p.key];
