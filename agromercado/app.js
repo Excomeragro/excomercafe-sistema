@@ -679,6 +679,8 @@ async function buscarReportePorFecha(agromercado, fecha){
   fecha = String(fecha || fechaSeleccionada()).slice(0,10);
   var queryAgro = encodeURIComponent(agromercado);
   var queryFecha = encodeURIComponent(fecha);
+  var pendingAny = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,estado,creado_en&agromercado=eq.' + queryAgro + '&estado=eq.pendiente&order=creado_en.desc&limit=1');
+  if(pendingAny && pendingAny.length) return Object.assign({ tipo:'pendiente' }, pendingAny[0]);
   var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,estado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.pendiente&limit=1');
   if(pending && pending.length) return Object.assign({ tipo:'pendiente' }, pending[0]);
   var approved = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&limit=1');

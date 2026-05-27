@@ -1799,7 +1799,7 @@
   <!-- HISTORIAL DE DISTRIBUCIÓN TIENDONA -->
   <div class="card" style="margin-top:16px;">
     <div class="card-header" style="cursor:pointer;" onclick="toggleHistorialDescargas()">
-      <span>📊 Historial de Distribución</span>
+      <span>🚚 Historial de Distribución</span>
       <span id="historial-descargas-toggle" style="font-size:0.8rem;color:var(--muted);">▼</span>
       <div class="flex gap-8 items-center flex-wrap" style="margin-left:auto;">
         <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirHistorialTiendona()">Imprimir</button>
@@ -1921,7 +1921,7 @@
   </div>
 <div class="card" style="margin-top:16px;">
     <div class="card-header" style="cursor:pointer;" onclick="toggleHistorialDistribucion()">
-      <span>📊 Historial de Distribución</span>
+      <span>🚚 Historial de Distribución</span>
       <span id="historial-distribucion-toggle" style="font-size:0.8rem;color:var(--muted);">▼</span>
       <div class="flex gap-8 items-center flex-wrap" style="margin-left:auto;">
         <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirHistorialCDA()">Imprimir</button>
@@ -5658,6 +5658,7 @@ function revertirInventarioPorVenta(registro){
         timestamp: new Date().toISOString()
       };
       reversa.total = reversa.arroz + reversa.precocido + reversa.frijol1 + reversa.frijol4 + reversa.aceite + reversa.harina;
+      reversa.supabase_synced = false;
       inventario.unshift(reversa);
     }
     localStorage.setItem('inventario-data', JSON.stringify(inventario));
@@ -9115,7 +9116,8 @@ function revertirDistribucionCDA(dist){
       frijol1: parseInt(dist.frijol1) || 0,
       frijol4: parseInt(dist.frijol4) || 0,
       aceite: parseInt(dist.aceite) || 0,
-      harina: parseInt(dist.harina) || 0
+      harina: parseInt(dist.harina) || 0,
+      supabase_synced: false
     });
     inv.unshift({
       id: 'reversa-distribucion-agro-' + ts,
@@ -9129,7 +9131,8 @@ function revertirDistribucionCDA(dist){
       frijol1: -(parseInt(dist.frijol1) || 0),
       frijol4: -(parseInt(dist.frijol4) || 0),
       aceite: -(parseInt(dist.aceite) || 0),
-      harina: -(parseInt(dist.harina) || 0)
+      harina: -(parseInt(dist.harina) || 0),
+      supabase_synced: false
     });
   }
   localStorage.setItem('inventario-data', JSON.stringify(inv));
@@ -12446,6 +12449,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!confirm('¿Eliminar esta distribución?')) return;
 
     var data = JSON.parse(localStorage.getItem('descargas-data') || '[]');
+    var reg = data.find(function(r){ return String(r.id) === String(id); }) || null;
     data = data.filter(function(r){ return String(r.id) !== String(id); });
     localStorage.setItem('descargas-data', JSON.stringify(data));
     eliminarSupabasePorLocalId('distribucion_tiendona', id);
@@ -12453,9 +12457,39 @@ document.addEventListener('DOMContentLoaded', function(){
 
     var inv = JSON.parse(localStorage.getItem('inventario-data') || '[]');
     inv = inv.filter(function(item){ return String(item.origenId) !== String(id); });
+    if(reg) {
+      var arroz = Number(reg.arroz || 0) || 0;
+      var precocido = Number(reg.precocido || reg.arrozPrecocido || 0) || 0;
+      var frijol1 = Number(reg.frijol1 || 0) || 0;
+      var frijol4 = Number(reg.frijol4 || 0) || 0;
+      var aceite = Number(reg.aceite || 0) || 0;
+      var harina = Number(reg.harina || 0) || 0;
+      inv.unshift({
+        id: 'reversa-descarga-' + id + '-' + Date.now(),
+        origenId: 'reversa-' + id,
+        fecha: reg.fecha || (typeof fechaHoy === 'function' ? fechaHoy() : fechaISOActualSistema()),
+        hora: reg.hora || (typeof window.obtenerHoraActual === 'function' ? window.obtenerHoraActual() : horaVistaSistema({timestamp: Date.now()})),
+        ubicacion: 'bodega-local',
+        lugar: 'Bodega Tiendona',
+        tipo: 'reversa-distribucion',
+        referencia: 'Producto devuelto por borrar distribucion Tiendona',
+        arroz: arroz,
+        precocido: precocido,
+        frijol1: frijol1,
+        frijol4: frijol4,
+        aceite: aceite,
+        harina: harina,
+        total: arroz + precocido + frijol1 + frijol4 + aceite + harina,
+        observaciones: 'Inventario restablecido al borrar distribucion',
+        supabase_synced: false,
+        timestamp: new Date().toISOString()
+      });
+    }
     localStorage.setItem('inventario-data', JSON.stringify(inv));
+    if (typeof inventarioData !== 'undefined') inventarioData = inv;
 
     actualizarHistorialDescargas?.();
+    refrescarInventarioEnTiempoReal?.();
     renderResumenInventarioTiendona?.();
   };
 
@@ -15202,6 +15236,7 @@ document.addEventListener('DOMContentLoaded', function() {
       + '.agro-date-indicator{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.72rem;font-weight:850;color:#48627c;}'
       + '.agro-date-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid #cfe0f1;border-radius:999px;background:#f8fbff;color:#17456b;padding:4px 8px;line-height:1;cursor:default;}'
       + '.agro-date-pill button{border:0;background:transparent;color:inherit;font:inherit;font-weight:900;cursor:pointer;padding:0;}'
+      + '.agro-date-clear{display:inline-flex;align-items:center;border:1px solid #cfe0f1;border-radius:999px;background:#fff;color:#17456b;padding:4px 9px;font-size:.72rem;font-weight:900;line-height:1;cursor:pointer;}'
       + '.agro-date-pill::before{content:"";width:8px;height:8px;border-radius:999px;background:#94a3b8;}'
       + '.agro-date-pill.amarillo{background:#fef3c7;border-color:#fde68a;color:#92400e;}'
       + '.agro-date-pill.amarillo::before{background:#f59e0b;}'
@@ -15215,6 +15250,23 @@ document.addEventListener('DOMContentLoaded', function() {
       + '@media(max-width:760px){.control-report-filters{grid-template-columns:1fr;}}';
     document.head.appendChild(style);
   }
+
+  window.limpiarIndicadorFechasControl = async function(){
+    var fecha = fechaReporteControl();
+    if(!confirm('Limpiar estados rechazados de esta fecha?')) return;
+    try {
+      if(window.supabaseRequest) {
+        await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?fecha=eq.' + encodeURIComponent(fechaReporteNormalizada(fecha)) + '&estado=eq.rechazado', {
+          method:'DELETE',
+          prefer:'return=minimal'
+        });
+      }
+      if(typeof showToast === 'function') showToast('Estados rechazados limpiados.');
+      await actualizarEstadoReportesAgromercado();
+    } catch(error) {
+      alert('No se pudo limpiar: ' + (error.message || error));
+    }
+  };
 
   function estadoReporteLabel(estado){
     if (estado === 'verde') return 'Aprobado';
@@ -15319,7 +15371,8 @@ document.addEventListener('DOMContentLoaded', function() {
       input.classList.add('fecha-roja');
     }
 
-    var resumen = '<span class="agro-date-pill ' + estadoActual + '">' + esc(textoActual) + '</span>';
+    var resumen = '<span class="agro-date-pill ' + estadoActual + '">' + esc(textoActual) + '</span>'
+      + '<button type="button" class="agro-date-clear" onclick="limpiarIndicadorFechasControl()">Limpiar</button>';
     var botones = Object.keys(fechas).sort().reverse().slice(0, 10).map(function(fecha){
       var item = fechas[fecha];
       var cls = item.pendiente ? 'amarillo' : (item.aprobado ? 'verde' : 'rojo');
@@ -15363,7 +15416,7 @@ document.addEventListener('DOMContentLoaded', function() {
     card.style.marginTop = '16px';
     card.innerHTML = ''
       + '<div class="card-header">'
-      + '<span>Historial de reportes de venta</span>'
+      + '<span>🧾 Historial de reportes de venta</span>'
       + '<div class="flex gap-8 items-center flex-wrap">'
       + '<span id="control-venta-reportes-status" class="dist-badge dist-badge-tiendona">0 reportes</span>'
       + '<button type="button" class="btn btn-sm btn-secondary" onclick="toggleHistorialReportesVentaControl()">Contraer</button>'
