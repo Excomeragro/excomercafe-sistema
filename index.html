@@ -7982,14 +7982,6 @@ function inventarioVisibleEnHistorial(inv){
 window.inventarioVisibleUsuario = window.inventarioVisibleUsuario || inventarioVisibleEnHistorial;
 
 function limpiarMovimientosAutomaticosInventarioVisible(){
-  var data = [];
-  try { data = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(error) { data = []; }
-  var limpia = (data || []).filter(inventarioVisibleEnHistorial);
-  if (limpia.length !== data.length) {
-    localStorage.setItem('inventario-data', JSON.stringify(limpia));
-    if (typeof inventarioData !== 'undefined') inventarioData = limpia;
-    return true;
-  }
   return false;
 }
 
@@ -14666,12 +14658,12 @@ document.addEventListener('DOMContentLoaded', function() {
     harina: 'Harina'
   };
   var PRODUCT_FACTORS_DIST = {
-    arroz: 80,
-    precocido: 80,
-    frijol1: 80,
-    frijol4: 80,
-    aceite: 20,
-    harina: 25
+    arroz: 1,
+    precocido: 1,
+    frijol1: 1,
+    frijol4: 1,
+    aceite: 1,
+    harina: 1
   };
 
   var SOURCE_LOCATIONS_DIST = {
@@ -14720,7 +14712,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e) {}
 
     data.forEach(function(item){
-      if (typeof window.inventarioVisibleUsuario === 'function' && !window.inventarioVisibleUsuario(item)) return;
       if (normalizedLocations.indexOf(normTxt(item.ubicacion)) < 0) return;
       addTotals(totals, item, 1);
     });

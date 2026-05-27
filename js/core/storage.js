@@ -654,11 +654,8 @@ window.registrarMovimientoInventario = function(movimiento) {
       + (movimiento.aceite || 0)
       + (movimiento.harina || 0);
 
-    // Agregar el nuevo movimiento
-    if (window.inventarioEsMovimientoAutomaticoDistribucion(movimiento)) {
-      return { success: true, mensaje: 'Movimiento automatico de distribucion omitido del inventario visible' };
-    }
-
+    // Agregar el nuevo movimiento. Los movimientos automaticos se guardan para
+    // calcular stock, aunque el historial visible los oculte.
     inventario.push({
       id: movimiento.id,
       origenId: movimiento.origenId || movimiento.distribucionId || movimiento.registroId || '',
