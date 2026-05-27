@@ -1329,16 +1329,25 @@ datalist {
   font-weight: 800;
 }
 
-.inventory-save-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
+.inventory-save-row,
 .distribution-save-row {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.inventory-save-row .alert,
+.distribution-save-row .alert {
+  flex: 1 1 auto;
+  min-height: 38px;
+  margin: 0;
+}
+
+.inventory-save-row .btn,
+.distribution-save-row .btn {
+  flex: 0 0 auto;
 }
 
 .tbl thead th,
@@ -1352,6 +1361,17 @@ table thead th {
 }
 
 @media (max-width: 900px) {
+  .inventory-save-row,
+  .distribution-save-row {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .inventory-save-row .btn,
+  .distribution-save-row .btn {
+    align-self: flex-end;
+  }
+
   .header {
     height: auto;
     min-height: 66px;
@@ -1483,16 +1503,25 @@ body {
   font-weight: 800;
 }
 
-.inventory-save-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
+.inventory-save-row,
 .distribution-save-row {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.inventory-save-row .alert,
+.distribution-save-row .alert {
+  flex: 1 1 auto;
+  min-height: 38px;
+  margin: 0;
+}
+
+.inventory-save-row .btn,
+.distribution-save-row .btn {
+  flex: 0 0 auto;
 }
 
 @media (min-width: 901px) {
