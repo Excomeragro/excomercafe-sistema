@@ -14465,6 +14465,7 @@ document.addEventListener('DOMContentLoaded', function() {
       showAlert('alert-descargas', 'Ingrese al menos una cantidad en la tabla.', 'err');
       return false;
     }
+    if (typeof window.validateSourceStockDistribucion === 'function' && !window.validateSourceStockDistribucion('TIENDONA', 'alert-descargas')) return false;
 
     var data = JSON.parse(localStorage.getItem('descargas-data') || '[]');
     var inv = JSON.parse(localStorage.getItem('inventario-data') || '[]');
@@ -14805,6 +14806,38 @@ document.addEventListener('DOMContentLoaded', function() {
     }).join(' | '), 'err');
     return false;
   }
+  window.validateSourceStockDistribucion = validateSourceStock;
+
+  function tipoDistribucionDesdeInput(input){
+    return input && input.closest('#tbody-distribucion-cda-fija') ? 'CDA' : 'TIENDONA';
+  }
+
+  function alertIdDistribucion(tipo){
+    return tipo === 'CDA' ? 'alert-distribucion' : 'alert-descargas';
+  }
+
+  function limitarCantidadDistribucion(input){
+    if (!input || !input.classList || !input.classList.contains('dist-qty')) return;
+    var tipo = tipoDistribucionDesdeInput(input);
+    var prod = input.getAttribute('data-prod') || '';
+    if (PRODUCT_KEYS_DIST.indexOf(prod) < 0) return;
+
+    var factor = PRODUCT_FACTORS_DIST[prod] || 1;
+    var disponible = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo])[prod] || 0;
+    var totalActual = getMatrixTotals(tipo)[prod] || 0;
+    var valorActual = normalizeNumber(input.value);
+    var otrosPedidos = Math.max(0, totalActual - (valorActual * factor));
+    var maxCantidad = Math.max(0, Math.floor((disponible - otrosPedidos) / factor));
+
+    input.max = String(maxCantidad);
+    if (valorActual > maxCantidad) {
+      input.value = String(maxCantidad);
+      input.classList.add('input-error');
+      showAlert(alertIdDistribucion(tipo), 'No hay suficiente inventario de ' + PRODUCT_LABELS_DIST[prod] + '. Disponible para esta casilla: ' + maxCantidad + '.', 'err');
+    } else {
+      input.classList.remove('input-error');
+    }
+  }
 
   function sourceForDestino(destino, tipo){
     if (typeof obtenerUbicacionesInventarioParaDestino === 'function') {
@@ -14976,6 +15009,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('input', function(event){
     if (!event.target || !event.target.classList || !event.target.classList.contains('dist-qty')) return;
+    limitarCantidadDistribucion(event.target);
     renderResumenInventarioTiendona();
     renderResumenInventarioCDA();
   });
