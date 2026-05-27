@@ -1714,11 +1714,10 @@
 
 <!-- ── TAB DESCARGAS ── -->
 <div class="tab-content" id="tab-descargas">
-  <div class="sec-title">🚚 Distribución Tiendona</div>
   
   <div class="card" id="resumen-inventario-tiendona-card">
     <div class="card-header">
-      <h3>📦 Existencia Disponible Tiendona</h3>
+      <h3>🚚 Distribución Tiendona · 📦 Existencia Disponible Tiendona</h3>
     </div>
     <div class="card-body">
       <div id="resumen-inventario-tiendona"></div>
@@ -2042,14 +2041,13 @@
 
 <!-- ── TAB CONTROL DE INVENTARIO ── -->
 <div class="tab-content" id="tab-inventario">
-  <div class="sec-title">📦 Control de Inventario</div>
 
   
   
   <!-- FORMULARIO DE CONTROL DE INVENTARIO -->
   <div class="card" id="inventario-registro-card">
     <div class="card-header">
-      <span>📋 Registro de Inventario</span>
+      <span>📦 Control de Inventario · 📋 Registro de Inventario</span>
     </div>
     <div class="card-body">
       <div class="form-row" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
@@ -14691,6 +14689,11 @@ document.addEventListener('DOMContentLoaded', function() {
     return target;
   }
 
+  function esMovimientoDistribucionStock(item){
+    var tipo = String(item && item.tipo || '').toLowerCase();
+    return tipo === 'salida-distribucion' || tipo === 'entrada-distribucion' || tipo === 'reversa-distribucion';
+  }
+
   function expandirDistribucionPaquetes(row){
     var expanded = Object.assign({}, row);
     PRODUCT_KEYS_DIST.forEach(function(key){
@@ -14718,9 +14721,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     data.forEach(function(item){
       if (normalizedLocations.indexOf(normTxt(item.ubicacion)) < 0) return;
+      if (esMovimientoDistribucionStock(item)) return;
       addTotals(totals, item, 1);
     });
 
+    return totals;
+  }
+
+  function getSavedDistributionTotals(tipo){
+    var totals = emptyTotals();
+    var key = tipo === 'CDA' ? 'distribucion-cda-data' : 'descargas-data';
+    var data = [];
+    try { data = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { data = []; }
+    (data || []).forEach(function(row){
+      if(!row) return;
+      addTotals(totals, row, 1);
+    });
     return totals;
   }
 
@@ -14758,9 +14774,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function getRemainingTotals(tipo){
     var base = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo]);
+    var saved = getSavedDistributionTotals(tipo);
     var pending = getMatrixTotals(tipo);
     PRODUCT_KEYS_DIST.forEach(function(key){
-      base[key] -= pending[key];
+      base[key] -= saved[key] + pending[key];
     });
     return base;
   }
@@ -14820,10 +14837,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (PRODUCT_KEYS_DIST.indexOf(prod) < 0) return;
 
     var disponible = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo])[prod] || 0;
+    var yaDistribuido = getSavedDistributionTotals(tipo)[prod] || 0;
     var totalActual = getMatrixTotals(tipo)[prod] || 0;
     var valorActual = normalizeNumber(input.value);
     var otrosPedidos = Math.max(0, totalActual - valorActual);
-    var maxCantidad = Math.max(0, Math.floor(disponible - otrosPedidos));
+    var maxCantidad = Math.max(0, Math.floor(disponible - yaDistribuido - otrosPedidos));
 
     input.max = String(maxCantidad);
     if (valorActual > maxCantidad) {
