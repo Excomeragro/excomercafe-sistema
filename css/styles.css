@@ -2493,6 +2493,7 @@ body.smart-menu-collapsed .online-indicator,
     font-weight:900;
   }
 
+  body.smart-menu-collapsed .hbtn-sync,
   body.smart-menu-collapsed .hbtn-chat,
   body.smart-menu-collapsed .hbtn-settings,
   body.smart-menu-collapsed .hbtn-logout{
@@ -2507,6 +2508,12 @@ body.smart-menu-collapsed .online-indicator,
     overflow:hidden;
     color:transparent !important;
     font-size:0 !important;
+  }
+
+  body.smart-menu-collapsed .hbtn-sync::before{
+    content:"\1F504";
+    color:#ffffff;
+    font-size:1rem;
   }
 
   body.smart-menu-collapsed .hbtn-chat::before{
@@ -2528,6 +2535,7 @@ body.smart-menu-collapsed .online-indicator,
     font-weight:900;
   }
 
+  body.smart-menu-collapsed .hbtn-sync span,
   body.smart-menu-collapsed .hbtn-chat span,
   body.smart-menu-collapsed .hbtn-settings span,
   body.smart-menu-collapsed .hbtn-logout span{
@@ -2555,6 +2563,7 @@ body.smart-menu-collapsed .online-indicator,
     font-size:.78rem !important;
   }
 
+  body.smart-menu-expanded .hbtn-sync,
   body.smart-menu-expanded .hbtn-chat,
   body.smart-menu-expanded .hbtn-settings,
   body.smart-menu-expanded .hbtn-logout{
@@ -2975,6 +2984,11 @@ body.theme-oscuro .settings-panel select option{
     color:#ffffff !important;
   }
 
+  body.smart-menu-expanded .hbtn-sync{
+    background:#16a34a !important;
+    color:#ffffff !important;
+  }
+
   body.smart-menu-expanded .hbtn-settings{
     background:#17456b !important;
     color:#ffffff !important;
@@ -3011,6 +3025,7 @@ body.theme-oscuro .settings-panel select option{
     border-radius:0 !important;
   }
   body.smart-menu-collapsed .online-indicator,
+  body.smart-menu-collapsed .hbtn-sync,
   body.smart-menu-collapsed .hbtn-chat,
   body.smart-menu-collapsed .hbtn-settings,
   body.smart-menu-collapsed .hbtn-logout{
@@ -3026,6 +3041,10 @@ body.theme-oscuro .settings-panel select option{
 
   body.smart-menu-collapsed .hbtn-chat{
     background:#0f766e !important;
+  }
+
+  body.smart-menu-collapsed .hbtn-sync{
+    background:#16a34a !important;
   }
 
   body.smart-menu-collapsed .hbtn-settings{
