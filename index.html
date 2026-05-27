@@ -14816,7 +14816,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return tipo === 'CDA' ? 'alert-distribucion' : 'alert-descargas';
   }
 
-  function limitarCantidadDistribucion(input){
+  function limitarCantidadDistribucion(input, ajustar){
     if (!input || !input.classList || !input.classList.contains('dist-qty')) return;
     var tipo = tipoDistribucionDesdeInput(input);
     var prod = input.getAttribute('data-prod') || '';
@@ -14831,9 +14831,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     input.max = String(maxCantidad);
     if (valorActual > maxCantidad) {
-      input.value = String(maxCantidad);
       input.classList.add('input-error');
-      showAlert(alertIdDistribucion(tipo), 'No hay suficiente inventario de ' + PRODUCT_LABELS_DIST[prod] + '. Disponible para esta casilla: ' + maxCantidad + '.', 'err');
+      if (ajustar) {
+        input.value = String(maxCantidad);
+        showAlert(alertIdDistribucion(tipo), 'No hay suficiente inventario de ' + PRODUCT_LABELS_DIST[prod] + '. Disponible para esta casilla: ' + maxCantidad + '.', 'err');
+      }
     } else {
       input.classList.remove('input-error');
     }
@@ -15009,7 +15011,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('input', function(event){
     if (!event.target || !event.target.classList || !event.target.classList.contains('dist-qty')) return;
-    limitarCantidadDistribucion(event.target);
+    limitarCantidadDistribucion(event.target, false);
+    renderResumenInventarioTiendona();
+    renderResumenInventarioCDA();
+  });
+
+  document.addEventListener('change', function(event){
+    if (!event.target || !event.target.classList || !event.target.classList.contains('dist-qty')) return;
+    limitarCantidadDistribucion(event.target, true);
     renderResumenInventarioTiendona();
     renderResumenInventarioCDA();
   });
