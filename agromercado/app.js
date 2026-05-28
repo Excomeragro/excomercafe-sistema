@@ -727,7 +727,20 @@ async function revisarBloqueoPendiente(agromercado, fecha){
 }
 
 function productoValueFromPayload(map, key){
-  return n(map && map[key]);
+  if(!map) return 0;
+  var aliases = {
+    arroz:['arroz','ab1'],
+    precocido:['precocido','ap1','arroz_precocido','arrozPrecocido'],
+    frijol1:['frijol1','fr1','frijol_1lb','frijol_1_lb'],
+    frijol4:['frijol4','fr4','frijol_4lb','frijol_4_lb'],
+    aceite:['aceite','ac','aceite_750ml','aceite_750_ml'],
+    harina:['harina','ha','harina_820grs','harina_820_grs']
+  };
+  var keys = aliases[key] || [key];
+  for(var i = 0; i < keys.length; i++){
+    if(map[keys[i]] !== undefined && map[keys[i]] !== null && map[keys[i]] !== '') return n(map[keys[i]]);
+  }
+  return 0;
 }
 
 function aplicarValoresProducto(key, anterior, nuevo){
@@ -736,6 +749,29 @@ function aplicarValoresProducto(key, anterior, nuevo){
   setRowValue(row, 'anterior', anterior);
   setRowValue(row, 'nuevo', nuevo);
   calcularProducto(row, PRODUCTOS.find(function(p){ return p.key === key; }) || { precio:0 });
+}
+
+function aplicarReporteAprobadoEnFormulario(report){
+  var payload = payloadHistorial(report);
+  PRODUCTOS.forEach(function(prod){
+    var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
+    if(!row) return;
+    setRowValue(row, 'anterior', productoValueFromPayload(payload.inventario_inicio, prod.key));
+    setRowValue(row, 'nuevo', productoValueFromPayload(payload.mercaderia_nueva, prod.key));
+    setRowValue(row, 'venta', productoValueFromPayload(payload.ventas_unidades, prod.key));
+    setRowValue(row, 'faltante', productoValueFromPayload(payload.faltante || payload.apartado || payload.faltantes_unidades, prod.key));
+    setRowValue(row, 'danado', productoValueFromPayload(payload.danado || payload.danadas_unidades, prod.key));
+    setRowValue(row, 'final', productoValueFromPayload(payload.inventario_final, prod.key));
+    calcularProducto(row, prod);
+  });
+  var banco = document.getElementById('banco');
+  var gastos = document.getElementById('gastos');
+  var observaciones = document.getElementById('observaciones');
+  if(banco) banco.value = payload.banco || report.banco || '';
+  if(gastos) gastos.value = n(payload.gastos != null ? payload.gastos : report.gastos);
+  if(observaciones) observaciones.value = payload.observaciones || report.observaciones || '';
+  actualizarBancoPortal();
+  calcularTotales();
 }
 
 async function fetchSupabase(path){
@@ -947,6 +983,14 @@ async function cargarValoresInicialesAgromercado(agromercado){
   var fecha = fechaSeleccionada();
   var anteriores = {};
   var nuevos = {};
+
+  try{
+    var approvedRows = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&order=creado_en.desc&limit=1');
+    if(approvedRows && approvedRows.length) {
+      aplicarReporteAprobadoEnFormulario(Object.assign({ estado:'aprobado', historial_tipo:'oficial' }, approvedRows[0]));
+      return;
+    }
+  }catch(e){}
 
   try{
     if(await cargarValoresInicialesRpc(agromercado, fecha)) return;

@@ -18579,26 +18579,30 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function dashInventoryTotals(){
-    var keys = ['inventario-registros', 'inventario-historial', 'exc_inventario_hist'];
     var total = 0;
-    keys.forEach(function(key){
-      dashReadJson(key).forEach(function(row){
-        ['arroz','arrozPrecocido','frijol1','frijol4','aceite','harina','ab1','ap1','fr1','fr4','ac','ha'].forEach(function(field){
-          total += Number(row && row[field] || 0) || 0;
-        });
+    dashReadJson('inventario-data').forEach(function(row){
+      if (typeof window.inventarioVisibleUsuario === 'function' && !window.inventarioVisibleUsuario(row)) return;
+      ['arroz','precocido','frijol1','frijol4','aceite','harina'].forEach(function(field){
+        total += Number(row && row[field] || 0) || 0;
       });
     });
     return total;
   }
 
   function dashLowStockCount(){
-    var candidates = document.querySelectorAll('.inventario-rojo, .stock-bajo, .low-stock, .status-rojo');
-    return candidates ? candidates.length : 0;
+    var totals = { arroz:0, precocido:0, frijol1:0, frijol4:0, aceite:0, harina:0 };
+    dashReadJson('inventario-data').forEach(function(row){
+      if (typeof window.inventarioVisibleUsuario === 'function' && !window.inventarioVisibleUsuario(row)) return;
+      Object.keys(totals).forEach(function(field){
+        totals[field] += Number(row && row[field] || 0) || 0;
+      });
+    });
+    return Object.keys(totals).filter(function(field){ return totals[field] > 0 && totals[field] < 100; }).length;
   }
 
   function dashDistributionCount(today){
     var count = 0;
-    ['descargas-tiendona-historial', 'distribucion-cda-historial', 'distribucion-historial'].forEach(function(key){
+    ['descargas-data', 'distribucion-cda-data'].forEach(function(key){
       dashReadJson(key).forEach(function(row){
         if (dashRecordDate(row) === today) count += 1;
       });
