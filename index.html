@@ -14851,8 +14851,7 @@ document.addEventListener('DOMContentLoaded', function() {
     cont.innerHTML = '<div class="resumen-grid resumen-stock-live">' +
       PRODUCT_KEYS_DIST.map(function(key){
         var value = totals[key];
-        var unidades = value * (PRODUCT_FACTORS_DIST[key] || 1);
-        return '<div class="' + stockClass(value) + '"><strong>' + PRODUCT_LABELS_DIST[key] + '</strong><br><span>' + value + ' ' + PRODUCT_PACKAGE_LABELS_DIST[key] + '</span><small>' + unidades + ' lb/unid.</small></div>';
+        return '<div class="' + stockClass(value) + '"><strong>' + PRODUCT_LABELS_DIST[key] + '</strong><br><span>' + value + ' ' + PRODUCT_PACKAGE_LABELS_DIST[key] + '</span></div>';
       }).join('') +
       '</div>';
   }
