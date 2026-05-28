@@ -3462,6 +3462,7 @@ function renderVentasPendientes(rows){
       + '<div class="review-actions">'
       + '<button class="btn btn-sm btn-success" onclick="aprobarVentaPendiente(' + index + ')">Aprobar</button>'
       + '<button class="btn btn-sm btn-danger" onclick="rechazarVentaPendiente(' + index + ')">Rechazar</button>'
+      + '<button class="btn btn-sm btn-secondary" onclick="borrarVentaPendiente(' + index + ')">Borrar</button>'
       + '</div>'
       + '</article>';
   }).join('');
@@ -3605,6 +3606,52 @@ window.rechazarVentaPendiente = async function(index){
     alert('No se pudo rechazar: ' + (error.message || error));
   }
 };
+
+window.borrarVentaPendiente = async function(index){
+  var row = window.ventasPendientesCache[index];
+  if(!row || !confirm('Borrar definitivamente este envío pendiente del vendedor?')) return;
+  await borrarVentaPendienteRow(row);
+};
+
+window.borrarVentaPendientePorId = async function(id){
+  id = String(id || '');
+  if(!id) return;
+  var row = (window.ventasPendientesCache || []).find(function(item){
+    return String(item && (item.id || item.local_id || '')) === id;
+  }) || { id:id };
+  if(!confirm('Borrar definitivamente este envío pendiente del vendedor?')) return;
+  await borrarVentaPendienteRow(row);
+};
+
+async function borrarVentaPendienteRow(row){
+  try {
+    var id = row && row.id;
+    var localId = row && row.local_id;
+    if(window.supabaseRequest) {
+      if(id) {
+        await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?id=eq.' + encodeURIComponent(id), {
+          method:'DELETE',
+          prefer:'return=minimal'
+        });
+      } else if(localId) {
+        await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?local_id=eq.' + encodeURIComponent(localId), {
+          method:'DELETE',
+          prefer:'return=minimal'
+        });
+      }
+    }
+    window.ventasPendientesCache = (window.ventasPendientesCache || []).filter(function(item){
+      return String(item && (item.id || '')) !== String(id || '')
+        && String(item && (item.local_id || '')) !== String(localId || '');
+    });
+    if(typeof showToast === 'function') showToast('Envío pendiente borrado.');
+    await cargarVentasPendientes();
+    if(typeof actualizarEstadoReportesAgromercado === 'function') await actualizarEstadoReportesAgromercado();
+    if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
+  } catch(error) {
+    alert('No se pudo borrar: ' + (error.message || error));
+  }
+}
 
 (function(){
   var previousSwitchRevision = window.switchTab;
@@ -15591,6 +15638,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
     return Object.assign({}, payload, {
       id: payload.id || row.local_id || row.id || '',
+      pending_id: row.id || '',
       local_id: payload.local_id || row.local_id || '',
       fecha: payload.fecha || row.fecha || '',
       agromercado: payload.agromercado || row.agromercado || '',
@@ -15721,7 +15769,8 @@ document.addEventListener('DOMContentLoaded', function() {
         + '<td>' + (row.__histIndex >= 0
           ? '<button type="button" class="btn btn-sm btn-primary" onclick="editarRegistroDesdeReporte(' + row.__histIndex + ')">Editar</button> '
             + '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarRegistro(' + row.__histIndex + ')">Borrar</button>'
-          : '<button type="button" class="btn btn-sm btn-secondary" onclick="switchTab(&quot;tab-revision&quot;, document.querySelector(&quot;.tab-btn[onclick*=tab-revision]&quot;))">Revisar</button>') + '</td>'
+          : '<button type="button" class="btn btn-sm btn-secondary" onclick="switchTab(&quot;tab-revision&quot;, document.querySelector(&quot;.tab-btn[onclick*=tab-revision]&quot;))">Revisar</button> '
+            + '<button type="button" class="btn btn-sm btn-danger" onclick="borrarVentaPendientePorId(' + JSON.stringify(String(row.pending_id || row.id || row.local_id || '')) + ')">Borrar</button>') + '</td>'
         + '</tr>';
     }).join('');
   };
