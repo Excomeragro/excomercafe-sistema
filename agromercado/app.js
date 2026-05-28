@@ -679,15 +679,19 @@ async function revisarBloqueoPendiente(agromercado, fecha){
     var existente = await buscarReportePorFecha(agromercado, fecha);
     if(existente){
       if(existente.tipo === 'pendiente' || String(existente.estado || '').toLowerCase() === 'pendiente') {
-        guardarPendienteLocal(agromercado, fecha);
-      } else if(local) {
+        guardarPendienteLocal(agromercado, existente.fecha || fecha);
+        setHojaBloqueada(true, existente);
+        return;
+      }
+      if(existente.tipo === 'rechazado' || String(existente.estado || '').toLowerCase() === 'rechazado') {
+        if(local) limpiarPendienteLocal();
+        setHojaBloqueada(false);
+        return;
+      }
+      if(local) {
         limpiarPendienteLocal();
       }
       setHojaBloqueada(true, existente);
-      return;
-    }else{
-      if(local) limpiarPendienteLocal();
-      setHojaBloqueada(false);
       return;
     }
   }catch(e){}
@@ -729,6 +733,8 @@ async function buscarReportePorFecha(agromercado, fecha){
   if(pending && pending.length) return Object.assign({ tipo:'pendiente' }, pending[0]);
   var approved = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&limit=1');
   if(approved && approved.length) return Object.assign({ tipo:'aprobado' }, approved[0]);
+  var rejected = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,estado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.rechazado&order=creado_en.desc&limit=1');
+  if(rejected && rejected.length) return Object.assign({ tipo:'rechazado' }, rejected[0]);
   return null;
 }
 
