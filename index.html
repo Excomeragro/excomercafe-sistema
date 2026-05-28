@@ -16151,7 +16151,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var remaining = totals[p.key].inventario;
         var factor = packageFactorVenta(p);
         var paquetes = factor ? (remaining / factor) : remaining;
-        return '<div class="' + stockLevel(remaining) + '"><strong>' + esc(p.label) + '</strong><br><span>' + remaining + ' lb/unid.</span><small>' + paquetes.toFixed(paquetes % 1 ? 2 : 0) + ' ' + packageLabelVenta(p) + '</small></div>';
+        return '<div class="' + stockLevel(remaining) + ' venta-stock-card"><strong>' + esc(p.label) + '</strong><span class="venta-stock-units">' + remaining + ' lb/unid.</span><span class="venta-stock-packages">' + paquetes.toFixed(paquetes % 1 ? 2 : 0) + ' ' + packageLabelVenta(p) + '</span></div>';
       }).join('');
     }
 

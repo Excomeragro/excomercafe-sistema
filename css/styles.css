@@ -1353,6 +1353,38 @@ datalist {
   font-weight: 800;
 }
 
+.venta-summary-row {
+  align-items: stretch;
+}
+
+.venta-stock-card {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 76px;
+  text-align: center;
+}
+
+.venta-stock-card strong,
+.venta-stock-units,
+.venta-stock-packages {
+  display: block;
+  width: 100%;
+  line-height: 1.15;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.venta-stock-units {
+  color: #064e3b;
+}
+
+.venta-stock-packages {
+  color: #1d4ed8;
+}
+
 .inventory-save-row,
 .distribution-save-row {
   display: flex;
