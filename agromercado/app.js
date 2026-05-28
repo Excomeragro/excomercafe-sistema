@@ -263,7 +263,9 @@ function guardarPendienteLocal(agromercado, fecha){
 function leerPendienteLocal(agromercado, fecha){
   try{
     var data = JSON.parse(localStorage.getItem(PENDING_STORAGE_KEY) || 'null');
-    return data && data.agromercado === agromercado && String(data.fecha || '').slice(0,10) === String(fecha || fechaSeleccionada()).slice(0,10) ? data : null;
+    if(!data || data.agromercado !== agromercado) return null;
+    if(!fecha) return data;
+    return String(data.fecha || '').slice(0,10) === String(fecha || fechaSeleccionada()).slice(0,10) ? data : null;
   }catch(e){
     return null;
   }
@@ -280,7 +282,7 @@ function setHojaBloqueada(locked, info){
   document.querySelectorAll('#sales-form input, #sales-form select, #sales-form textarea').forEach(function(el){
     el.disabled = hojaBloqueada && el.id !== 'fecha';
   });
-  document.querySelectorAll('#sales-form button.primary').forEach(function(btn){
+  document.querySelectorAll('#sales-form .submit-actions button').forEach(function(btn){
     btn.disabled = hojaBloqueada;
   });
   if(hojaBloqueada){
@@ -634,7 +636,7 @@ function buildPrintHtml(){
 
 async function revisarBloqueoPendiente(agromercado, fecha){
   fecha = fecha || fechaSeleccionada();
-  var local = leerPendienteLocal(agromercado, fecha);
+  var local = leerPendienteLocal(agromercado);
   try{
     var existente = await buscarReportePorFecha(agromercado, fecha);
     if(existente){
@@ -967,18 +969,27 @@ async function enviarControl(event){
   event.preventDefault();
   if(!accesoActual) return;
   if(hojaBloqueada){
-    setMessage('submit-message', 'Ya existe un reporte para esta fecha de este agromercado.', 'error');
+    setMessage('submit-message', 'Ya hay un reporte enviado y pendiente de revision. Espera aprobacion del encargado.', 'error');
     return;
   }
   setMessage('submit-message', 'Enviando...', '');
   calcularTotales();
   if(!validarInventarioDisponible()) return;
   var fechaReporte = document.getElementById('fecha').value;
+  var pendienteLocal = leerPendienteLocal(accesoActual.nombre);
+  if(pendienteLocal){
+    setHojaBloqueada(true, pendienteLocal);
+    setMessage('submit-message', 'Ya hay un reporte enviado y pendiente de revision. Espera aprobacion del encargado.', 'error');
+    return;
+  }
   try{
     var existente = await buscarReportePorFecha(accesoActual.nombre, fechaReporte);
     if(existente){
       setHojaBloqueada(true, existente);
-      setMessage('submit-message', 'Ya existe un reporte para el ' + fechaVista(fechaReporte) + '. Selecciona otra fecha si necesitas enviar otro dia.', 'error');
+      var esPendiente = existente.tipo === 'pendiente' || String(existente.estado || '').toLowerCase() === 'pendiente';
+      setMessage('submit-message', esPendiente
+        ? 'Ya hay un reporte enviado y pendiente de revision. Espera aprobacion del encargado.'
+        : 'Ya existe un reporte aprobado para el ' + fechaVista(fechaReporte) + '.', 'error');
       return;
     }
   }catch(errorValidacion){
