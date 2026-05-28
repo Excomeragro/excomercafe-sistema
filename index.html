@@ -14724,13 +14724,27 @@ document.addEventListener('DOMContentLoaded', function() {
     return totals;
   }
 
-  function getSavedDistributionTotals(tipo){
+  function distributionDateForTipo(tipo){
+    var id = tipo === 'CDA' ? 'distribucion-fecha' : 'descargas-fecha';
+    var input = document.getElementById(id);
+    return (input && input.value) || (typeof fechaHoy === 'function' ? fechaHoy() : fechaISOActualSistema());
+  }
+
+  function dateOnOrBefore(value, fecha){
+    if (!fecha) return true;
+    var rowDate = String(value || '').slice(0, 10);
+    return rowDate && rowDate <= fecha;
+  }
+
+  function getSavedDistributionTotals(tipo, fecha){
     var totals = emptyTotals();
     var key = tipo === 'CDA' ? 'distribucion-cda-data' : 'descargas-data';
     var data = [];
+    fecha = fecha || distributionDateForTipo(tipo);
     try { data = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { data = []; }
     (data || []).forEach(function(row){
       if(!row) return;
+      if(!dateOnOrBefore(row.fecha, fecha)) return;
       addTotals(totals, row, 1);
     });
     return totals;
@@ -14770,7 +14784,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function getRemainingTotals(tipo){
     var base = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo]);
-    var saved = getSavedDistributionTotals(tipo);
+    var fecha = distributionDateForTipo(tipo);
+    var saved = getSavedDistributionTotals(tipo, fecha);
     var pending = getMatrixTotals(tipo);
     PRODUCT_KEYS_DIST.forEach(function(key){
       base[key] -= saved[key] + pending[key];
@@ -14833,7 +14848,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (PRODUCT_KEYS_DIST.indexOf(prod) < 0) return;
 
     var disponible = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo])[prod] || 0;
-    var yaDistribuido = getSavedDistributionTotals(tipo)[prod] || 0;
+    var yaDistribuido = getSavedDistributionTotals(tipo, distributionDateForTipo(tipo))[prod] || 0;
     var totalActual = getMatrixTotals(tipo)[prod] || 0;
     var valorActual = normalizeNumber(input.value);
     var otrosPedidos = Math.max(0, totalActual - valorActual);
