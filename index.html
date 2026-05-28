@@ -11525,6 +11525,10 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 
   window.renderResumenInventarioTiendona = function(){
+    if (typeof window.renderResumenDistribucionDisponible === 'function') {
+      window.renderResumenDistribucionDisponible('TIENDONA');
+      return;
+    }
     var cont = document.getElementById('resumen-inventario-tiendona');
     if (!cont) return;
 
@@ -11547,6 +11551,10 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 
   window.renderResumenInventarioCDA = function(){
+    if (typeof window.renderResumenDistribucionDisponible === 'function') {
+      window.renderResumenDistribucionDisponible('CDA');
+      return;
+    }
     var cont = document.getElementById('resumen-inventario-cda');
     if (!cont) return;
 
@@ -14664,6 +14672,14 @@ document.addEventListener('DOMContentLoaded', function() {
     aceite: 'cajas',
     harina: 'cajas'
   };
+  var PRODUCT_ALIASES_DIST = {
+    arroz: ['arroz'],
+    precocido: ['precocido', 'arroz_precocido', 'arrozPrecocido'],
+    frijol1: ['frijol1', 'frijol_1lb', 'frijol_1_lb'],
+    frijol4: ['frijol4', 'frijol_4lb', 'frijol_4_lb'],
+    aceite: ['aceite', 'aceite_750ml', 'aceite_750_ml'],
+    harina: ['harina', 'harina_820grs', 'harina_820_grs']
+  };
 
   var SOURCE_LOCATIONS_DIST = {
     TIENDONA: ['descargas-tiendona', 'descargas-tiendona-abajo', 'descargas-tiendona-arriba'],
@@ -14678,9 +14694,27 @@ document.addEventListener('DOMContentLoaded', function() {
     return Number(value || 0) || 0;
   }
 
+  function productAmount(row, key){
+    row = row || {};
+    var payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    var sources = [row, payload];
+    var aliases = PRODUCT_ALIASES_DIST[key] || [key];
+
+    for (var s = 0; s < sources.length; s++) {
+      var source = sources[s] || {};
+      for (var i = 0; i < aliases.length; i++) {
+        var alias = aliases[i];
+        if (source[alias] !== undefined && source[alias] !== null && source[alias] !== '') {
+          return normalizeNumber(source[alias]);
+        }
+      }
+    }
+    return 0;
+  }
+
   function addTotals(target, row, sign){
     PRODUCT_KEYS_DIST.forEach(function(key){
-      target[key] += normalizeNumber(row[key]) * (sign || 1);
+      target[key] += productAmount(row, key) * (sign || 1);
     });
     return target;
   }
@@ -14751,12 +14785,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var totals = emptyTotals();
     var key = tipo === 'CDA' ? 'distribucion-cda-data' : 'descargas-data';
     var data = [];
-    fecha = fecha || distributionDateForTipo(tipo);
     try { data = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { data = []; }
     (data || []).forEach(function(row){
       if(!row) return;
       var rowFecha = row.fecha || (row.payload && row.payload.fecha) || row.creado_en || row.timestamp;
-      if(!dateOnOrBefore(rowFecha, fecha)) return;
+      if(fecha && !dateOnOrBefore(rowFecha, fecha)) return;
       addTotals(totals, row, 1);
     });
     return totals;
@@ -14796,8 +14829,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function getRemainingTotals(tipo){
     var base = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo]);
-    var fecha = distributionDateForTipo(tipo);
-    var saved = getSavedDistributionTotals(tipo, fecha);
+    var saved = getSavedDistributionTotals(tipo);
     var pending = getMatrixTotals(tipo);
     PRODUCT_KEYS_DIST.forEach(function(key){
       base[key] -= saved[key] + pending[key];
@@ -14825,12 +14857,20 @@ document.addEventListener('DOMContentLoaded', function() {
       '</div>';
   }
 
+  window.renderResumenDistribucionDisponible = function(tipo){
+    if (tipo === 'CDA') {
+      renderStockResumen('resumen-inventario-cda', 'CDA');
+    } else {
+      renderStockResumen('resumen-inventario-tiendona', 'TIENDONA');
+    }
+  };
+
   window.renderResumenInventarioTiendona = function(){
-    renderStockResumen('resumen-inventario-tiendona', 'TIENDONA');
+    window.renderResumenDistribucionDisponible('TIENDONA');
   };
 
   window.renderResumenInventarioCDA = function(){
-    renderStockResumen('resumen-inventario-cda', 'CDA');
+    window.renderResumenDistribucionDisponible('CDA');
   };
 
   function validateSourceStock(tipo, alertId){
@@ -14860,7 +14900,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (PRODUCT_KEYS_DIST.indexOf(prod) < 0) return;
 
     var disponible = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo])[prod] || 0;
-    var yaDistribuido = getSavedDistributionTotals(tipo, distributionDateForTipo(tipo))[prod] || 0;
+    var yaDistribuido = getSavedDistributionTotals(tipo)[prod] || 0;
     var totalActual = getMatrixTotals(tipo)[prod] || 0;
     var valorActual = normalizeNumber(input.value);
     var otrosPedidos = Math.max(0, totalActual - valorActual);
