@@ -90,6 +90,14 @@ var PRODUCTO_COLUMNAS = {
   harina: 'harina_820grs'
 };
 
+var BANCOS_PORTAL = [
+  { nombre:'Agricola', etiqueta:'Banco Agricola', cuenta:'560-005547-0', keys:['AGRICOLA','BANCO AGRICOLA'] },
+  { nombre:'Cuscatlan', etiqueta:'Banco Cuscatlan', cuenta:'0405-01747', keys:['CUSCATLAN','BANCO CUSCATLAN'] },
+  { nombre:'Hipotecario', etiqueta:'Banco Hipotecario', cuenta:'001-2015261-7', keys:['HIPOTECARIO','BANCO HIPOTECARIO'] },
+  { nombre:'BAC', etiqueta:'BAC', cuenta:'200992790', keys:['BAC','BAC CREDOMATIC'] },
+  { nombre:'Promerica', etiqueta:'Banco Promerica', cuenta:'50000046000244', keys:['PROMERICA','BANCO PROMERICA'] }
+];
+
 var accesoActual = null;
 var ACCESS_STORAGE_KEY = 'agromercado_portal_access_v1';
 var PENDING_STORAGE_KEY = 'agromercado_portal_pending_v1';
@@ -138,6 +146,36 @@ function n(value){
 function money(value){
   return '$' + n(value).toFixed(2);
 }
+
+function bancoKey(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function bancoPortalData(nombre){
+  var key = bancoKey(nombre);
+  return BANCOS_PORTAL.find(function(banco){
+    return banco.keys.indexOf(key) >= 0 || bancoKey(banco.nombre) === key || bancoKey(banco.etiqueta) === key;
+  }) || null;
+}
+
+window.actualizarBancoPortal = function(){
+  var select = document.getElementById('banco');
+  var info = document.getElementById('banco-cuenta');
+  if(!select || !info) return;
+  var banco = bancoPortalData(select.value);
+  if(!banco){
+    info.textContent = 'Seleccione banco para ver la cuenta.';
+    info.classList.remove('has-bank');
+    return;
+  }
+  info.innerHTML = '<strong>' + htmlEscape(banco.etiqueta) + '</strong><span>Cuenta: ' + htmlEscape(banco.cuenta) + '</span>';
+  info.classList.add('has-bank');
+};
 
 function clearZero(input){
   if(input && String(input.value) === '0') input.value = '';
@@ -1044,6 +1082,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('fecha-visible').textContent = fechaVista(hoy());
   llenarAgromercados();
   renderProductos();
+  actualizarBancoPortal();
   var fecha = document.getElementById('fecha');
   if(fecha) fecha.value = hoy();
   if(fecha){

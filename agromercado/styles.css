@@ -177,6 +177,33 @@ label{
   color:#334155;
 }
 
+.bank-account{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-height:34px;
+  border:1px solid #d9e6f5;
+  border-radius:6px;
+  background:#f8fbff;
+  color:#64748b;
+  padding:8px 10px;
+  font-size:.78rem;
+  line-height:1.2;
+}
+
+.bank-account.has-bank{
+  color:#0b2239;
+  border-color:#bfd3ea;
+  background:#eef6ff;
+}
+
+.bank-account span{
+  color:#17456b;
+  font-weight:900;
+  white-space:nowrap;
+}
+
 input,
 select,
 textarea{

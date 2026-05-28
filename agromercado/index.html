@@ -88,7 +88,17 @@
 
       <section class="form-card payment-card">
         <div class="form-grid compact">
-          <label>Banco<select id="banco"><option value="">Pendiente</option><option>Agricola</option><option>Cuscatlan</option><option>Hipotecario</option><option>BAC</option><option>Promerica</option></select></label>
+          <label>Banco
+            <select id="banco" onchange="actualizarBancoPortal()">
+              <option value="">Pendiente</option>
+              <option value="Agricola">Agricola</option>
+              <option value="Cuscatlan">Cuscatlan</option>
+              <option value="Hipotecario">Hipotecario</option>
+              <option value="BAC">BAC</option>
+              <option value="Promerica">Promerica</option>
+            </select>
+            <span class="bank-account" id="banco-cuenta">Seleccione banco para ver la cuenta.</span>
+          </label>
           <label>Gastos<input id="gastos" type="number" min="0" step="0.01" value="0" inputmode="decimal" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></label>
         </div>
       </section>
@@ -122,6 +132,6 @@
     </form>
   </main>
 
-  <script src="./app.js?v=20260527-bloqueo-pendiente"></script>
+  <script src="./app.js?v=20260527-banco-cuenta"></script>
 </body>
 </html>
