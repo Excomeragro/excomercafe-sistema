@@ -6,7 +6,7 @@
 <link rel="apple-touch-icon" href="./favicon.png">
 <link href="./css/styles.css?v=20260525-inventario-total-firmado" rel="stylesheet">
 <link href="./css/components.css?v=20260519-phase61" rel="stylesheet">
-<link href="./css/distribution-matrix.css?v=20260521-normal-theme" rel="stylesheet">
+<link href="./css/distribution-matrix.css?v=20260528-cda-grupos" rel="stylesheet">
 <script>
   try {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -7622,6 +7622,7 @@ window.obtenerDestinosInventarioPorTipo = function(){
   }
 
   function tipoAgromercado(item, nombre){
+    if (typeof obtenerGrupoCDAParaDestino === 'function' && obtenerGrupoCDAParaDestino(nombre, item)) return 'CDA';
     if (item && item.tipo) return String(item.tipo).toUpperCase() === 'CDA' ? 'CDA' : 'TIENDONA';
     if (esAgromercadoCDA(nombre)) return 'CDA';
     if (item && esAgromercadoCDA(item.m || item.municipio || '')) return 'CDA';
@@ -7645,8 +7646,13 @@ window.obtenerDestinosInventarioPorTipo = function(){
     });
   }
 
-  Object.keys(grupos).forEach(function(tipo){
-    grupos[tipo].sort(function(a,b){ return a.localeCompare(b, 'es', { sensitivity: 'base' }); });
+  grupos.TIENDONA.sort(function(a,b){
+    if (typeof ordenarDestinosTiendona === 'function') return ordenarDestinosTiendona(a, b);
+    return a.localeCompare(b, 'es', { sensitivity: 'base' });
+  });
+  grupos.CDA.sort(function(a,b){
+    if (typeof ordenarDestinosCDA === 'function') return ordenarDestinosCDA(a, b);
+    return a.localeCompare(b, 'es', { sensitivity: 'base' });
   });
 
   return grupos;
@@ -7815,38 +7821,9 @@ window.obtenerUbicacionesInventarioParaDestino = function(destino, tipo){
     return [opcionesTiendona.abajo, opcionesTiendona.arriba];
   }
 
-  var cdaUsulutan = [
-    'BERLIN',
-    'JOCORO',
-    'SAN MIGUEL',
-    'SAN MIGUEL BARRAZA',
-    'CORINTO',
-    'ANAMOROS',
-    'JIQUILISCO',
-    'SANTIAGO DE MARIA',
-    'EL TRANSITO',
-    'SANTA ROSA DE LIMA',
-    'SAN FRANCISCO GOTERA',
-    'USULUTAN'
-  ];
-
-  if (cdaUsulutan.some(coincide)) return [opcionesCDA.usulutan];
-
-  var cdaSoyapango = [
-    'CIUDAD ARCE',
-    'PUERTO DE LA LIBERTAD',
-    'ZARAGOZA',
-    'SANTA TECLA 2',
-    'ATIQUIZAYA',
-    'AYUTUXTEPEQUE',
-    'SAN JUAN OPICO',
-    'SANTO TOMAS',
-    'COLON',
-    'JUAYUA',
-    'SAN VICENTE'
-  ];
-
-  if (cdaSoyapango.some(coincide)) return [opcionesCDA.soyapango];
+  var grupoCDA = typeof obtenerGrupoCDAParaDestino === 'function' ? obtenerGrupoCDAParaDestino(destino) : '';
+  if (grupoCDA === 'usulutan') return [opcionesCDA.usulutan];
+  if (grupoCDA === 'soyapango') return [opcionesCDA.soyapango];
 
   return [opcionesCDA.soyapango, opcionesCDA.usulutan];
 };
@@ -10106,8 +10083,46 @@ window.eliminarMunicipio = function(index){
 };
 
 // ── AGROMERCADOS ──
+function construirAgromercadosBaseDesdeCatalogo(){
+  var agromercados = [];
+  if (typeof AGROMERCADOS_DATA === 'undefined') return agromercados;
+  Object.keys(AGROMERCADOS_DATA).forEach(function(distrito){
+    (AGROMERCADOS_DATA[distrito] || []).forEach(function(e){
+      var nombre = e && e.a || '';
+      var meta = { municipio: e && e.m, m: e && e.m, distrito: distrito };
+      var grupoCDA = typeof obtenerGrupoCDAParaDestino === 'function' ? obtenerGrupoCDAParaDestino(nombre, meta) : '';
+      var grupoTiendona = typeof obtenerGrupoTiendonaParaDestino === 'function' ? obtenerGrupoTiendonaParaDestino(nombre) : '';
+      agromercados.push({
+        distrito: distrito,
+        municipio: e && e.m || '',
+        nombre: nombre,
+        tipo: grupoCDA ? 'CDA' : 'TIENDONA',
+        referencia: grupoCDA ? ('CDA ' + (grupoCDA === 'usulutan' ? 'USULUTAN' : 'SOYAPANGO')) : (grupoTiendona ? ('TIENDONA ' + grupoTiendona.toUpperCase()) : '')
+      });
+    });
+  });
+  return agromercados;
+}
+
 window.cargarAgromercados = function(){
-  var agromercados = JSON.parse(localStorage.getItem('agromercados-data')||'[]');
+  var agromercados = [];
+  try { agromercados = JSON.parse(localStorage.getItem('agromercados-data')||'[]'); } catch(e) { agromercados = []; }
+  if (!Array.isArray(agromercados) || agromercados.length === 0) {
+    agromercados = construirAgromercadosBaseDesdeCatalogo();
+    localStorage.setItem('agromercados-data', JSON.stringify(agromercados));
+  } else {
+    var changed = false;
+    agromercados.forEach(function(agro){
+      if (!agro || !agro.nombre) return;
+      var grupoCDA = typeof obtenerGrupoCDAParaDestino === 'function' ? obtenerGrupoCDAParaDestino(agro.nombre, agro) : '';
+      var grupoTiendona = typeof obtenerGrupoTiendonaParaDestino === 'function' ? obtenerGrupoTiendonaParaDestino(agro.nombre) : '';
+      var tipo = grupoCDA ? 'CDA' : 'TIENDONA';
+      var referencia = grupoCDA ? ('CDA ' + (grupoCDA === 'usulutan' ? 'USULUTAN' : 'SOYAPANGO')) : (grupoTiendona ? ('TIENDONA ' + grupoTiendona.toUpperCase()) : (agro.referencia || ''));
+      if (agro.tipo !== tipo) { agro.tipo = tipo; changed = true; }
+      if (!agro.referencia || agro.referencia === 'SIN DEFINIR') { agro.referencia = referencia; changed = true; }
+    });
+    if (changed) localStorage.setItem('agromercados-data', JSON.stringify(agromercados));
+  }
   var tbody = document.getElementById('tabla-agromercados');
   var distritoSelect = document.getElementById('agromercado-distrito');
   var municipioSelect = document.getElementById('agromercado-municipio');
@@ -11417,12 +11432,9 @@ function sembrarDatosIniciales(){
 
   // ── AGROMERCADOS ──
   if(!localStorage.getItem('agromercados-data')){
-    var agromercados = [];
-    Object.keys(AGROMERCADOS_DATA).forEach(function(distrito){
-      AGROMERCADOS_DATA[distrito].forEach(function(e){
-        agromercados.push({distrito: distrito, municipio: e.m, nombre: e.a});
-      });
-    });
+    var agromercados = typeof construirAgromercadosBaseDesdeCatalogo === 'function'
+      ? construirAgromercadosBaseDesdeCatalogo()
+      : [];
     localStorage.setItem('agromercados-data', JSON.stringify(agromercados));
   }
 
@@ -13011,6 +13023,42 @@ var LISTA_CDA = [
   "USULUTAN"
 ];
 
+var CDA_GRUPOS_ORDEN = ['soyapango', 'usulutan'];
+var CDA_GRUPOS_DESTINOS = {
+  soyapango: [
+    'CIUDAD ARCE',
+    'PUERTO DE LA LIBERTAD',
+    'LA LIBERTAD',
+    'PARQUE MUNICIPAL MARIO MOLINA',
+    'ZARAGOZA',
+    'SANTA TECLA 2',
+    'ATIQUIZAYA',
+    'AYUTUXTEPEQUE',
+    'SAN JUAN OPICO',
+    'SANTO TOMAS',
+    'COLON',
+    'JUAYUA',
+    'SAN VICENTE'
+  ],
+  usulutan: [
+    'BERLIN',
+    'JOCORO',
+    'SAN MIGUEL',
+    'SAN MIGUEL BARRAZA',
+    'CENTRO DE GOBIERNO MUNICIPAL',
+    'CORINTO',
+    'ANAMOROS',
+    'JIQUILISCO',
+    'SANTIAGO DE MARIA',
+    'EL TRANSITO',
+    'SANTA ROSA DE LIMA',
+    'SAN FRANCISCO GOTERA',
+    'USULUTAN',
+    'MERCADO MUNICIPAL #5',
+    'PARQUE DE ALCALDIA MUNICIPAL DEL TRIUNFO'
+  ]
+};
+
 // Función de normalización de nombres
 function normalizarNombre(nombre) {
   if (!nombre) return '';
@@ -13023,10 +13071,78 @@ function normalizarNombre(nombre) {
     .trim();
 }
 
+function textoDestinoCDA(nombre, meta) {
+  meta = meta || {};
+  return normalizarNombre([
+    nombre,
+    meta.nombre,
+    meta.a,
+    meta.agromercado,
+    meta.m,
+    meta.municipio
+  ].filter(Boolean).join(' '));
+}
+
+function destinoCoincideCDA(texto, patron) {
+  texto = normalizarNombre(texto);
+  patron = normalizarNombre(patron);
+  if (!texto || !patron) return false;
+  return texto === patron || texto.indexOf(patron) >= 0 || patron.indexOf(texto) >= 0;
+}
+
+window.obtenerGrupoCDAParaDestino = function(nombre, meta) {
+  var texto = textoDestinoCDA(nombre, meta);
+  if (!texto) return '';
+  for (var i = 0; i < CDA_GRUPOS_ORDEN.length; i++) {
+    var grupo = CDA_GRUPOS_ORDEN[i];
+    var lista = CDA_GRUPOS_DESTINOS[grupo] || [];
+    for (var j = 0; j < lista.length; j++) {
+      if (destinoCoincideCDA(texto, lista[j])) return grupo;
+    }
+  }
+  return '';
+};
+
+window.ordenarDestinosCDA = function(a, b) {
+  var grupoA = obtenerGrupoCDAParaDestino(a);
+  var grupoB = obtenerGrupoCDAParaDestino(b);
+  var idxA = CDA_GRUPOS_ORDEN.indexOf(grupoA);
+  var idxB = CDA_GRUPOS_ORDEN.indexOf(grupoB);
+  if (idxA < 0) idxA = 99;
+  if (idxB < 0) idxB = 99;
+  if (idxA !== idxB) return idxA - idxB;
+  return String(a || '').localeCompare(String(b || ''), 'es', { sensitivity: 'base' });
+};
+
+window.obtenerGrupoTiendonaParaDestino = function(nombre) {
+  var target = normalizarNombre(nombre);
+  if (!target || typeof TIENDONA_DATOS === 'undefined') return '';
+  var grupos = Object.keys(TIENDONA_DATOS);
+  for (var i = 0; i < grupos.length; i++) {
+    var grupo = grupos[i];
+    var lugares = TIENDONA_DATOS[grupo] || [];
+    for (var j = 0; j < lugares.length; j++) {
+      var lugar = normalizarNombre(lugares[j]);
+      if (target === lugar || target.indexOf(lugar) >= 0 || lugar.indexOf(target) >= 0) {
+        return normalizarNombre(grupo).indexOf('ARRIBA') >= 0 ? 'arriba' : 'abajo';
+      }
+    }
+  }
+  return '';
+};
+
+window.ordenarDestinosTiendona = function(a, b) {
+  var orden = { arriba: 0, abajo: 1, '': 2 };
+  var grupoA = obtenerGrupoTiendonaParaDestino(a);
+  var grupoB = obtenerGrupoTiendonaParaDestino(b);
+  if (orden[grupoA] !== orden[grupoB]) return orden[grupoA] - orden[grupoB];
+  return String(a || '').localeCompare(String(b || ''), 'es', { sensitivity: 'base' });
+};
+
 // Función para determinar si un agromercado es CDA
 function esAgromercadoCDA(nombre) {
   var nombreNormalizado = normalizarNombre(nombre);
-  return LISTA_CDA.some(function(cda) {
+  return obtenerGrupoCDAParaDestino(nombre) || LISTA_CDA.some(function(cda) {
     return normalizarNombre(cda) === nombreNormalizado;
   });
 }
@@ -14412,6 +14528,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var lista = (grupos[tipo] || []).slice();
 
     lista.sort(function(a, b){
+      if (tipo === 'CDA' && typeof ordenarDestinosCDA === 'function') return ordenarDestinosCDA(a, b);
+      if (tipo === 'TIENDONA' && typeof ordenarDestinosTiendona === 'function') return ordenarDestinosTiendona(a, b);
       return String(a).localeCompare(String(b), 'es', { sensitivity: 'base' });
     });
 
@@ -14420,9 +14538,23 @@ document.addEventListener('DOMContentLoaded', function() {
       return {
         nombre: nombre,
         distrito: meta.distrito,
-        municipio: meta.municipio
+        municipio: meta.municipio,
+        grupo: tipo === 'CDA'
+          ? (typeof obtenerGrupoCDAParaDestino === 'function' ? obtenerGrupoCDAParaDestino(nombre, meta) : '')
+          : (typeof obtenerGrupoTiendonaParaDestino === 'function' ? obtenerGrupoTiendonaParaDestino(nombre) : '')
       };
     });
+  }
+
+  function grupoLabel(tipo, grupo){
+    if (tipo === 'CDA') {
+      if (grupo === 'usulutan') return 'CDA USULUTAN';
+      if (grupo === 'soyapango') return 'CDA SOYAPANGO';
+      return 'CDA SIN GRUPO';
+    }
+    if (grupo === 'arriba') return 'TIENDONA ARRIBA';
+    if (grupo === 'abajo') return 'TIENDONA ABAJO';
+    return 'TIENDONA SIN GRUPO';
   }
 
   function inputCell(prod){
@@ -14443,8 +14575,14 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    var grupoActual = null;
     tbody.innerHTML = destinos.map(function(destino){
-      return '<tr data-destino="' + destino.nombre.replace(/"/g, '&quot;') + '" data-distrito="' + destino.distrito.replace(/"/g, '&quot;') + '" data-municipio="' + destino.municipio.replace(/"/g, '&quot;') + '">'
+      var html = '';
+      if (destino.grupo !== grupoActual) {
+        grupoActual = destino.grupo;
+        html += '<tr class="dist-group-row"><td colspan="7">' + grupoLabel(tipo, grupoActual) + '</td></tr>';
+      }
+      return html + '<tr data-destino="' + destino.nombre.replace(/"/g, '&quot;') + '" data-distrito="' + destino.distrito.replace(/"/g, '&quot;') + '" data-municipio="' + destino.municipio.replace(/"/g, '&quot;') + '">'
         + '<td class="dist-destino-cell">' + destino.nombre + '</td>'
         + inputCell('arroz')
         + inputCell('precocido')

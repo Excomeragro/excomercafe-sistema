@@ -114,6 +114,15 @@
   line-height: 1.2;
 }
 
+.dist-matrix-table .dist-group-row td {
+  background: #eef6ff !important;
+  color: #17456b;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: uppercase;
+}
+
 .dist-matrix-table tr:nth-child(even) td {
   background: var(--surface);
 }
