@@ -2684,6 +2684,7 @@
           <button class="sp-btn sp-btn-guide" onclick="openProgramGuide()">Guia</button>
         </div>
         <div class="sp-sub" id="supabase-status" style="margin-top:8px;">Proyecto conectado: hfijlpjeqagxyvgirkwk.supabase.co</div>
+        <div class="sp-sub" id="local-storage-status" style="margin-top:8px;">Datos locales: calculando...</div>
         <div class="sp-sub" id="sync-check-status" style="margin-top:8px;">La sincronizacion corre automaticamente al abrir, al volver a la pestaña, al reconectar internet y cada 10 segundos.</div>
       </div>
 
@@ -18200,6 +18201,73 @@ document.addEventListener('DOMContentLoaded', function() {
     if (el) el.textContent = message;
   }
 
+  var LOCAL_STORAGE_SYNC_KEYS = [
+    { key:'exc_agro_hist', label:'ventas' },
+    { key:'inventario-data', label:'inventario' },
+    { key:'descargas-data', label:'tiendona' },
+    { key:'distribucion-cda-data', label:'cda' },
+    { key:'personas-data', label:'personas' }
+  ];
+
+  function localStorageSyncEstado(){
+    var total = 0;
+    var pendientes = 0;
+    var detalle = [];
+
+    LOCAL_STORAGE_SYNC_KEYS.forEach(function(config){
+      var rows = readLocalList(config.key);
+      var pendientesTabla = rows.filter(function(row){
+        return row && !row.supabase_synced;
+      }).length;
+      total += rows.length;
+      pendientes += pendientesTabla;
+      detalle.push({
+        key: config.key,
+        label: config.label,
+        total: rows.length,
+        pendientes: pendientesTabla
+      });
+    });
+
+    return {
+      total: total,
+      pendientes: pendientes,
+      sincronizados: Math.max(0, total - pendientes),
+      detalle: detalle,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  function renderLocalStorageSyncEstado(){
+    var status = document.getElementById('local-storage-status');
+    var check = document.getElementById('sync-check-status');
+    var estado = localStorageSyncEstado();
+    window.excomercafeLocalStorageEstado = estado;
+
+    if(status) {
+      var pendientesDetalle = estado.detalle.filter(function(row){ return row.pendientes > 0; }).map(function(row){
+        return row.label + ': ' + row.pendientes;
+      }).join(' | ');
+      status.textContent = estado.pendientes
+        ? 'Datos locales pendientes de sincronizar: ' + estado.pendientes + ' de ' + estado.total + (pendientesDetalle ? ' (' + pendientesDetalle + ')' : '')
+        : 'Datos locales protegidos: ' + estado.total + ' registro(s), 0 pendientes de sincronizar.';
+      status.style.color = estado.pendientes ? '#92400e' : 'var(--muted)';
+      status.style.fontWeight = estado.pendientes ? '800' : '';
+    }
+
+    if(check) {
+      var hora = (typeof fechaHoraActualVistaSistema === 'function') ? fechaHoraActualVistaSistema() : new Date().toLocaleString();
+      check.textContent = estado.pendientes
+        ? 'Hay datos guardados en este navegador esperando Supabase. No cierres ni limpies el navegador antes de sincronizar o crear respaldo. Ultima revision: ' + hora
+        : 'LocalStorage y Supabase sin pendientes locales. Ultima revision: ' + hora;
+    }
+
+    return estado;
+  }
+
+  window.excomercafeEstadoLocalStorage = localStorageSyncEstado;
+  window.excomercafeRenderEstadoLocalStorage = renderLocalStorageSyncEstado;
+
   function setOnlineIndicator(state, text){
     var indicator = document.getElementById('online-indicator');
     if (!indicator) return;
@@ -18551,6 +18619,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function refreshAfterOnlineSync(){
     reloadLocalCaches();
+    if (typeof renderLocalStorageSyncEstado === 'function') renderLocalStorageSyncEstado();
     if (typeof renderInventarioTable === 'function') renderInventarioTable();
     if (typeof renderDistribucionTable === 'function') renderDistribucionTable();
     if (typeof actualizarHistorialDescargas === 'function') actualizarHistorialDescargas();
@@ -18606,6 +18675,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!keys[key]) return;
       clearTimeout(timer);
       timer = setTimeout(function(){
+        if (typeof renderLocalStorageSyncEstado === 'function') renderLocalStorageSyncEstado();
         if (typeof window.excomercafeRefreshAllSeguro === 'function') {
           window.excomercafeRefreshAllSeguro();
         }
@@ -18692,6 +18762,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!window.haySesionSupabase || !window.haySesionSupabase()) {
       setOnlineIndicator(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Inicia sesion' : 'Sin conexion');
       if (!options.silent) currentOnlineStatus('Inicia sesion para sincronizar con Supabase.');
+      if (typeof renderLocalStorageSyncEstado === 'function') renderLocalStorageSyncEstado();
       return { ok: false, skipped: true, reason: 'auth-required' };
     }
     if (window.supabaseSyncRunning) return { ok: true, skipped: true };
@@ -18729,17 +18800,20 @@ document.addEventListener('DOMContentLoaded', function() {
       if (errores.length) {
         setOnlineIndicator('offline', 'Sincronizacion parcial');
         currentOnlineStatus('Sincronizacion parcial. Revisa tablas pendientes en Supabase.');
+        if (typeof renderLocalStorageSyncEstado === 'function') renderLocalStorageSyncEstado();
         if (!options.silent && typeof showToast === 'function') showToast('Sincronizacion parcial. Faltan tablas en Supabase.');
         return { ok: false, uploaded: totalUploaded, downloaded: totalDownloaded, errores: errores };
       }
 
       setOnlineIndicator('online', 'En linea');
       currentOnlineStatus((refreshed ? 'En linea.' : 'En linea. Refresco pendiente mientras digitas.') + ' Subidos: ' + totalUploaded + ' | Recibidos: ' + totalDownloaded + ' | ' + fechaHoraActualVistaSistema());
+      if (typeof renderLocalStorageSyncEstado === 'function') renderLocalStorageSyncEstado();
       if (!options.silent && typeof showToast === 'function') showToast(refreshed ? 'Sincronizacion completa.' : 'Sincronizado. La pantalla se actualizara al terminar de digitar.');
       return { ok: true, uploaded: totalUploaded, downloaded: totalDownloaded, refreshed: refreshed };
     } catch(error) {
       setOnlineIndicator('offline', 'Sin conexion');
       currentOnlineStatus('Sin conexion: ' + error.message);
+      if (typeof renderLocalStorageSyncEstado === 'function') renderLocalStorageSyncEstado();
       throw error;
     } finally {
       window.supabaseSyncRunning = false;
@@ -18887,6 +18961,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.addEventListener('DOMContentLoaded', function(){
     setOnlineIndicator(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Sincronizando...' : 'Sin conexion');
+    if (typeof renderLocalStorageSyncEstado === 'function') renderLocalStorageSyncEstado();
     if (typeof actualizarPeriodoResumenVentas === 'function') actualizarPeriodoResumenVentas();
     setTimeout(function(){
       ejecutarSincronizacionAutomatica('Sincronizando...').catch(function(error){
@@ -18928,6 +19003,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     document.addEventListener('change', function(){
       setTimeout(aplicarRefreshPendiente, 250);
+    });
+    window.addEventListener('beforeunload', function(event){
+      var estado = (typeof localStorageSyncEstado === 'function') ? localStorageSyncEstado() : { pendientes: 0 };
+      if(!estado.pendientes) return;
+      event.preventDefault();
+      event.returnValue = 'Hay datos locales pendientes de sincronizar.';
+      return event.returnValue;
     });
   });
 })();
