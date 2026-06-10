@@ -21,6 +21,13 @@ yarn-debug.log*
 yarn-error.log*
 temp-*.js
 *.tmp
+.codex-temp-npm/
+.electron-cache/
+.localappdata/
+.npm-cache/
+.github-upload-staging-*/
+EXCOMERCAFE_GitHub_*.zip
+-
 
 # Sistema/editor
 .DS_Store

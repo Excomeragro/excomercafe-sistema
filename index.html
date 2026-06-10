@@ -10246,10 +10246,18 @@ window.cargarAgromercados = function(){
         tbody.appendChild(grupoTr);
       }
       var tr = document.createElement('tr');
+      var tipoAgro = String(agro.tipo || '').toUpperCase();
+      var referenciaAgro = String(agro.referencia || grupo || '').toUpperCase();
+      if (!tipoAgro || tipoAgro === 'SIN DEFINIR') {
+        if (referenciaAgro.indexOf('CDA') >= 0) tipoAgro = 'CDA';
+        else if (referenciaAgro.indexOf('TIENDONA') >= 0) tipoAgro = 'TIENDONA';
+        else tipoAgro = 'SIN DEFINIR';
+      }
+      var tipoColor = tipoAgro === 'CDA' ? '#2563eb' : tipoAgro === 'TIENDONA' ? 'var(--accent)' : 'var(--muted)';
       tr.innerHTML = '<td>' + (agro.distrito || 'SIN DEFINIR') + '</td>' +
         '<td>' + (agro.municipio || 'SIN DEFINIR') + '</td>' +
         '<td>' + (agro.nombre || '') + '</td>' +
-        '<td><span class="badge" style="background:' + (agro.tipo === 'CDA' ? 'var(--success)' : agro.tipo === 'TIENDONA' ? 'var(--accent)' : 'var(--muted)') + ';color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">' + (agro.tipo || 'SIN DEFINIR') + '</span></td>' +
+        '<td><span class="badge" style="background:' + tipoColor + ';color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">' + tipoAgro + '</span></td>' +
         '<td>' + (agro.referencia || 'SIN DEFINIR') + '</td>';
       tbody.appendChild(tr);
     });
