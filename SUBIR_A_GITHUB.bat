@@ -73,6 +73,25 @@ if not errorlevel 1 (
   echo No hay cambios nuevos para subir.
   echo Intentando asegurar que GitHub este actualizado...
   "%GIT_EXE%" push -u origin main
+  if errorlevel 1 (
+    echo.
+    echo No se pudo subir a GitHub.
+    echo.
+    echo GitHub rechazo el acceso. Normalmente pasa por una de estas razones:
+    echo 1. Iniciaste sesion con una cuenta sin permiso para este repositorio.
+    echo 2. El repositorio pertenece a otra cuenta.
+    echo 3. GitHub necesita que vuelvas a iniciar sesion.
+    echo.
+    echo Repositorio actual:
+    "%GIT_EXE%" remote get-url origin
+    echo.
+    echo Solucion rapida:
+    echo - Inicia sesion en GitHub con la cuenta que tiene permiso.
+    echo - O agrega la cuenta actual como colaborador del repositorio.
+    echo.
+    pause
+    exit /b 1
+  )
   echo.
   echo Proceso terminado.
   pause
