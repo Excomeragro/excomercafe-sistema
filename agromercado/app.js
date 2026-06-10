@@ -1005,8 +1005,32 @@ async function cargarValoresInicialesAgromercado(agromercado){
   }catch(e){}
 
   try{
-    var distRows = await fetchSupabase('/rest/v1/distribucion_tiendona?select=arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&limit=1000');
-    (distRows || []).forEach(function(row){
+    function sumarMercaderiaNueva(rows){
+      (rows || []).forEach(function(row){
+        PRODUCTOS.forEach(function(prod){
+          var col = PRODUCTO_COLUMNAS[prod.key];
+          var payload = row && row.payload && typeof row.payload === 'object' ? row.payload : {};
+          var unidades = payload.unidades || {};
+          var valor = unidades[prod.key] !== undefined ? unidades[prod.key] : row[col];
+          nuevos[prod.key] = n(nuevos[prod.key]) + n(valor);
+        });
+      });
+    }
+
+    var distTiendonaRows = await fetchSupabase('/rest/v1/distribucion_tiendona?select=arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&limit=1000');
+    sumarMercaderiaNueva(distTiendonaRows);
+
+    var distCdaRows = await fetchSupabase('/rest/v1/distribucion_cda?select=arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&cda=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&limit=1000');
+    sumarMercaderiaNueva(distCdaRows);
+  }catch(e){}
+
+  if (!PRODUCTOS.some(function(prod){ return n(nuevos[prod.key]) > 0; })) {
+    try{
+      var distCdaFechaRows = await fetchSupabase('/rest/v1/distribucion_cda?select=cda,arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&fecha=eq.' + encodeURIComponent(fecha) + '&limit=1000');
+      (distCdaFechaRows || []).forEach(function(row){
+        var payload = row && row.payload && typeof row.payload === 'object' ? row.payload : {};
+        var destino = String(row && row.cda || payload.cda || payload.agromercado || payload.destino || '').trim();
+        if(destino !== agromercado) return;
       PRODUCTOS.forEach(function(prod){
         var col = PRODUCTO_COLUMNAS[prod.key];
         var payload = row && row.payload && typeof row.payload === 'object' ? row.payload : {};
@@ -1015,7 +1039,8 @@ async function cargarValoresInicialesAgromercado(agromercado){
         nuevos[prod.key] = n(nuevos[prod.key]) + n(valor);
       });
     });
-  }catch(e){}
+    }catch(e){}
+  }
 
   PRODUCTOS.forEach(function(prod){
     aplicarValoresProducto(prod.key, anteriores[prod.key] || 0, nuevos[prod.key] || 0);
