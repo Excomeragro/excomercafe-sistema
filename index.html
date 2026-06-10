@@ -10139,10 +10139,14 @@ function ordenarAgromercadosSistema(a, b){
 
 function obtenerAgromercadosSistemaCompletos(){
   var mapa = {};
+  var AGROMERCADOS_META_OFICIAL = {
+    'COLON': { distrito:'LA LIBERTAD OESTE', municipio:'Colon' }
+  };
 
   function metaCatalogo(nombre){
     var target = normalizarNombre(nombre);
     var meta = { distrito:'SIN DEFINIR', municipio:'SIN DEFINIR' };
+    if (AGROMERCADOS_META_OFICIAL[target]) return AGROMERCADOS_META_OFICIAL[target];
     if (!target || typeof AGROMERCADOS_DATA === 'undefined') return meta;
     Object.keys(AGROMERCADOS_DATA).some(function(distrito){
       return (AGROMERCADOS_DATA[distrito] || []).some(function(item){
