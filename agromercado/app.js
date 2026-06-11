@@ -339,6 +339,35 @@ function limpiarPendienteLocal(agromercado, fecha){
   }catch(e){}
 }
 
+function esPendienteRemotoActivo(row, agromercado, fecha){
+  return row
+    && String(row.estado || '').toLowerCase() === 'pendiente'
+    && String(row.agromercado || '') === String(agromercado || '')
+    && String(row.fecha || '').slice(0,10) === String(fecha || '').slice(0,10);
+}
+
+function depurarPendientesLocalesHuerfanos(agromercado, remoteRows){
+  try{
+    var changed = false;
+    var pendientes = leerPendientesLocales().filter(function(local){
+      if(!local || local.agromercado !== agromercado) return true;
+      var fecha = String(local.fecha || '').slice(0,10);
+      var existe = (remoteRows || []).some(function(row){
+        return esPendienteRemotoActivo(row, agromercado, fecha);
+      });
+      if(existe) return true;
+      changed = true;
+      return false;
+    });
+    if(!changed) return false;
+    if(pendientes.length) localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(pendientes));
+    else localStorage.removeItem(PENDING_STORAGE_KEY);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
 function setHojaBloqueada(locked, info){
   hojaBloqueada = !!locked;
   var form = document.getElementById('sales-form');
@@ -701,8 +730,10 @@ function buildPrintHtml(){
 async function revisarBloqueoPendiente(agromercado, fecha){
   fecha = fecha || fechaSeleccionada();
   var local = leerPendienteLocal(agromercado, fecha);
+  var consultaOk = false;
   try{
     var existente = await buscarReportePorFecha(agromercado, fecha);
+    consultaOk = true;
     if(existente){
       if(existente.tipo === 'pendiente' || String(existente.estado || '').toLowerCase() === 'pendiente') {
         guardarPendienteLocal(agromercado, existente.fecha || fecha);
@@ -721,6 +752,12 @@ async function revisarBloqueoPendiente(agromercado, fecha){
       return;
     }
   }catch(e){}
+
+  if(consultaOk && local){
+    limpiarPendienteLocal(agromercado, fecha);
+    setHojaBloqueada(false);
+    return;
+  }
 
   if(local) setHojaBloqueada(true, local);
   else setHojaBloqueada(false);
@@ -960,6 +997,7 @@ async function cargarHistorialVentas(agromercado){
   try{
     var official = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=fecha.desc,creado_en.desc&limit=50');
     var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=*&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=creado_en.desc&limit=50');
+    depurarPendientesLocalesHuerfanos(agromercado, pending);
     var rows = [];
     (official || []).forEach(function(row){
       rows.push(Object.assign({ estado:'aprobado', historial_tipo:'oficial' }, row));
@@ -1115,8 +1153,8 @@ async function refrescarHojaVendedor(silent){
     await aplicarEncargadoAgromercado(accesoActual.nombre);
     await cargarValoresInicialesAgromercado(accesoActual.nombre);
     calcularTotales();
-    await cargarHistorialVentas(accesoActual.nombre);
     await revisarBloqueoPendiente(accesoActual.nombre, fechaHoy);
+    await cargarHistorialVentas(accesoActual.nombre);
   }catch(error){
     if(!silent) setMessage('submit-message', 'No se pudo refrescar automaticamente. Reintentando...', 'error');
   }finally{
