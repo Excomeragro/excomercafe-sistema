@@ -53,6 +53,7 @@ create table if not exists public.ventas_agromercado_pendientes (
   ventas numeric default 0,
   gastos numeric default 0,
   remesa numeric default 0,
+  banco text default '',
   payload jsonb default '{}'::jsonb,
   creado_en timestamptz not null default now(),
   actualizado_en timestamptz not null default now()
@@ -234,6 +235,7 @@ alter table public.ventas_agromercado_pendientes add column if not exists estado
 alter table public.ventas_agromercado_pendientes add column if not exists ventas numeric default 0;
 alter table public.ventas_agromercado_pendientes add column if not exists gastos numeric default 0;
 alter table public.ventas_agromercado_pendientes add column if not exists remesa numeric default 0;
+alter table public.ventas_agromercado_pendientes add column if not exists banco text default '';
 alter table public.ventas_agromercado_pendientes add column if not exists payload jsonb default '{}'::jsonb;
 alter table public.ventas_agromercado_pendientes add column if not exists creado_en timestamptz not null default now();
 alter table public.ventas_agromercado_pendientes add column if not exists actualizado_en timestamptz not null default now();

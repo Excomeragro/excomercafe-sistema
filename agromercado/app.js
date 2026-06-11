@@ -885,6 +885,47 @@ function renderHistorialVentas(rows){
   }).join('');
 }
 
+function historialPrioridad(row){
+  var estado = String(row && row.estado || '').toLowerCase();
+  if(estado === 'aprobado') return 4;
+  if(estado === 'pendiente') return 3;
+  if(estado === 'rechazado') return 2;
+  return 1;
+}
+
+function historialFecha(row){
+  var payload = payloadHistorial(row);
+  return String((row && row.fecha) || payload.fecha || '').slice(0, 10);
+}
+
+function historialCreadoEn(row){
+  var payload = payloadHistorial(row);
+  return String((row && (row.creado_en || row.actualizado_en)) || payload.supabase_synced_at || payload.timestamp || payload.id || '');
+}
+
+function deduplicarHistorialPorFecha(rows){
+  var porFecha = {};
+  (rows || []).forEach(function(row){
+    var fecha = historialFecha(row);
+    if(!fecha) return;
+    var anterior = porFecha[fecha];
+    if(!anterior){
+      porFecha[fecha] = row;
+      return;
+    }
+    var prioridadNueva = historialPrioridad(row);
+    var prioridadAnterior = historialPrioridad(anterior);
+    if(prioridadNueva > prioridadAnterior || (prioridadNueva === prioridadAnterior && historialCreadoEn(row) > historialCreadoEn(anterior))){
+      porFecha[fecha] = row;
+    }
+  });
+  return Object.keys(porFecha).map(function(fecha){
+    return porFecha[fecha];
+  }).sort(function(a, b){
+    return historialFecha(b).localeCompare(historialFecha(a)) || historialCreadoEn(b).localeCompare(historialCreadoEn(a));
+  });
+}
+
 function agregarPendientesLocalesHistorial(rows, agromercado){
   rows = rows || [];
   leerPendientesLocales().forEach(function(local){
@@ -903,6 +944,7 @@ function agregarPendientesLocalesHistorial(rows, agromercado){
         ventas: local.ventas || 0,
         gastos: local.gastos || 0,
         remesa: local.remesa || 0,
+        banco: (local.payload && local.payload.banco) || local.banco || '',
         payload: local.payload || {},
         creado_en: local.guardado_en || new Date().toISOString(),
         historial_tipo: 'local'
@@ -917,7 +959,7 @@ async function cargarHistorialVentas(agromercado){
   if(status) status.textContent = 'Cargando...';
   try{
     var official = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=fecha.desc,creado_en.desc&limit=50');
-    var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,encargado,estado,ventas,gastos,remesa,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=creado_en.desc&limit=50');
+    var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=*&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=creado_en.desc&limit=50');
     var rows = [];
     (official || []).forEach(function(row){
       rows.push(Object.assign({ estado:'aprobado', historial_tipo:'oficial' }, row));
@@ -926,9 +968,7 @@ async function cargarHistorialVentas(agromercado){
       rows.push(Object.assign({ historial_tipo:'revision' }, row));
     });
     rows = agregarPendientesLocalesHistorial(rows, agromercado);
-    rows.sort(function(a, b){
-      return String(b.fecha || '').localeCompare(String(a.fecha || '')) || String(b.creado_en || '').localeCompare(String(a.creado_en || ''));
-    });
+    rows = deduplicarHistorialPorFecha(rows);
     renderHistorialVentas(rows.slice(0, 50));
   }catch(error){
     if(status) status.textContent = 'Error';
@@ -1132,16 +1172,30 @@ function leerProductos(){
 }
 
 async function supabaseInsert(row){
-  var response = await fetch(SUPABASE_CONFIG.url + '/rest/v1/ventas_agromercado_pendientes', {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_CONFIG.key,
-      Authorization: 'Bearer ' + SUPABASE_CONFIG.key,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal'
-    },
-    body: JSON.stringify([row])
-  });
+  async function post(bodyRow){
+    return fetch(SUPABASE_CONFIG.url + '/rest/v1/ventas_agromercado_pendientes', {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_CONFIG.key,
+        Authorization: 'Bearer ' + SUPABASE_CONFIG.key,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify([bodyRow])
+    });
+  }
+  var response = await post(row);
+  if(!response.ok && row && row.banco){
+    var firstError = await response.json().catch(function(){ return null; });
+    var firstMessage = (firstError && firstError.message) || '';
+    if(/banco/i.test(firstMessage) && /column|schema|cache/i.test(firstMessage)){
+      var compatibleRow = Object.assign({}, row);
+      delete compatibleRow.banco;
+      response = await post(compatibleRow);
+    } else {
+      throw new Error(firstMessage || response.status + ' ' + response.statusText);
+    }
+  }
   if(!response.ok){
     var data = await response.json().catch(function(){ return null; });
     throw new Error((data && data.message) || response.status + ' ' + response.statusText);
@@ -1211,6 +1265,7 @@ async function enviarControl(event){
     ventas: payload.ventas,
     gastos: payload.gastos,
     remesa: payload.remesa,
+    banco: payload.banco,
     payload: payload
   };
 

@@ -3339,7 +3339,12 @@ function revisionMoney(value){
 }
 
 function revisionPayload(row){
-  return row && row.payload ? row.payload : {};
+  if(!row || !row.payload) return {};
+  if(typeof row.payload === 'object') return row.payload;
+  if(typeof row.payload === 'string') {
+    try { return JSON.parse(row.payload); } catch(error) { return {}; }
+  }
+  return {};
 }
 
 function revisionEscapeHtml(value){
@@ -3396,8 +3401,7 @@ function revisionBancoSelectHtml(index, selected){
 
 function revisionBancoHtml(index, selected){
   selected = revisionBancoNombre(selected);
-  if(!selected) return revisionBancoSelectHtml(index, '');
-  return '<b>' + revisionEscapeHtml(selected) + '</b>';
+  return revisionBancoSelectHtml(index, selected);
 }
 
 function revisionBancoSeleccionado(index, fallback){
@@ -3503,6 +3507,8 @@ window.aprobarVentaPendiente = async function(index){
   payload.banco = revisionBancoSeleccionado(index, payload.banco || row.banco || '');
   payload.id = payload.id || row.local_id || ('aprobado-' + Date.now());
   payload.local_id = payload.local_id || payload.id;
+  payload.fecha = payload.fecha || row.fecha || null;
+  payload.agromercado = payload.agromercado || row.agromercado || '';
   var originalUnits = payload.ventas_unidades || {};
   payload.ventas_unidades = Object.assign({}, originalUnits, {
     ab1: Number(originalUnits.ab1 || originalUnits.arroz || 0) || 0,
@@ -3541,11 +3547,11 @@ window.aprobarVentaPendiente = async function(index){
       prefer:'resolution=merge-duplicates,return=representation',
       body:[{
         local_id: payload.local_id,
-        fecha: payload.fecha || row.fecha || null,
+        fecha: payload.fecha,
         dia: payload.dia || '',
         distrito: payload.distrito || '',
         municipio: payload.municipio || '',
-        agromercado: payload.agromercado || row.agromercado || '',
+        agromercado: payload.agromercado,
         arroz: Number(payload.ventas_unidades && payload.ventas_unidades.ab1 || 0) || 0,
         arroz_precocido: Number(payload.ventas_unidades && payload.ventas_unidades.ap1 || 0) || 0,
         frijol_1lb: Number(payload.ventas_unidades && payload.ventas_unidades.fr1 || 0) || 0,
@@ -3561,6 +3567,16 @@ window.aprobarVentaPendiente = async function(index){
         payload: payload
       }]
     });
+    if(payload.fecha && payload.agromercado && payload.local_id) {
+      try {
+        await window.supabaseRequest('/rest/v1/ventas_agromercado?fecha=eq.' + encodeURIComponent(payload.fecha) + '&agromercado=eq.' + encodeURIComponent(payload.agromercado) + '&local_id=neq.' + encodeURIComponent(payload.local_id), {
+          method:'DELETE',
+          prefer:'return=minimal'
+        });
+      } catch(errorLimpieza) {
+        console.warn('No se pudieron limpiar reportes duplicados del dia:', errorLimpieza);
+      }
+    }
     await window.supabaseRequest('/rest/v1/ventas_agromercado_pendientes?id=eq.' + encodeURIComponent(row.id), {
       method:'PATCH',
       prefer:'return=minimal',
@@ -16388,7 +16404,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function pendingRowToHist(row){
     row = row || {};
-    var payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    var payload = {};
+    if(row.payload && typeof row.payload === 'object') payload = row.payload;
+    else if(row.payload && typeof row.payload === 'string') {
+      try { payload = JSON.parse(row.payload); } catch(error) { payload = {}; }
+    }
     return Object.assign({}, payload, {
       id: payload.id || row.local_id || row.id || '',
       pending_id: row.id || '',
@@ -16405,6 +16425,46 @@ document.addEventListener('DOMContentLoaded', function() {
       estado_revision: row.estado || 'pendiente',
       timestamp: row.creado_en || payload.timestamp || ''
     });
+  }
+
+  function prioridadReporteVentaControl(row){
+    var estado = String(row && (row.estado_revision || row.estado) || 'aprobado').toLowerCase();
+    if(estado === 'aprobado') return 4;
+    if(estado === 'pendiente') return 3;
+    if(estado === 'rechazado') return 2;
+    return 1;
+  }
+
+  function fechaClaveReporteVentaControl(row){
+    return fechaReporteNormalizada(row && row.fecha);
+  }
+
+  function agroClaveReporteVentaControl(row){
+    return normText((row && (row.agromercado || row.nombre)) || '');
+  }
+
+  function tiempoReporteVentaControl(row){
+    return String((row && (row.timestamp || row.creado_en || row.supabase_synced_at || row.id || row.local_id)) || '');
+  }
+
+  function deduplicarReportesVentaControl(rows){
+    var map = {};
+    (rows || []).forEach(function(row, index){
+      var fecha = fechaClaveReporteVentaControl(row);
+      var agro = agroClaveReporteVentaControl(row);
+      var key = fecha && agro ? fecha + '|' + agro : 'incompleto|' + index;
+      var prev = map[key];
+      if(!prev){
+        map[key] = row;
+        return;
+      }
+      var nueva = prioridadReporteVentaControl(row);
+      var anterior = prioridadReporteVentaControl(prev);
+      if(nueva > anterior || (nueva === anterior && tiempoReporteVentaControl(row) > tiempoReporteVentaControl(prev))){
+        map[key] = row;
+      }
+    });
+    return Object.keys(map).map(function(key){ return map[key]; });
   }
 
   function leerHistorialVentaLocal(){
@@ -16488,6 +16548,7 @@ document.addEventListener('DOMContentLoaded', function() {
     rows.sort(function(a, b){
       return String(b.fecha || '').localeCompare(String(a.fecha || '')) || String(b.timestamp || b.creado_en || '').localeCompare(String(a.timestamp || a.creado_en || ''));
     });
+    rows = deduplicarReportesVentaControl(rows);
     var filtroAgro = llenarFiltroAgromercadoHistorial(rows);
     var filtroFecha = (document.getElementById('control-reporte-fecha') || {}).value || '';
     var busqueda = normText((document.getElementById('control-reporte-buscar') || {}).value || '');
