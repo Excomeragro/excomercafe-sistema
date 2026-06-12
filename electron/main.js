@@ -172,7 +172,7 @@ function createMainWindow() {
           label: '🌐 Página web',
           click: () => {
             shell.openExternal(
-              'https://skobar31sv-pixel.github.io/excomercafe-sistema/'
+              'https://excomeragro.github.io/excomercafe-sistema/'
             );
           }
         },

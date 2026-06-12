@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 title Subir EXCOMERCAFE a GitHub
+set "EXPECTED_REPO_URL=https://github.com/Excomeragro/excomercafe-sistema.git"
 
 cd /d "%~dp0"
 
@@ -43,21 +44,27 @@ if errorlevel 1 "%GIT_EXE%" config user.email "excomercafe@local"
 "%GIT_EXE%" remote get-url origin >nul 2>&1
 if errorlevel 1 (
   echo No hay repositorio remoto configurado.
+  echo Configurando el repositorio oficial de empresa...
+  "%GIT_EXE%" remote add origin "%EXPECTED_REPO_URL%"
+)
+
+for /f "delims=" %%R in ('"%GIT_EXE%" remote get-url origin 2^>nul') do set "CURRENT_REPO_URL=%%R"
+
+if /I not "%CURRENT_REPO_URL%"=="%EXPECTED_REPO_URL%" (
+  echo El remoto actual no es el oficial de empresa.
+  echo Actual:
+  echo %CURRENT_REPO_URL%
   echo.
-  echo Pega aqui la URL de GitHub.
-  echo Ejemplo: https://github.com/usuario/repositorio.git
+  echo Nuevo:
+  echo %EXPECTED_REPO_URL%
   echo.
-  set /p REPO_URL=URL de GitHub: 
-  if "%REPO_URL%"=="" (
-    echo No se ingreso URL. Cancelado.
-    pause
-    exit /b 1
-  )
-  "%GIT_EXE%" remote add origin "%REPO_URL%"
+  echo Corrigiendo automaticamente...
+  "%GIT_EXE%" remote set-url origin "%EXPECTED_REPO_URL%"
+  set "CURRENT_REPO_URL=%EXPECTED_REPO_URL%"
 )
 
 echo Repositorio remoto:
-"%GIT_EXE%" remote get-url origin
+echo %CURRENT_REPO_URL%
 echo.
 
 echo Quitando del control de Git archivos pesados o temporales si estaban agregados...
