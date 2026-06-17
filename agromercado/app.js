@@ -72,14 +72,20 @@ var AGROMERCADOS = AGROMERCADO_NOMBRES.map(function(nombre, index){
   return { nombre: nombre, clave: generarClaveAgromercado(nombre, index) };
 });
 
-var PRODUCTOS = [
-  { key:'arroz', nombre:'Arroz', precio:0.25 },
-  { key:'precocido', nombre:'Arroz precocido', precio:0.60 },
-  { key:'frijol1', nombre:'Frijol 1 lb', precio:0.70 },
-  { key:'frijol4', nombre:'Frijol 4 lb', precio:0.70 },
-  { key:'aceite', nombre:'Aceite vegetal 750 ml', precio:2.00 },
-  { key:'harina', nombre:'Harina de maiz 820 grs', precio:1.10 }
+var PRODUCTOS_BASE = [
+  { key:'arroz', sistemaKey:'ab1', nombre:'Arroz', precio:0.25, activo:true },
+  { key:'precocido', sistemaKey:'ap1', nombre:'Arroz precocido', precio:0.55, activo:true },
+  { key:'frijol1', sistemaKey:'fr1', nombre:'Frijol 1 lb', precio:0.70, activo:true },
+  { key:'frijol4', sistemaKey:'fr4', nombre:'Frijol 4 lb', precio:0.70, activo:true },
+  { key:'aceite', sistemaKey:'ac', nombre:'Aceite vegetal 750 ml', precio:2.00, activo:true },
+  { key:'harina', sistemaKey:'ha', nombre:'Harina de maiz 820 grs', precio:1.10, activo:true }
 ];
+var PRODUCTOS = PRODUCTOS_BASE.filter(function(producto){ return producto.activo !== false; }).map(function(producto){
+  return Object.assign({}, producto);
+});
+var PRODUCTOS_TODOS = PRODUCTOS_BASE.map(function(producto){
+  return Object.assign({}, producto);
+});
 
 var PRODUCTO_COLUMNAS = {
   arroz: 'arroz',
@@ -89,6 +95,60 @@ var PRODUCTO_COLUMNAS = {
   aceite: 'aceite_750ml',
   harina: 'harina_820grs'
 };
+
+function precioPortalDesdeSistema(producto){
+  var precio = Number(producto && producto.precio || 0) || 0;
+  return producto && producto.key === 'fr4' ? precio / 4 : precio;
+}
+
+function construirProductosPortal(desdeSistema, soloActivos){
+  var basePorSistema = {};
+  PRODUCTOS_BASE.forEach(function(producto){
+    basePorSistema[producto.sistemaKey] = producto;
+  });
+
+  var productos = (desdeSistema || []).map(function(producto){
+    var base = basePorSistema[producto.key];
+    if(!base) return null;
+    return {
+      key: base.key,
+      sistemaKey: base.sistemaKey,
+      nombre: producto.nombre || base.nombre,
+      precio: precioPortalDesdeSistema(producto),
+      activo: producto.activo !== false
+    };
+  }).filter(Boolean);
+
+  if(!productos.length){
+    productos = PRODUCTOS_BASE.map(function(producto){
+      return Object.assign({}, producto);
+    });
+  }
+
+  if(soloActivos){
+    productos = productos.filter(function(producto){
+      return producto.activo !== false;
+    });
+  }
+
+  return productos.map(function(producto){
+    return Object.assign({}, producto);
+  });
+}
+
+function cargarProductosSistemaPortal(){
+  var guardados = [];
+  try{
+    guardados = JSON.parse(localStorage.getItem('productos_sistema') || '[]');
+    if(!Array.isArray(guardados)) guardados = [];
+  }catch(e){
+    guardados = [];
+  }
+
+  PRODUCTOS_TODOS = construirProductosPortal(guardados, false);
+  PRODUCTOS = construirProductosPortal(guardados, true);
+  if(!PRODUCTOS.length) PRODUCTOS = PRODUCTOS_TODOS.slice();
+}
 
 var BANCOS_PORTAL = [
   { nombre:'Agricola', etiqueta:'Banco Agricola', cuenta:'560-005547-0', keys:['AGRICOLA','BANCO AGRICOLA'] },
@@ -872,7 +932,7 @@ function historialProductosHtml(payload, row){
   return '<div class="history-table-wrap"><table class="history-table"><thead><tr>'
     + '<th>Producto</th><th>Anterior</th><th>Nueva</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
     + '</tr></thead><tbody>'
-    + PRODUCTOS.map(function(prod){
+    + PRODUCTOS_TODOS.map(function(prod){
       var vendido = historialMapValue(unidades, prod.key);
       var dineroProducto = dinero && dinero[prod.key] != null ? n(dinero[prod.key]) : vendido * prod.precio;
       return '<tr>'
@@ -1328,6 +1388,7 @@ async function enviarControl(event){
 
 document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('fecha-visible').textContent = fechaVista(hoy());
+  cargarProductosSistemaPortal();
   llenarAgromercados();
   renderProductos();
   actualizarBancoPortal();
@@ -1340,4 +1401,13 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
   restaurarAccesoGuardado();
+});
+
+window.addEventListener('storage', function(event){
+  if(event && event.key === 'productos_sistema'){
+    cargarProductosSistemaPortal();
+    renderProductos();
+    calcularTotales();
+    if(accesoActual) refrescarHojaVendedor(true);
+  }
 });

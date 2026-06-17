@@ -1,6 +1,129 @@
 // ══ SISTEMA DE ALMACENAMIENTO ══
 
 // ── SISTEMA CENTRALIZADO DE GESTIÓN DE BANCOS ──
+window.productosSistema = {
+  storageKey: 'productos_sistema',
+  productosIniciales: (typeof PRODUCTOS_CATALOGO_INICIAL !== 'undefined' ? PRODUCTOS_CATALOGO_INICIAL : []).map(function(producto){
+    return Object.assign({}, producto);
+  }),
+
+  clonarProducto: function(producto) {
+    return Object.assign({}, producto);
+  },
+
+  obtenerProductosConDatos: function() {
+    try {
+      var guardados = localStorage.getItem(this.storageKey);
+      if (guardados) {
+        var productos = JSON.parse(guardados);
+        if (Array.isArray(productos) && productos.length) {
+          return productos.map(this.clonarProducto);
+        }
+      }
+    } catch (e) {
+      console.error('Error leyendo productos del sistema:', e);
+    }
+    return this.productosIniciales.map(this.clonarProducto);
+  },
+
+  obtenerProductosActivosConDatos: function() {
+    return this.obtenerProductosConDatos().filter(function(producto){
+      return producto.activo !== false;
+    });
+  },
+
+  obtenerProducto: function(key) {
+    return this.obtenerProductosConDatos().find(function(producto){
+      return producto.key === key;
+    }) || null;
+  },
+
+  fusionarConIniciales: function(productos) {
+    var mapa = {};
+    (productos || []).forEach(function(producto){
+      if (producto && producto.key) mapa[producto.key] = Object.assign({}, producto);
+    });
+
+    return this.productosIniciales.map(function(base){
+      var guardado = mapa[base.key] || {};
+      return {
+        key: base.key,
+        inv: guardado.inv || base.inv,
+        nombre: guardado.nombre || base.nombre,
+        corto: guardado.corto || base.corto,
+        precio: guardado.precio != null ? Number(guardado.precio) || 0 : base.precio,
+        activo: guardado.activo !== false
+      };
+    });
+  },
+
+  aplicarEnMemoria: function(productos) {
+    var lista = this.fusionarConIniciales(productos);
+    if (typeof PRECIOS === 'undefined') window.PRECIOS = {};
+    if (typeof window.PRODUCTOS_INFO === 'undefined') window.PRODUCTOS_INFO = {};
+
+    lista.forEach(function(producto){
+      PRECIOS[producto.key] = Number(producto.precio || 0) || 0;
+      window.PRODUCTOS_INFO[producto.key] = Object.assign({}, producto);
+    });
+
+    window.PRODUCTOS_ACTIVOS_SISTEMA = lista.filter(function(producto){
+      return producto.activo !== false;
+    }).map(function(producto){
+      return Object.assign({}, producto);
+    });
+
+    return lista;
+  },
+
+  guardarProductos: function(productos, silent) {
+    var copia = (productos || []).map(this.clonarProducto);
+    localStorage.setItem(this.storageKey, JSON.stringify(copia));
+    this.aplicarEnMemoria(copia);
+    if (!silent) {
+      window.dispatchEvent(new CustomEvent('productos-sistema-actualizados', {
+        detail: {
+          productos: copia.map(this.clonarProducto)
+        }
+      }));
+    }
+  },
+
+  inicializar: function() {
+    var productos = this.obtenerProductosConDatos();
+    var fusionados = this.fusionarConIniciales(productos);
+    var guardados = localStorage.getItem(this.storageKey);
+    var necesitaGuardar = !guardados || JSON.stringify(productos) !== JSON.stringify(fusionados);
+    if (necesitaGuardar) {
+      this.guardarProductos(fusionados, true);
+    } else {
+      this.aplicarEnMemoria(fusionados);
+    }
+  },
+
+  actualizarProducto: function(key, cambios) {
+    try {
+      var productos = this.obtenerProductosConDatos();
+      var indice = productos.findIndex(function(producto){ return producto.key === key; });
+      if (indice < 0) {
+        return { success:false, mensaje:'Producto no encontrado' };
+      }
+
+      productos[indice] = Object.assign({}, productos[indice], cambios || {});
+      if (productos[indice].precio != null) {
+        productos[indice].precio = Number(productos[indice].precio) || 0;
+      }
+
+      this.guardarProductos(productos);
+      return { success:true, mensaje:'Producto actualizado correctamente' };
+    } catch (e) {
+      return { success:false, mensaje:'Error al actualizar producto: ' + e.message };
+    }
+  }
+};
+
+window.productosSistema.inicializar();
+
 window.bancosSistema = {
   // Lista inicial de bancos con números de cuenta
   bancosIniciales: BANCOS_INICIALES,

@@ -53,6 +53,9 @@ window.mostrarSeccionDatos = function(seccion){
       case 'bancos':
         if(window.renderBancosDatos) window.renderBancosDatos();
         break;
+      case 'productos':
+        if(window.renderProductosDatos) window.renderProductosDatos();
+        break;
       case 'departamentos':
         if(window.renderDepartamentos) window.renderDepartamentos();
         break;

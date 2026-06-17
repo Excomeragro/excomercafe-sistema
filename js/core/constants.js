@@ -1,22 +1,34 @@
 // ══ CONSTANTES Y DATOS FIJOS DEL SISTEMA ══
 
+// Catalogo base de productos del sistema
+var PRODUCTOS_CATALOGO_INICIAL = [
+  { key:'ab1', inv:'arroz', nombre:'Arroz', corto:'AB 1lb', precio:0.25, activo:true },
+  { key:'ap1', inv:'precocido', nombre:'Arroz precocido', corto:'AP 1lb', precio:0.55, activo:true },
+  { key:'fr1', inv:'frijol1', nombre:'Frijol 1 lb', corto:'FR 1lb', precio:0.70, activo:true },
+  { key:'fr4', inv:'frijol4', nombre:'Frijol 4 lb', corto:'FR 4lb', precio:2.80, activo:true },
+  { key:'ac', inv:'aceite', nombre:'Aceite vegetal 750 ml', corto:'Aceite', precio:2.00, activo:true },
+  { key:'ha', inv:'harina', nombre:'Harina de maiz 820 grs', corto:'Harina', precio:1.10, activo:true }
+];
+
 // Productos del sistema
-var PRODUCTOS = ['ab1','ap1','fr1','fr4','ac','ha'];
+var PRODUCTOS = PRODUCTOS_CATALOGO_INICIAL.map(function(producto){ return producto.key; });
 
 // Nombres de productos para mostrar
-var PRODUCTOS_NOMBRES = ['AB 1lb', 'AP 1lb', 'FR 1lb', 'FR 4lb', 'Aceite_TEMP', 'Harina'];
+var PRODUCTOS_NOMBRES = PRODUCTOS_CATALOGO_INICIAL.map(function(producto){ return producto.corto; });
 
 // Claves de productos para formularios, precios e inventario
-var PRODUCTOS_KEYS = ['ab1', 'ap1', 'fr1', 'fr4', 'ac', 'ha'];
+var PRODUCTOS_KEYS = PRODUCTOS.slice();
 
 // Precios por unidad de cada producto
-var PRECIOS = {
-  'ab1':0.25,
-  'ap1':0.60,
-  'fr1':0.70, 'fr4':2.80,
-  'ac':2.00,
-  'ha':1.10
-};
+var PRECIOS = {};
+PRODUCTOS_CATALOGO_INICIAL.forEach(function(producto){
+  PRECIOS[producto.key] = producto.precio;
+});
+
+window.PRODUCTOS_INFO = {};
+PRODUCTOS_CATALOGO_INICIAL.forEach(function(producto){
+  window.PRODUCTOS_INFO[producto.key] = Object.assign({}, producto);
+});
 
 // Datos de agromercados por distrito
 var AGROMERCADOS_DATA = {

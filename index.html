@@ -2202,6 +2202,7 @@
     <button class="data-tab-btn" onclick="mostrarSeccionDatos(&#39;claves&#39;)" style="padding:6px 12px;font-size:0.8rem;">🔑 Claves</button>
     <button class="data-tab-btn" onclick="mostrarSeccionDatos(&#39;transporte&#39;)" style="padding:6px 12px;font-size:0.8rem;">🚚 Transporte</button>
     <button class="data-tab-btn" onclick="mostrarSeccionDatos(&#39;bancos&#39;)" style="padding:6px 12px;font-size:0.8rem;">🏦 Bancos</button>
+    <button class="data-tab-btn" onclick="mostrarSeccionDatos(&#39;productos&#39;)" style="padding:6px 12px;font-size:0.8rem;">📦 Productos</button>
     <!-- <button class="tab-btn" onclick="mostrarSeccionDatos(&#39;departamentos&#39;)" style="padding:6px 12px;font-size:0.8rem;">🗺️ Departamentos</button> -->
   </div>
 
@@ -2521,6 +2522,39 @@
     </div>
   </div>
 
+  <!-- SECCIÓN PRODUCTOS -->
+  <div id="seccion-productos" class="seccion-datos" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <span>📦 Gestión de Productos</span>
+        <div class="flex gap-8 items-center flex-wrap">
+          <button class="btn btn-sm btn-secondary" onclick="exportarDatos(&#39;productos&#39;)">📥 Exportar</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom:12px;color:var(--muted);font-size:0.9rem;font-weight:600;">
+          Aquí puedes actualizar precios y dejar productos inactivos sin borrar su historial.
+        </div>
+        <div style="max-height:320px;overflow-y:auto;">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Clave</th>
+                <th>Precio ($)</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-productos-sistema">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Cargando productos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ALERTAS -->
   <div id="alert-datos" class="alert alert-ok"></div>
 </div>
@@ -2772,10 +2806,10 @@
     </div>
   </div>
 </div>
-<script src="./js/core/constants.js"></script>
+<script src="./js/core/constants.js?v=20260617-productos-sistema"></script>
 <script src="./js/utils/helpers.js"></script>
-<script src="./js/core/storage.js?v=20260527-stock-distribucion"></script>
-<script src="./js/core/app.js"></script>
+<script src="./js/core/storage.js?v=20260617-productos-sistema"></script>
+<script src="./js/core/app.js?v=20260617-productos-sistema"></script>
 <script>
 window.SUPABASE_CONFIG = {
   url: 'https://hfijlpjeqagxyvgirkwk.supabase.co',
@@ -11263,6 +11297,8 @@ window.cargarBancos = function(){
   });
 };
 
+window.renderBancosDatos = window.cargarBancos;
+
 window.agregarBanco = function(){
   var nombre = document.getElementById('nuevo-banco').value.trim();
   var cuenta = document.getElementById('nueva-cuenta').value.trim();
@@ -11317,6 +11353,81 @@ window.eliminarBancoDesdeGestion = function(index){
   }
 };
 
+// ── PRODUCTOS (SISTEMA CENTRALIZADO) ──
+window.renderProductosDatos = function(){
+  var tbody = document.getElementById('tabla-productos-sistema');
+  if(!tbody) return;
+
+  var productos = window.productosSistema && typeof productosSistema.obtenerProductosConDatos === 'function'
+    ? productosSistema.obtenerProductosConDatos()
+    : [];
+
+  if(!productos.length){
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No hay productos registrados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = productos.map(function(producto){
+    var precio = Number(producto.precio || 0).toFixed(2);
+    var activo = producto.activo !== false;
+    return '<tr>'
+      + '<td>' + producto.nombre + '</td>'
+      + '<td><code>' + producto.key + '</code></td>'
+      + '<td><input type="number" min="0" step="0.01" id="producto-precio-' + producto.key + '" value="' + precio + '" style="width:120px;"></td>'
+      + '<td><span class="status-chip ' + (activo ? 'status-ok' : 'status-muted') + '">' + (activo ? 'Activo' : 'Inactivo') + '</span></td>'
+      + '<td>'
+      + '<button class="btn btn-sm btn-secondary" onclick="guardarProductoDesdeGestion(\'' + producto.key + '\')">💾 Guardar</button> '
+      + '<button class="btn btn-sm ' + (activo ? 'btn-danger' : 'btn-success') + '" onclick="cambiarEstadoProductoDesdeGestion(\'' + producto.key + '\')">' + (activo ? '⏸️ Inactivar' : '✅ Activar') + '</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+};
+
+window.guardarProductoDesdeGestion = function(key){
+  var input = document.getElementById('producto-precio-' + key);
+  var precio = Number(input && input.value);
+  if(!isFinite(precio) || precio < 0){
+    showAlert('datos', '❌ Ingrese un precio válido', 'err');
+    return;
+  }
+
+  var resultado = productosSistema.actualizarProducto(key, { precio: precio });
+  if(resultado.success){
+    renderProductosDatos();
+    showAlert('datos', '✅ ' + resultado.mensaje, 'ok');
+  } else {
+    showAlert('datos', '❌ ' + resultado.mensaje, 'err');
+  }
+};
+
+window.cambiarEstadoProductoDesdeGestion = function(key){
+  var producto = productosSistema.obtenerProducto(key);
+  if(!producto) return;
+
+  var activar = producto.activo === false;
+  var mensaje = activar
+    ? '¿Activar este producto para que vuelva a salir en las pantallas de trabajo?'
+    : '¿Dejar este producto inactivo? Ya no saldrá en las pantallas de trabajo, pero su historial se conservará.';
+
+  if(!confirm(mensaje)) return;
+
+  var resultado = productosSistema.actualizarProducto(key, { activo: activar });
+  if(resultado.success){
+    renderProductosDatos();
+    showAlert('datos', '✅ ' + resultado.mensaje, 'ok');
+  } else {
+    showAlert('datos', '❌ ' + resultado.mensaje, 'err');
+  }
+};
+
+window.addEventListener('productos-sistema-actualizados', function(){
+  if(typeof renderProductosDatos === 'function') renderProductosDatos();
+  if(typeof renderBancos === 'function') renderBancos();
+  if(typeof renderControlVentaMatrix === 'function') renderControlVentaMatrix();
+  if(typeof renderHistorial === 'function') renderHistorial();
+  if(typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
+});
+
 // ── EXPORTAR DATOS ──
 window.exportarDatos = function(tipo){
   var datos = {};
@@ -11350,6 +11461,10 @@ window.exportarDatos = function(tipo){
     case 'bancos':
       datos = bancosSistema.obtenerBancosConDatos();
       filename = 'bancos.json';
+      break;
+    case 'productos':
+      datos = productosSistema.obtenerProductosConDatos();
+      filename = 'productos.json';
       break;
   }
   
@@ -15947,7 +16062,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 (function(){
-  var VENTA_PRODUCTS = [
+  var VENTA_PRODUCTS_BASE = [
     { key:'ab1', inv:'arroz', label:'Arroz', short:'ARROZ' },
     { key:'ap1', inv:'precocido', label:'Arroz Precocido', short:'ARROZ PRECOCIDO' },
     { key:'fr1', inv:'frijol1', label:'Frijol 1 Lb', short:'FRIJOL 1 LB' },
@@ -15955,6 +16070,7 @@ document.addEventListener('DOMContentLoaded', function() {
     { key:'ac', inv:'aceite', label:'Aceite 750 ML', short:'ACEITE 750 ML' },
     { key:'ha', inv:'harina', label:'Harina 820 GRS', short:'HARINA 820 GRS' }
   ];
+  var VENTA_PRODUCTS = VENTA_PRODUCTS_BASE.slice();
 
   var VENTA_FIELDS = [
     { key:'inicio', label:'Inicio', editable:false },
@@ -16073,6 +16189,27 @@ document.addEventListener('DOMContentLoaded', function() {
   function productMoney(key, qty){
     qty = Number(qty || 0) || 0;
     return key === 'fr4' ? (qty / 4) * productPrice(key) : qty * productPrice(key);
+  }
+
+  function currentVentaProducts(){
+    try{
+      if(window.productosSistema && typeof productosSistema.obtenerProductosActivosConDatos === 'function'){
+        var activos = productosSistema.obtenerProductosActivosConDatos().map(function(producto){
+          return producto.key;
+        });
+        var filtrados = VENTA_PRODUCTS_BASE.filter(function(producto){
+          return activos.indexOf(producto.key) >= 0;
+        });
+        if(filtrados.length) return filtrados;
+      }
+    }catch(e){}
+    return VENTA_PRODUCTS_BASE.slice();
+  }
+
+  function ventaProductSignature(){
+    return currentVentaProducts().map(function(producto){
+      return producto.key;
+    }).join('|');
   }
 
   function ventaPayload(row){
@@ -16758,7 +16895,13 @@ document.addEventListener('DOMContentLoaded', function() {
     ensureControlVentaStyles();
     var tableWrap = document.querySelector('#tab-agro .tbl-wrap');
     if (!tableWrap) return;
+    VENTA_PRODUCTS = currentVentaProducts();
     var existingCard = document.getElementById('control-venta-matrix-card');
+    var signature = ventaProductSignature();
+    if (existingCard && existingCard.getAttribute('data-product-signature') !== signature) {
+      existingCard.remove();
+      existingCard = null;
+    }
     if (existingCard) {
       existingCard.querySelectorAll('.venta-municipio-col,.venta-municipio-cell').forEach(function(cell){
         cell.remove();
@@ -16769,6 +16912,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var card = document.createElement('div');
     card.className = 'card venta-matriz-card';
     card.id = 'control-venta-matrix-card';
+    card.setAttribute('data-product-signature', signature);
 
     var productHeaders = VENTA_PRODUCTS.map(function(p){
       return '<th class="venta-prod-head" colspan="' + VENTA_FIELDS.length + '">' + esc(p.short) + '</th>';
@@ -17142,7 +17286,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 /* Reporte Bancos desde Digitar */
 (function(){
-  var BANK_PRODUCTS = [
+  var BANK_PRODUCTS_ALL = [
     { key:'ab1', label:'ARROZ A 1LB', cls:'bank-col-arroz' },
     { key:'ap1', label:'ARROZ AP 1LB', cls:'bank-col-precocido' },
     { key:'fr1', label:'FRIJOL F 1LB', cls:'bank-col-frijol' },
@@ -17150,6 +17294,7 @@ document.addEventListener('DOMContentLoaded', function() {
     { key:'ac', label:'ACEITE 750 ML', cls:'bank-col-aceite' },
     { key:'ha', label:'HARINA 820 GRS', cls:'bank-col-harina' }
   ];
+  var BANK_PRODUCTS = BANK_PRODUCTS_ALL.slice();
 
   var BANK_ALIASES = {
     ab1: ['ab1','arroz'],
@@ -17266,10 +17411,31 @@ document.addEventListener('DOMContentLoaded', function() {
     return q * Number(prices[key] || 0);
   }
 
+  function currentBankProducts(){
+    try{
+      if(window.productosSistema && typeof productosSistema.obtenerProductosActivosConDatos === 'function'){
+        var activos = productosSistema.obtenerProductosActivosConDatos().map(function(producto){
+          return producto.key;
+        });
+        var filtrados = BANK_PRODUCTS_ALL.filter(function(producto){
+          return activos.indexOf(producto.key) >= 0;
+        });
+        if(filtrados.length) return filtrados;
+      }
+    }catch(e){}
+    return BANK_PRODUCTS_ALL.slice();
+  }
+
+  function bankProductSignature(){
+    return currentBankProducts().map(function(producto){
+      return producto.key;
+    }).join('|');
+  }
+
   function calcSales(record){
     var explicit = readNumber(record.ventas);
     if(explicit > 0) return explicit;
-    return BANK_PRODUCTS.reduce(function(total, p){
+    return BANK_PRODUCTS_ALL.reduce(function(total, p){
       return total + calcProductMoney(p.key, getQty(record, p.key));
     }, 0);
   }
@@ -17437,7 +17603,9 @@ document.addEventListener('DOMContentLoaded', function() {
   function setTableShell(){
     var table = document.getElementById('tbl-bancos');
     if(!table) return null;
+    BANK_PRODUCTS = currentBankProducts();
     table.classList.add('bank-report-table');
+    table.setAttribute('data-product-signature', bankProductSignature());
     table.innerHTML =
       '<thead>'
       + '<tr><th rowspan="2" class="bank-report-date-head">FECHA</th><th rowspan="2" class="bank-report-agro-head">AGROMERCADO</th>'
@@ -17451,9 +17619,11 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   window.renderBancos = function(){
+    BANK_PRODUCTS = currentBankProducts();
     updateBancoFilter();
+    var table = document.getElementById('tbl-bancos');
     var tbody = document.getElementById('tbody-bancos') || setTableShell();
-    if(!tbody || !tbody.closest('.bank-report-table')) tbody = setTableShell();
+    if(!tbody || !tbody.closest('.bank-report-table') || (table && table.getAttribute('data-product-signature') !== bankProductSignature())) tbody = setTableShell();
     if(!tbody) return;
 
     var rows = filteredRecords();
@@ -17462,7 +17632,7 @@ document.addEventListener('DOMContentLoaded', function() {
     BANK_PRODUCTS.forEach(function(p){ productTotals[p.key] = 0; });
 
     if(!rows.length){
-      tbody.innerHTML = '<tr><td colspan="14" class="bank-report-empty">Sin registros para los filtros seleccionados. Primero guarda datos en Control de Venta.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="' + (BANK_PRODUCTS.length + 8) + '" class="bank-report-empty">Sin registros para los filtros seleccionados. Primero guarda datos en Control de Venta.</td></tr>';
     } else {
       tbody.innerHTML = rows.map(function(item){
         var r = item.record || {};
