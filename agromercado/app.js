@@ -1,4 +1,4 @@
-var SUPABASE_CONFIG = {
+﻿var SUPABASE_CONFIG = {
   url: 'https://hfijlpjeqagxyvgirkwk.supabase.co',
   key: 'sb_publishable_AIUqdFrAct3bR6y8Y6t1Qw_qNGJ5GHs'
 };
@@ -107,9 +107,15 @@ function construirProductosPortal(desdeSistema, soloActivos){
     basePorSistema[producto.sistemaKey] = producto;
   });
 
-  var productos = (desdeSistema || []).map(function(producto){
-    var base = basePorSistema[producto.key];
-    if(!base) return null;
+  var guardadosPorSistema = {};
+  (desdeSistema || []).forEach(function(producto){
+    if(!producto || !producto.key || !basePorSistema[producto.key]) return;
+    if(!guardadosPorSistema[producto.key]) guardadosPorSistema[producto.key] = Object.assign({}, producto);
+  });
+
+  var productos = PRODUCTOS_BASE.map(function(base){
+    var producto = guardadosPorSistema[base.sistemaKey];
+    if(!producto) return null;
     return {
       key: base.key,
       sistemaKey: base.sistemaKey,
@@ -220,7 +226,7 @@ function nombreAgromercadoKey(value){
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/�/g, 'N')
+    .replace(/ï¿½/g, 'N')
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();
@@ -543,7 +549,7 @@ function validarInventarioDisponible(){
     }
   });
   if(errores.length){
-    setMessage('submit-message', 'No se puede enviar: hay ventas/faltantes/dañado mayores al inventario disponible. Revisa las casillas en rojo.', 'error');
+    setMessage('submit-message', 'No se puede enviar: hay ventas/faltantes/daÃ±ado mayores al inventario disponible. Revisa las casillas en rojo.', 'error');
     alert('No se puede enviar el reporte. Inventario negativo en:\n\n' + errores.join('\n'));
     return false;
   }
@@ -747,7 +753,7 @@ async function enviarReporteWhatsApp(){
   var url = URL.createObjectURL(blob);
   window.open(url, '_blank');
   window.open('https://wa.me/50379285503', '_blank');
-  setMessage('submit-message', 'Se abrió la imagen y WhatsApp. Adjunta la imagen al chat.', 'ok');
+  setMessage('submit-message', 'Se abriÃ³ la imagen y WhatsApp. Adjunta la imagen al chat.', 'ok');
 }
 
 function htmlEscape(value){
@@ -1479,3 +1485,4 @@ window.addEventListener('storage', function(event){
     if(accesoActual) refrescarHojaVendedor(true);
   }
 });
+
