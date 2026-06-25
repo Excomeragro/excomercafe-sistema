@@ -876,5 +876,6 @@
   }
 
   window.INVENTARIO_INICIAL_AGROMERCADOS_20260624 = ROWS;
+  window.aplicarSaldoInicialAgromercados20260624 = importarSaldoInicial;
   importarSaldoInicial();
 })();

@@ -216,6 +216,23 @@ function bancoKey(value){
     .toUpperCase();
 }
 
+function nombreAgromercadoKey(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/�/g, 'N')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function mismoAgromercado(a, b){
+  var left = nombreAgromercadoKey(a);
+  var right = nombreAgromercadoKey(b);
+  if(!left || !right) return false;
+  return left === right || left.indexOf(right) >= 0 || right.indexOf(left) >= 0;
+}
+
 function bancoPortalData(nombre){
   var key = bancoKey(nombre);
   return BANCOS_PORTAL.find(function(banco){
@@ -840,6 +857,49 @@ function productoValueFromPayload(map, key){
   return 0;
 }
 
+function acumularMovimientoInventario(totales, row, agromercado){
+  if(!row) return;
+  var payload = row.payload && typeof row.payload === 'object' ? row.payload : row;
+  var lugar = row.lugar || row.agromercado || row.destino || payload.lugar || payload.agromercado || payload.destino || '';
+  if(!mismoAgromercado(lugar, agromercado)) return;
+  var tipo = String(row.tipo || payload.tipo || '').toLowerCase();
+  if(tipo && tipo !== 'saldo-inicial' && tipo !== 'registro-inventario' && tipo !== 'inventario-manual') return;
+  PRODUCTOS.forEach(function(prod){
+    var col = PRODUCTO_COLUMNAS[prod.key];
+    var valor = payload[prod.key];
+    if(valor === undefined) valor = row[col];
+    if(valor === undefined && prod.key === 'precocido') valor = row.arroz_precocido;
+    if(valor === undefined && prod.key === 'frijol1') valor = row.frijol_1lb;
+    if(valor === undefined && prod.key === 'frijol4') valor = row.frijol_4lb;
+    if(valor === undefined && prod.key === 'aceite') valor = row.aceite_750ml;
+    if(valor === undefined && prod.key === 'harina') valor = row.harina_820grs;
+    totales[prod.key] = n(totales[prod.key]) + n(valor);
+  });
+}
+
+async function cargarSaldosInicialesInventario(agromercado, fecha){
+  var totales = {};
+  PRODUCTOS.forEach(function(prod){ totales[prod.key] = 0; });
+
+  try{
+    var local = JSON.parse(localStorage.getItem('inventario-data') || '[]');
+    (Array.isArray(local) ? local : []).forEach(function(row){
+      if(String(row && row.fecha || '').slice(0, 10) <= String(fecha || '').slice(0, 10)) {
+        acumularMovimientoInventario(totales, row, agromercado);
+      }
+    });
+  }catch(e){}
+
+  try{
+    var rows = await fetchSupabase('/rest/v1/inventario_movimientos?select=fecha,ubicacion,lugar,tipo,arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&fecha=lte.' + encodeURIComponent(fecha) + '&ubicacion=eq.agromercados&order=fecha.asc&limit=5000');
+    (rows || []).forEach(function(row){
+      acumularMovimientoInventario(totales, row, agromercado);
+    });
+  }catch(e){}
+
+  return totales;
+}
+
 function aplicarValoresProducto(key, anterior, nuevo){
   var row = document.querySelector('tr[data-prod="' + key + '"]');
   if(!row) return;
@@ -1136,11 +1196,19 @@ async function cargarValoresInicialesAgromercado(agromercado){
   }catch(e){}
 
   try{
+    var saldosIniciales = await cargarSaldosInicialesInventario(agromercado, fecha);
+    PRODUCTOS.forEach(function(prod){
+      anteriores[prod.key] = n(anteriores[prod.key]) + n(saldosIniciales[prod.key]);
+    });
+  }catch(e){}
+
+  try{
     var prevRows = await fetchSupabase('/rest/v1/ventas_agromercado?select=payload,fecha,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=lt.' + encodeURIComponent(fecha) + '&order=fecha.desc,creado_en.desc&limit=1');
     var prevPayload = prevRows && prevRows[0] && prevRows[0].payload ? prevRows[0].payload : null;
     ultimaFechaAprobada = prevRows && prevRows[0] && prevRows[0].fecha ? String(prevRows[0].fecha).slice(0, 10) : '';
     PRODUCTOS.forEach(function(prod){
-      anteriores[prod.key] = productoValueFromPayload(prevPayload && prevPayload.inventario_final, prod.key);
+      var anteriorReporte = productoValueFromPayload(prevPayload && prevPayload.inventario_final, prod.key);
+      if(anteriorReporte) anteriores[prod.key] = anteriorReporte;
     });
   }catch(e){}
 

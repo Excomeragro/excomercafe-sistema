@@ -8088,7 +8088,7 @@ function claseTotalInventario(total){
 function inventarioEsRegistroManual(inv){
   if (!inv) return false;
   var tipo = String(inv.tipo || '').toLowerCase();
-  if (tipo) return tipo === 'registro-inventario' || tipo === 'inventario-manual';
+  if (tipo) return tipo === 'registro-inventario' || tipo === 'inventario-manual' || tipo === 'saldo-inicial';
   return !inv.origenId && !inv.referencia && !inv.origen;
 }
 
@@ -19193,6 +19193,11 @@ document.addEventListener('DOMContentLoaded', function() {
   ];
 
   function reloadLocalCaches(){
+    try {
+      if (typeof window.aplicarSaldoInicialAgromercados20260624 === 'function') {
+        window.aplicarSaldoInicialAgromercados20260624();
+      }
+    } catch(error) {}
     try {
       if (typeof inventarioData !== 'undefined') inventarioData = readLocalList('inventario-data');
     } catch(error) {}
