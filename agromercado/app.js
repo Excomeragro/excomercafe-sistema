@@ -863,13 +863,21 @@ function productoValueFromPayload(map, key){
   return 0;
 }
 
-function acumularMovimientoInventario(totales, row, agromercado){
-  if(!row) return;
+function movimientoInventarioId(row){
+  var payload = row && row.payload && typeof row.payload === 'object' ? row.payload : {};
+  return String((row && (row.local_id || row.id)) || payload.local_id || payload.id || '').trim();
+}
+
+function acumularMovimientoInventario(totales, row, agromercado, vistos){
+  if(!row) return false;
   var payload = row.payload && typeof row.payload === 'object' ? row.payload : row;
   var lugar = row.lugar || row.agromercado || row.destino || payload.lugar || payload.agromercado || payload.destino || '';
-  if(!mismoAgromercado(lugar, agromercado)) return;
+  if(!mismoAgromercado(lugar, agromercado)) return false;
   var tipo = String(row.tipo || payload.tipo || '').toLowerCase();
-  if(tipo && tipo !== 'saldo-inicial' && tipo !== 'registro-inventario' && tipo !== 'inventario-manual') return;
+  if(tipo && tipo !== 'saldo-inicial' && tipo !== 'registro-inventario' && tipo !== 'inventario-manual') return false;
+  var id = movimientoInventarioId(row);
+  if(id && vistos && vistos[id]) return false;
+  if(id && vistos) vistos[id] = true;
   PRODUCTOS.forEach(function(prod){
     var col = PRODUCTO_COLUMNAS[prod.key];
     var valor = payload[prod.key];
@@ -881,25 +889,27 @@ function acumularMovimientoInventario(totales, row, agromercado){
     if(valor === undefined && prod.key === 'harina') valor = row.harina_820grs;
     totales[prod.key] = n(totales[prod.key]) + n(valor);
   });
+  return true;
 }
 
 async function cargarSaldosInicialesInventario(agromercado, fecha){
   var totales = {};
+  var vistos = {};
   PRODUCTOS.forEach(function(prod){ totales[prod.key] = 0; });
 
   try{
     var local = JSON.parse(localStorage.getItem('inventario-data') || '[]');
     (Array.isArray(local) ? local : []).forEach(function(row){
       if(String(row && row.fecha || '').slice(0, 10) <= String(fecha || '').slice(0, 10)) {
-        acumularMovimientoInventario(totales, row, agromercado);
+        acumularMovimientoInventario(totales, row, agromercado, vistos);
       }
     });
   }catch(e){}
 
   try{
-    var rows = await fetchSupabase('/rest/v1/inventario_movimientos?select=fecha,ubicacion,lugar,tipo,arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&fecha=lte.' + encodeURIComponent(fecha) + '&ubicacion=eq.agromercados&order=fecha.asc&limit=5000');
+    var rows = await fetchSupabase('/rest/v1/inventario_movimientos?select=local_id,fecha,ubicacion,lugar,tipo,arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&fecha=lte.' + encodeURIComponent(fecha) + '&ubicacion=eq.agromercados&order=fecha.asc&limit=5000');
     (rows || []).forEach(function(row){
-      acumularMovimientoInventario(totales, row, agromercado);
+      acumularMovimientoInventario(totales, row, agromercado, vistos);
     });
   }catch(e){}
 
