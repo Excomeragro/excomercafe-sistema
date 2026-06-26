@@ -1876,11 +1876,11 @@
             <tr>
               <th class="dist-destino-col">Agromercado CDA</th>
               <th>Arroz</th>
-              <th>Arroz Precocido</th>
-              <th>Frijol 1 Lb</th>
-              <th>Frijol 4 Lb</th>
-              <th>Aceite 750 ML</th>
-              <th>Harina 820 GRS</th>
+              <th>Precoc.</th>
+              <th>F1</th>
+              <th>F4</th>
+              <th>Aceite</th>
+              <th>Harina</th>
             </tr>
           </thead>
           <tbody id="tbody-distribucion-cda-fija"></tbody>
@@ -1933,6 +1933,9 @@
       </div>
     </div>
     <div class="card-body" style="overflow-x:auto;padding:0;display:none;" id="historial-distribucion-content">
+      <div style="padding:12px;border-bottom:1px solid var(--line);">
+        <input type="search" id="buscar-historial-distribucion" placeholder="Buscar por fecha, distrito, municipio, CDA o producto..." oninput="renderDistribucionTable()" style="width:100%;">
+      </div>
       <table class="tbl" id="tbl-distribucion">
         <thead>
           <tr>
@@ -1942,17 +1945,16 @@
             <th>Municipio</th>
             <th>CDA</th>
             <th>Arroz</th>
-            <th>Arroz Precocido</th>
-            <th>Frijol 1 Lb</th>
-            <th>Frijol 4 Lb</th>
-            <th>Aceite 750 ML</th>
-            <th>Harina 820 GRS</th>
+            <th>Precoc.</th>
+            <th>F1</th>
+            <th>F4</th>
+            <th>Aceite</th>
+            <th>Harina</th>
             <th>Total</th>
-            <th>Observaciones</th>
             <th>Acciones</th>
           </tr>
         </thead>
-        <tbody id="tbody-distribucion"><tr><td colspan="14" style="text-align:center;color:var(--muted);padding:20px;font-style:italic;">Sin registros de distribución CDA.</td></tr></tbody>
+        <tbody id="tbody-distribucion"><tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;font-style:italic;">Sin registros de distribución CDA.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -2300,10 +2302,11 @@
                 <th>Agromercado</th>
                 <th>Tipo</th>
                 <th>Clasificación</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="tabla-agromercados">
-              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Cargando agromercados...</td></tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Cargando agromercados...</td></tr>
             </tbody>
           </table>
         </div>
@@ -9163,33 +9166,228 @@ window.limpiarFormularioDistribucion = function(){
 
 window.renderDistribucionTable = function(){
   var tbody = document.getElementById('tbody-distribucion');
+  if (!tbody) return;
+  var filtroEl = document.getElementById('buscar-historial-distribucion');
+  var filtro = textoDistribucionEdicion(filtroEl ? filtroEl.value : '');
   
   if(distribucionData.length === 0){
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:20px;font-style:italic;">No hay registros de distribución CDA.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;font-style:italic;">No hay registros de distribución CDA.</td></tr>';
     return;
   }
-  
-  tbody.innerHTML = distribucionData.map(function(dist){
+
+  var visibles = distribucionData.filter(function(dist){
+    if (!filtro) return true;
+    var total = (parseInt(dist.arroz) || 0) + (parseInt(dist.precocido) || 0) + (parseInt(dist.frijol1) || 0) + (parseInt(dist.frijol4) || 0) + (parseInt(dist.aceite) || 0) + (parseInt(dist.harina) || 0);
+    var texto = [
+      fechaVistaSistema(dist.fecha),
+      horaVistaSistema(dist),
+      dist.distrito,
+      dist.municipio,
+      dist.cda,
+      dist.arroz,
+      dist.precocido,
+      dist.frijol1,
+      dist.frijol4,
+      dist.aceite,
+      dist.harina,
+      total
+    ].join(' ');
+    return textoDistribucionEdicion(texto).indexOf(filtro) >= 0;
+  });
+
+  if (!visibles.length) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;font-style:italic;">No hay registros que coincidan con la búsqueda.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = visibles.map(function(dist){
+    if (window.distribucionEditandoId && String(window.distribucionEditandoId) === String(dist.id)) {
+      return filaEdicionDistribucionCDA(dist);
+    }
+    var total = (parseInt(dist.arroz) || 0) + (parseInt(dist.precocido) || 0) + (parseInt(dist.frijol1) || 0) + (parseInt(dist.frijol4) || 0) + (parseInt(dist.aceite) || 0) + (parseInt(dist.harina) || 0);
     return '<tr>'
       + '<td>' + fechaVistaSistema(dist.fecha) + '</td>'
       + '<td>' + horaVistaSistema(dist) + '</td>'
-      + '<td>' + dist.distrito + '</td>'
-      + '<td>' + dist.municipio + '</td>'
-      + '<td>' + dist.cda + '</td>'
-      + '<td>' + dist.arroz + '</td>'
-      + '<td>' + dist.precocido + '</td>'
-      + '<td>' + dist.frijol1 + '</td>'
-      + '<td>' + dist.frijol4 + '</td>'
-      + '<td>' + dist.aceite + '</td>'
-      + '<td>' + dist.harina + '</td>'
-      + '<td><strong>' + dist.total + '</strong></td>'
-      + '<td>' + (dist.observaciones || '') + '</td>'
+      + '<td>' + (dist.distrito || '') + '</td>'
+      + '<td>' + (dist.municipio || '') + '</td>'
+      + '<td>' + (dist.cda || '') + '</td>'
+      + '<td>' + (parseInt(dist.arroz) || 0) + '</td>'
+      + '<td>' + (parseInt(dist.precocido) || 0) + '</td>'
+      + '<td>' + (parseInt(dist.frijol1) || 0) + '</td>'
+      + '<td>' + (parseInt(dist.frijol4) || 0) + '</td>'
+      + '<td>' + (parseInt(dist.aceite) || 0) + '</td>'
+      + '<td>' + (parseInt(dist.harina) || 0) + '</td>'
+      + '<td><strong>' + total + '</strong></td>'
       + '<td style="text-align:center;">'
         + '<button class="btn btn-sm btn-primary" onclick="editarDistribucion(\'' + dist.id + '\')" style="padding:2px 6px;font-size:0.7rem;margin-right:4px;">Editar</button>'
         + '<button class="btn btn-sm btn-danger" onclick="eliminarDistribucion(\'' + dist.id + '\')" style="padding:2px 6px;font-size:0.7rem;">🗑️</button>'
       + '</td>'
       + '</tr>';
   }).join('');
+};
+
+function htmlDistribucion(value){
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function inputEdicionDistribucion(id, value, type, extra){
+  return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + htmlDistribucion(value) + '" ' + (extra || '') + ' style="width:100%;min-width:72px;padding:6px 8px;">';
+}
+
+function totalDistribucionRegistro(dist){
+  return (parseInt(dist.arroz) || 0)
+    + (parseInt(dist.precocido) || 0)
+    + (parseInt(dist.frijol1) || 0)
+    + (parseInt(dist.frijol4) || 0)
+    + (parseInt(dist.aceite) || 0)
+    + (parseInt(dist.harina) || 0);
+}
+
+function filaEdicionDistribucionCDA(dist){
+  return '<tr class="editing-row">'
+    + '<td>' + inputEdicionDistribucion('edit-dist-fecha', dist.fecha || '', 'date') + '</td>'
+    + '<td>' + htmlDistribucion(horaVistaSistema(dist)) + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-distrito', dist.distrito || '') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-municipio', dist.municipio || '') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-cda', dist.cda || '', 'text', 'list="dl-agromercados-master"') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-arroz', parseInt(dist.arroz) || 0, 'number', 'min="0" oninput="actualizarTotalEdicionDistribucion()"') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-precocido', parseInt(dist.precocido) || 0, 'number', 'min="0" oninput="actualizarTotalEdicionDistribucion()"') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-frijol1', parseInt(dist.frijol1) || 0, 'number', 'min="0" oninput="actualizarTotalEdicionDistribucion()"') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-frijol4', parseInt(dist.frijol4) || 0, 'number', 'min="0" oninput="actualizarTotalEdicionDistribucion()"') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-aceite', parseInt(dist.aceite) || 0, 'number', 'min="0" oninput="actualizarTotalEdicionDistribucion()"') + '</td>'
+    + '<td>' + inputEdicionDistribucion('edit-dist-harina', parseInt(dist.harina) || 0, 'number', 'min="0" oninput="actualizarTotalEdicionDistribucion()"') + '</td>'
+    + '<td><strong id="edit-dist-total">' + totalDistribucionRegistro(dist) + '</strong></td>'
+    + '<td style="text-align:center;white-space:nowrap;">'
+      + '<button class="btn btn-sm btn-success" onclick="guardarEdicionDistribucionCDA(\'' + dist.id + '\')" style="padding:2px 6px;font-size:0.7rem;margin-right:4px;">Guardar</button>'
+      + '<button class="btn btn-sm btn-secondary" onclick="cancelarEdicionDistribucionCDA()" style="padding:2px 6px;font-size:0.7rem;">Cancelar</button>'
+    + '</td>'
+    + '</tr>';
+}
+
+function numeroEdicionDistribucion(id){
+  var el = document.getElementById(id);
+  return Math.max(0, parseInt(el && el.value) || 0);
+}
+
+window.actualizarTotalEdicionDistribucion = function(){
+  var totalEl = document.getElementById('edit-dist-total');
+  if (!totalEl) return;
+  totalEl.textContent = numeroEdicionDistribucion('edit-dist-arroz')
+    + numeroEdicionDistribucion('edit-dist-precocido')
+    + numeroEdicionDistribucion('edit-dist-frijol1')
+    + numeroEdicionDistribucion('edit-dist-frijol4')
+    + numeroEdicionDistribucion('edit-dist-aceite')
+    + numeroEdicionDistribucion('edit-dist-harina');
+};
+
+window.cancelarEdicionDistribucionCDA = function(){
+  window.distribucionEditandoId = null;
+  renderDistribucionTable();
+};
+
+function origenInventarioDistribucionCDA(dist){
+  if (typeof obtenerUbicacionesInventarioParaDestino === 'function') {
+    var opciones = obtenerUbicacionesInventarioParaDestino(dist.cda || '', 'CDA') || [];
+    if (opciones[0] && opciones[0].value) return opciones[0].value;
+  }
+  var grupo = typeof obtenerGrupoCDAParaDestino === 'function' ? obtenerGrupoCDAParaDestino(dist.cda || '', dist) : '';
+  return grupo === 'usulutan' ? 'distribucion-cda-usulutan' : 'distribucion-cda-soyapango';
+}
+
+function registrarMovimientosEdicionDistribucionCDA(dist){
+  var inv = [];
+  try { inv = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(e) { inv = []; }
+  var ts = Date.now();
+  var salidaId = 'salida-edit-' + dist.id + '-' + ts;
+  var entradaId = 'entrada-edit-' + dist.id + '-' + ts;
+  dist.movimientoSalidaId = salidaId;
+  dist.movimientoEntradaId = entradaId;
+  var origen = origenInventarioDistribucionCDA(dist);
+  inv.unshift({
+    id: entradaId,
+    origenId: dist.id,
+    fecha: dist.fecha,
+    ubicacion: 'agromercados',
+    lugar: dist.cda,
+    agromercado: dist.cda,
+    distrito: dist.distrito || '',
+    municipio: dist.municipio || '',
+    tipo: 'entrada-distribucion',
+    referencia: 'Correccion distribucion CDA',
+    arroz: parseInt(dist.arroz) || 0,
+    precocido: parseInt(dist.precocido) || 0,
+    frijol1: parseInt(dist.frijol1) || 0,
+    frijol4: parseInt(dist.frijol4) || 0,
+    aceite: parseInt(dist.aceite) || 0,
+    harina: parseInt(dist.harina) || 0,
+    total: totalDistribucionRegistro(dist),
+    supabase_synced: false,
+    timestamp: new Date().toISOString()
+  });
+  inv.unshift({
+    id: salidaId,
+    origenId: dist.id,
+    fecha: dist.fecha,
+    ubicacion: origen,
+    lugar: 'CDA',
+    tipo: 'salida-distribucion',
+    referencia: 'Correccion distribucion CDA a ' + (dist.cda || ''),
+    arroz: -(parseInt(dist.arroz) || 0),
+    precocido: -(parseInt(dist.precocido) || 0),
+    frijol1: -(parseInt(dist.frijol1) || 0),
+    frijol4: -(parseInt(dist.frijol4) || 0),
+    aceite: -(parseInt(dist.aceite) || 0),
+    harina: -(parseInt(dist.harina) || 0),
+    total: -totalDistribucionRegistro(dist),
+    supabase_synced: false,
+    timestamp: new Date().toISOString()
+  });
+  localStorage.setItem('inventario-data', JSON.stringify(inv));
+  if (typeof inventarioData !== 'undefined') inventarioData = inv;
+}
+
+window.guardarEdicionDistribucionCDA = function(id){
+  var index = distribucionData.findIndex(function(d){ return d && String(d.id) === String(id); });
+  if (index < 0) {
+    showAlert('alert-distribucion', 'No se encontro el registro para editar', 'err');
+    return;
+  }
+  var fecha = (document.getElementById('edit-dist-fecha') || {}).value || '';
+  var cda = ((document.getElementById('edit-dist-cda') || {}).value || '').trim();
+  if (!fecha || !cda) {
+    showAlert('alert-distribucion', 'Fecha y CDA son obligatorios para guardar la correccion.', 'err');
+    return;
+  }
+  var anterior = distribucionData[index];
+  var actualizado = Object.assign({}, anterior, {
+    fecha: fecha,
+    distrito: ((document.getElementById('edit-dist-distrito') || {}).value || '').trim(),
+    municipio: ((document.getElementById('edit-dist-municipio') || {}).value || '').trim(),
+    cda: cda,
+    arroz: numeroEdicionDistribucion('edit-dist-arroz'),
+    precocido: numeroEdicionDistribucion('edit-dist-precocido'),
+    frijol1: numeroEdicionDistribucion('edit-dist-frijol1'),
+    frijol4: numeroEdicionDistribucion('edit-dist-frijol4'),
+    aceite: numeroEdicionDistribucion('edit-dist-aceite'),
+    harina: numeroEdicionDistribucion('edit-dist-harina'),
+    timestamp: new Date().toISOString(),
+    supabase_synced: false
+  });
+  actualizado.total = totalDistribucionRegistro(actualizado);
+  revertirDistribucionCDA(anterior);
+  registrarMovimientosEdicionDistribucionCDA(actualizado);
+  distribucionData[index] = actualizado;
+  localStorage.setItem('distribucion-cda-data', JSON.stringify(distribucionData));
+  window.distribucionEditandoId = null;
+  renderDistribucionTable();
+  refrescarInventarioEnTiempoReal();
+  if (typeof renderResumenInventarioCDA === 'function') renderResumenInventarioCDA();
+  showAlert('alert-distribucion', 'Distribucion actualizada e inventario corregido.', 'ok');
 };
 
 function revertirDistribucionCDA(dist){
@@ -9302,16 +9500,9 @@ window.editarDistribucion = function(id){
     showAlert('alert-distribucion', 'No se encontro el registro para editar', 'err');
     return;
   }
-  if (!cargarDistribucionCDAEnMatriz(dist)) {
-    showAlert('alert-distribucion', 'No se pudo cargar este registro en la tabla actual. Revisa que el agromercado exista en el catalogo.', 'err');
-    return;
-  }
-  revertirDistribucionCDA(dist);
-  distribucionData = distribucionData.filter(function(d){ return d.id !== id; });
-  localStorage.setItem('distribucion-cda-data', JSON.stringify(distribucionData));
+  window.distribucionEditandoId = id;
   renderDistribucionTable();
-  refrescarInventarioEnTiempoReal();
-  showAlert('alert-distribucion', 'Editando distribucion. Guarda para aplicar los cambios.', 'ok');
+  showAlert('alert-distribucion', 'Editando distribucion en el historial. Guarda para aplicar la correccion.', 'ok');
 };
 
 window.eliminarDistribucion = function(id){
@@ -9330,8 +9521,9 @@ window.eliminarDistribucion = function(id){
   distribucionData = distribucionData.filter(function(d){ return d.id !== id; });
   localStorage.setItem('distribucion-cda-data', JSON.stringify(distribucionData));
   eliminarSupabasePorLocalId('distribucion_cda', id);
+  renderDistribucionTable();
   refrescarInventarioEnTiempoReal();
-  showAlert('distribucion', 'Registro eliminado e inventario restablecido', 'ok');
+  showAlert('alert-distribucion', 'Registro eliminado e inventario restablecido', 'ok');
 };
 
 window.limpiarHistorialDistribucion = function(){
@@ -9347,12 +9539,12 @@ window.limpiarHistorialDistribucion = function(){
 
 window.exportarDistribucionExcel = function(){
   if(distribucionData.length === 0){
-    showAlert('distribucion', 'No hay datos para exportar', 'err');
+    showAlert('alert-distribucion', 'No hay datos para exportar', 'err');
     return;
   }
   
   var ws_data = [];
-  ws_data.push(['FECHA', 'DISTRITO', 'MUNICIPIO', 'CDA', 'ARROZ', 'ARROZ PRECOCIDO', 'FRIJOL 1 LB', 'FRIJOL 4 LB', 'ACEITE 750 ML', 'HARINA 820 GRS', 'TOTAL', 'OBSERVACIONES']);
+  ws_data.push(['FECHA', 'DISTRITO', 'MUNICIPIO', 'CDA', 'ARROZ', 'PRECOC.', 'F1', 'F4', 'ACEITE', 'HARINA', 'TOTAL']);
   
   distribucionData.forEach(function(dist){
     ws_data.push([
@@ -9366,8 +9558,7 @@ window.exportarDistribucionExcel = function(){
       dist.frijol4,
       dist.aceite,
       dist.harina,
-      dist.total,
-      dist.observaciones || ''
+      dist.total
     ]);
   });
   
@@ -9378,7 +9569,7 @@ window.exportarDistribucionExcel = function(){
   var fileName = 'Distribucion_CDA_' + (typeof fechaHoy === 'function' ? fechaHoy() : fechaISOActualSistema()) + '.xlsx';
   XLSX.writeFile(wb, fileName);
   
-  showAlert('distribucion', 'Archivo exportado correctamente', 'ok');
+  showAlert('alert-distribucion', 'Archivo exportado correctamente', 'ok');
 };
 
 window.importarDistribucionExcel = function(){
@@ -10208,6 +10399,16 @@ function construirAgromercadosBaseDesdeCatalogo(){
 
 function grupoAgromercadoSistema(agro){
   var nombre = agro && (agro.nombre || agro.a || agro.agromercado || '');
+  if (agro && (agro.manual || agro.editado)) {
+    var tipoManual = normalizarNombre(agro.tipo || '');
+    var refManual = normalizarNombre(agro.referencia || agro.clasificacion || '');
+    var textoManual = (tipoManual + ' ' + refManual).trim();
+    if (textoManual.indexOf('CDA') >= 0 && textoManual.indexOf('USULUTAN') >= 0) return 'cda-usulutan';
+    if (textoManual.indexOf('CDA') >= 0) return 'cda-soyapango';
+    if (textoManual.indexOf('TIENDONA') >= 0 && textoManual.indexOf('ABAJO') >= 0) return 'tiendona-abajo';
+    if (textoManual.indexOf('TIENDONA') >= 0) return 'tiendona-arriba';
+    if (textoManual.indexOf('SIN CLASIFICAR') >= 0 || textoManual.indexOf('SIN DEFINIR') >= 0) return 'sin-clasificar';
+  }
   var nombreNorm = normalizarNombre(nombre);
   if (typeof AGROMERCADOS_GRUPOS_OFICIALES !== 'undefined') {
     var gruposOficiales = Object.keys(AGROMERCADOS_GRUPOS_OFICIALES);
@@ -10301,7 +10502,8 @@ function obtenerAgromercadosSistemaCompletos(){
       distrito: datoValido(agro.distrito) || datoValido(prev.distrito) || meta.distrito,
       municipio: datoValido(agro.municipio || agro.m) || datoValido(prev.municipio) || meta.municipio,
       nombre: nombre,
-      referencia: datoValido(agro.referencia) || datoValido(prev.referencia) || ''
+      referencia: datoValido(agro.referencia) || datoValido(prev.referencia) || '',
+      manual: !!(agro.manual || agro.editado || prev.manual || prev.editado)
     });
     merged.__grupo = grupoAgromercadoSistema(merged);
     merged.tipo = tipoGrupoAgromercado(merged.__grupo, agro.tipo || prev.tipo);
@@ -10335,8 +10537,8 @@ function obtenerAgromercadosSistemaCompletos(){
   } catch(e) {}
 
   var lista = Object.keys(mapa).map(function(key){ return mapa[key]; }).sort(ordenarAgromercadosSistema);
-  localStorage.setItem('agromercados-data', JSON.stringify(lista.map(function(agro){
-    return { distrito:agro.distrito, municipio:agro.municipio, nombre:agro.nombre, tipo:agro.tipo, referencia:agro.referencia };
+    localStorage.setItem('agromercados-data', JSON.stringify(lista.map(function(agro){
+    return { distrito:agro.distrito, municipio:agro.municipio, nombre:agro.nombre, tipo:agro.tipo, referencia:agro.referencia, manual: !!agro.manual };
   })));
   return lista;
 }
@@ -10369,7 +10571,7 @@ window.cargarAgromercados = function(){
     }
 
     if(agromercados.length === 0){
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No hay agromercados registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No hay agromercados registrados</td></tr>';
       return;
     }
 
@@ -10383,7 +10585,7 @@ window.cargarAgromercados = function(){
         grupoActual = grupo;
         var grupoTr = document.createElement('tr');
         grupoTr.className = 'agromercado-group-row';
-        grupoTr.innerHTML = '<td colspan="5">' + etiquetaGrupoAgromercado(grupo) + '</td>';
+        grupoTr.innerHTML = '<td colspan="6">' + etiquetaGrupoAgromercado(grupo) + '</td>';
         tbody.appendChild(grupoTr);
       }
       var tr = document.createElement('tr');
@@ -10399,7 +10601,8 @@ window.cargarAgromercados = function(){
         '<td>' + (agro.municipio || 'SIN DEFINIR') + '</td>' +
         '<td>' + (agro.nombre || '') + '</td>' +
         '<td><span class="badge" style="background:' + tipoColor + ';color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">' + tipoAgro + '</span></td>' +
-        '<td>' + (agro.referencia || 'SIN DEFINIR') + '</td>';
+        '<td>' + (agro.referencia || 'SIN DEFINIR') + '</td>' +
+        '<td style="text-align:center;"><button class="btn btn-sm btn-secondary" onclick="editarAgromercado(' + index + ')" style="padding:2px 6px;font-size:0.72rem;">Editar</button></td>';
       tbody.appendChild(tr);
     });
     var resumenEl = document.getElementById('agromercados-resumen-grupos');
@@ -10411,7 +10614,7 @@ window.cargarAgromercados = function(){
     }
   } catch(error) {
     console.error('No se pudieron cargar agromercados:', error);
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#b91c1c;padding:20px;">Error al cargar agromercados. Se regeneraran al actualizar la pagina.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#b91c1c;padding:20px;">Error al cargar agromercados. Se regeneraran al actualizar la pagina.</td></tr>';
   }
 };
 
@@ -10546,7 +10749,8 @@ window.editarAgromercado = function(index){
       municipio: nuevoMunicipio.trim(),
       nombre: nuevoNombre.trim(),
       tipo: nuevoTipo.trim(),
-      referencia: nuevaReferencia.trim()
+      referencia: nuevaReferencia.trim(),
+      manual: true
     };
     localStorage.setItem('agromercados-data', JSON.stringify(agromercados));
     cargarAgromercados();
