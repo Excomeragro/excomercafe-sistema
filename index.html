@@ -9243,31 +9243,75 @@ function revertirDistribucionCDA(dist){
   if (typeof inventarioData !== 'undefined') inventarioData = inv;
 }
 
+function valorDistribucionEdicion(dist, campo){
+  var valor = dist && dist[campo];
+  if ((valor === undefined || valor === null) && dist && dist.unidades) valor = dist.unidades[campo];
+  return parseInt(valor) || 0;
+}
+
+function textoDistribucionEdicion(valor){
+  if (typeof normalizarNombre === 'function') return normalizarNombre(valor);
+  if (window.normTxt) return window.normTxt(valor);
+  return String(valor || '').toUpperCase().trim();
+}
+
+function setCampoDistribucionSiExiste(id, valor){
+  var el = document.getElementById(id);
+  if (!el) return false;
+  el.value = valor == null ? '' : valor;
+  return true;
+}
+
+function cargarDistribucionCDAEnMatriz(dist){
+  setCampoDistribucionSiExiste('distribucion-fecha', dist.fecha || '');
+  setCampoDistribucionSiExiste('distribucion-observaciones', dist.observaciones || '');
+
+  var tbody = document.getElementById('tbody-distribucion-cda-fija');
+  if (!tbody) return false;
+  if (!tbody.querySelector('tr[data-destino]') && typeof window.renderDistribucionMatrices === 'function') {
+    window.renderDistribucionMatrices();
+  }
+
+  var destino = dist.cda || dist.destino || dist.agromercado || dist.lugar || '';
+  var destinoNorm = textoDistribucionEdicion(destino);
+  var rows = Array.from(tbody.querySelectorAll('tr[data-destino]'));
+  var row = rows.find(function(tr){
+    return textoDistribucionEdicion(tr.getAttribute('data-destino') || '') === destinoNorm;
+  });
+
+  if (!row && destinoNorm) {
+    row = rows.find(function(tr){
+      var nombre = textoDistribucionEdicion(tr.getAttribute('data-destino') || '');
+      return nombre && (nombre.indexOf(destinoNorm) >= 0 || destinoNorm.indexOf(nombre) >= 0);
+    });
+  }
+  if (!row) return false;
+
+  tbody.querySelectorAll('input.dist-qty').forEach(function(input){ input.value = '0'; });
+  ['arroz','precocido','frijol1','frijol4','aceite','harina'].forEach(function(prod){
+    var input = row.querySelector('input[data-prod="' + prod + '"]');
+    if (input) input.value = String(valorDistribucionEdicion(dist, prod));
+  });
+  if (typeof renderResumenInventarioCDA === 'function') renderResumenInventarioCDA();
+  return true;
+}
+
 window.editarDistribucion = function(id){
   var dist = distribucionData.find(function(d){ return d && d.id === id; });
   if (!dist) {
-    showAlert('distribucion', 'No se encontro el registro para editar', 'err');
+    showAlert('alert-distribucion', 'No se encontro el registro para editar', 'err');
+    return;
+  }
+  if (!cargarDistribucionCDAEnMatriz(dist)) {
+    showAlert('alert-distribucion', 'No se pudo cargar este registro en la tabla actual. Revisa que el agromercado exista en el catalogo.', 'err');
     return;
   }
   revertirDistribucionCDA(dist);
   distribucionData = distribucionData.filter(function(d){ return d.id !== id; });
   localStorage.setItem('distribucion-cda-data', JSON.stringify(distribucionData));
-  document.getElementById('distribucion-fecha').value = dist.fecha || '';
-  document.getElementById('distribucion-distrito').value = dist.distrito || '';
-  actualizarMunicipiosDistribucion();
-  document.getElementById('distribucion-municipio').value = dist.municipio || '';
-  actualizarCDAsDistribucion();
-  document.getElementById('distribucion-cda').value = dist.cda || '';
-  document.getElementById('distribucion-arroz').value = parseInt(dist.arroz) || 0;
-  document.getElementById('distribucion-precocido').value = parseInt(dist.precocido) || 0;
-  document.getElementById('distribucion-frijol1').value = parseInt(dist.frijol1) || 0;
-  document.getElementById('distribucion-frijol4').value = parseInt(dist.frijol4) || 0;
-  document.getElementById('distribucion-aceite').value = parseInt(dist.aceite) || 0;
-  document.getElementById('distribucion-harina').value = parseInt(dist.harina) || 0;
-  document.getElementById('distribucion-observaciones').value = dist.observaciones || '';
   renderDistribucionTable();
   refrescarInventarioEnTiempoReal();
-  showAlert('distribucion', 'Editando distribucion. Guarda para aplicar los cambios.', 'ok');
+  showAlert('alert-distribucion', 'Editando distribucion. Guarda para aplicar los cambios.', 'ok');
 };
 
 window.eliminarDistribucion = function(id){
