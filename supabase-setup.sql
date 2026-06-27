@@ -142,6 +142,37 @@ create table if not exists public.personas_sistema (
   actualizado_en timestamptz not null default now()
 );
 
+-- Productos del sistema
+create table if not exists public.productos_sistema (
+  id uuid primary key default gen_random_uuid(),
+  local_id text unique not null,
+  user_id uuid null,
+  key text default '',
+  nombre text default '',
+  corto text default '',
+  inv text default '',
+  precio numeric default 0,
+  activo boolean default true,
+  payload jsonb default '{}'::jsonb,
+  creado_en timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+-- Agromercados del sistema
+create table if not exists public.agromercados_sistema (
+  id uuid primary key default gen_random_uuid(),
+  local_id text unique not null,
+  user_id uuid null,
+  distrito text default '',
+  municipio text default '',
+  nombre text default '',
+  tipo text default '',
+  referencia text default '',
+  payload jsonb default '{}'::jsonb,
+  creado_en timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
 -- Estado de cuadres de bodegas y CDA
 create table if not exists public.estado_cuadres (
   id uuid primary key default gen_random_uuid(),
@@ -307,6 +338,29 @@ alter table public.personas_sistema add column if not exists payload jsonb defau
 alter table public.personas_sistema add column if not exists creado_en timestamptz not null default now();
 alter table public.personas_sistema add column if not exists actualizado_en timestamptz not null default now();
 
+alter table public.productos_sistema add column if not exists local_id text;
+alter table public.productos_sistema add column if not exists user_id uuid null;
+alter table public.productos_sistema add column if not exists key text default '';
+alter table public.productos_sistema add column if not exists nombre text default '';
+alter table public.productos_sistema add column if not exists corto text default '';
+alter table public.productos_sistema add column if not exists inv text default '';
+alter table public.productos_sistema add column if not exists precio numeric default 0;
+alter table public.productos_sistema add column if not exists activo boolean default true;
+alter table public.productos_sistema add column if not exists payload jsonb default '{}'::jsonb;
+alter table public.productos_sistema add column if not exists creado_en timestamptz not null default now();
+alter table public.productos_sistema add column if not exists actualizado_en timestamptz not null default now();
+
+alter table public.agromercados_sistema add column if not exists local_id text;
+alter table public.agromercados_sistema add column if not exists user_id uuid null;
+alter table public.agromercados_sistema add column if not exists distrito text default '';
+alter table public.agromercados_sistema add column if not exists municipio text default '';
+alter table public.agromercados_sistema add column if not exists nombre text default '';
+alter table public.agromercados_sistema add column if not exists tipo text default '';
+alter table public.agromercados_sistema add column if not exists referencia text default '';
+alter table public.agromercados_sistema add column if not exists payload jsonb default '{}'::jsonb;
+alter table public.agromercados_sistema add column if not exists creado_en timestamptz not null default now();
+alter table public.agromercados_sistema add column if not exists actualizado_en timestamptz not null default now();
+
 alter table public.estado_cuadres add column if not exists local_id text;
 alter table public.estado_cuadres add column if not exists user_id uuid null;
 alter table public.estado_cuadres add column if not exists tipo text default '';
@@ -352,6 +406,8 @@ create unique index if not exists inventario_movimientos_local_id_uidx on public
 create unique index if not exists distribucion_tiendona_local_id_uidx on public.distribucion_tiendona(local_id);
 create unique index if not exists distribucion_cda_local_id_uidx on public.distribucion_cda(local_id);
 create unique index if not exists personas_sistema_local_id_uidx on public.personas_sistema(local_id);
+create unique index if not exists productos_sistema_local_id_uidx on public.productos_sistema(local_id);
+create unique index if not exists agromercados_sistema_local_id_uidx on public.agromercados_sistema(local_id);
 create unique index if not exists estado_cuadres_local_id_uidx on public.estado_cuadres(local_id);
 create unique index if not exists backups_local_id_uidx on public.backups(local_id);
 create unique index if not exists presence_online_client_id_uidx on public.presence_online(client_id);
@@ -364,6 +420,8 @@ create index if not exists idx_pendientes_agro_fecha on public.ventas_agromercad
 create index if not exists idx_inventario_fecha on public.inventario_movimientos(fecha);
 create index if not exists idx_tiendona_fecha on public.distribucion_tiendona(fecha);
 create index if not exists idx_cda_fecha on public.distribucion_cda(fecha);
+create index if not exists idx_productos_sistema_key on public.productos_sistema(key);
+create index if not exists idx_agromercados_sistema_nombre on public.agromercados_sistema(nombre);
 create index if not exists idx_estado_cuadres_tipo_fecha on public.estado_cuadres(tipo, fecha);
 create index if not exists idx_presence_ultimo_visto on public.presence_online(ultimo_visto);
 create index if not exists idx_chat_creado_en on public.chat_messages(creado_en);
@@ -387,6 +445,12 @@ create trigger set_updated_at_distribucion_cda before update on public.distribuc
 drop trigger if exists set_updated_at_personas_sistema on public.personas_sistema;
 create trigger set_updated_at_personas_sistema before update on public.personas_sistema for each row execute function public.set_updated_at();
 
+drop trigger if exists set_updated_at_productos_sistema on public.productos_sistema;
+create trigger set_updated_at_productos_sistema before update on public.productos_sistema for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at_agromercados_sistema on public.agromercados_sistema;
+create trigger set_updated_at_agromercados_sistema before update on public.agromercados_sistema for each row execute function public.set_updated_at();
+
 drop trigger if exists set_updated_at_estado_cuadres on public.estado_cuadres;
 create trigger set_updated_at_estado_cuadres before update on public.estado_cuadres for each row execute function public.set_updated_at();
 
@@ -407,6 +471,8 @@ alter table public.inventario_movimientos enable row level security;
 alter table public.distribucion_tiendona enable row level security;
 alter table public.distribucion_cda enable row level security;
 alter table public.personas_sistema enable row level security;
+alter table public.productos_sistema enable row level security;
+alter table public.agromercados_sistema enable row level security;
 alter table public.estado_cuadres enable row level security;
 alter table public.backups enable row level security;
 alter table public.backup_logs enable row level security;
@@ -424,6 +490,8 @@ begin
     'distribucion_tiendona',
     'distribucion_cda',
     'personas_sistema',
+    'productos_sistema',
+    'agromercados_sistema',
     'estado_cuadres',
     'backups',
     'backup_logs',

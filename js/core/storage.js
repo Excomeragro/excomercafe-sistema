@@ -48,11 +48,15 @@ window.productosSistema = {
       var guardado = mapa[base.key] || {};
       return {
         key: base.key,
+        local_id: guardado.local_id || ('producto-' + base.key),
         inv: guardado.inv || base.inv,
         nombre: guardado.nombre || base.nombre,
         corto: guardado.corto || base.corto,
         precio: guardado.precio != null ? Number(guardado.precio) || 0 : base.precio,
-        activo: guardado.activo !== false
+        activo: guardado.activo !== false,
+        supabase_synced: guardado.supabase_synced === true,
+        supabase_synced_at: guardado.supabase_synced_at || '',
+        actualizado_en: guardado.actualizado_en || ''
       };
     });
   },
@@ -113,6 +117,9 @@ window.productosSistema = {
       if (productos[indice].precio != null) {
         productos[indice].precio = Number(productos[indice].precio) || 0;
       }
+      productos[indice].local_id = productos[indice].local_id || ('producto-' + productos[indice].key);
+      productos[indice].supabase_synced = false;
+      productos[indice].actualizado_en = new Date().toISOString();
 
       this.guardarProductos(productos);
       return { success:true, mensaje:'Producto actualizado correctamente' };

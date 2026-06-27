@@ -5860,18 +5860,26 @@ window.eliminarRegistro = async function(index){
     }
     return true;
   });
+  var reversasAplicadas = {};
   registrosEliminados.forEach(function(registro){
+    var claveReversa = movimientoIdDesdeVenta(registro) || idVentaAgromercado(registro);
+    if (claveReversa && reversasAplicadas[claveReversa]) return;
+    if (claveReversa) reversasAplicadas[claveReversa] = true;
     revertirInventarioPorVenta(registro);
   });
   localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
-  var localIdValue = registroEliminado.local_id || registroEliminado.id || registroEliminado.ts || registroEliminado.timestamp;
   var borradoRemoto = false;
-  if (typeof window.eliminarVentaAgromercadoRemota === 'function') {
-    borradoRemoto = await window.eliminarVentaAgromercadoRemota(registroEliminado);
-  } else if (localIdValue) {
-    borradoRemoto = await eliminarSupabasePorLocalId('ventas_agromercado', localIdValue);
+  for (var r = 0; r < registrosEliminados.length; r++) {
+    var remoto = false;
+    var localIdValue = registrosEliminados[r].local_id || registrosEliminados[r].id || registrosEliminados[r].ts || registrosEliminados[r].timestamp;
+    if (typeof window.eliminarVentaAgromercadoRemota === 'function') {
+      remoto = await window.eliminarVentaAgromercadoRemota(registrosEliminados[r]);
+    } else if (localIdValue) {
+      remoto = await eliminarSupabasePorLocalId('ventas_agromercado', localIdValue);
+    }
+    borradoRemoto = borradoRemoto || remoto;
   }
-  if (!localIdValue && !borradoRemoto) {
+  if (!registrosEliminados.some(function(row){ return row && (row.local_id || row.id || row.ts || row.timestamp); }) && !borradoRemoto) {
     if (typeof showToast === 'function') {
       showToast('⚠️ Registro eliminado localmente. No se encontró ID para borrar en Supabase.');
     }
@@ -9602,7 +9610,9 @@ window.eliminarDistribucion = function(id){
   });
   eliminados.forEach(function(item){ revertirDistribucionCDA(item); });
   localStorage.setItem('distribucion-cda-data', JSON.stringify(distribucionData));
-  eliminarSupabasePorLocalId('distribucion_cda', id);
+  eliminados.forEach(function(item){
+    eliminarSupabasePorLocalId('distribucion_cda', item.local_id || item.id);
+  });
   renderDistribucionTable();
   refrescarInventarioEnTiempoReal();
   showAlert('alert-distribucion', eliminados.length > 1 ? 'Registros duplicados eliminados e inventario restablecido' : 'Registro eliminado e inventario restablecido', 'ok');
@@ -10585,7 +10595,10 @@ function obtenerAgromercadosSistemaCompletos(){
       municipio: datoValido(agro.municipio || agro.m) || datoValido(prev.municipio) || meta.municipio,
       nombre: nombre,
       referencia: datoValido(agro.referencia) || datoValido(prev.referencia) || '',
-      manual: !!(agro.manual || agro.editado || prev.manual || prev.editado)
+      manual: !!(agro.manual || agro.editado || prev.manual || prev.editado),
+      local_id: agro.local_id || prev.local_id || ('agro-' + key),
+      supabase_synced: agro.supabase_synced !== undefined ? agro.supabase_synced : prev.supabase_synced,
+      supabase_synced_at: agro.supabase_synced_at || prev.supabase_synced_at || ''
     });
     merged.__grupo = grupoAgromercadoSistema(merged);
     merged.tipo = tipoGrupoAgromercado(merged.__grupo, agro.tipo || prev.tipo);
@@ -10619,8 +10632,18 @@ function obtenerAgromercadosSistemaCompletos(){
   } catch(e) {}
 
   var lista = Object.keys(mapa).map(function(key){ return mapa[key]; }).sort(ordenarAgromercadosSistema);
-    localStorage.setItem('agromercados-data', JSON.stringify(lista.map(function(agro){
-    return { distrito:agro.distrito, municipio:agro.municipio, nombre:agro.nombre, tipo:agro.tipo, referencia:agro.referencia, manual: !!agro.manual };
+  localStorage.setItem('agromercados-data', JSON.stringify(lista.map(function(agro){
+    return {
+      local_id: agro.local_id || ('agro-' + normalizarNombre(agro.nombre || '')),
+      distrito:agro.distrito,
+      municipio:agro.municipio,
+      nombre:agro.nombre,
+      tipo:agro.tipo,
+      referencia:agro.referencia,
+      manual: !!agro.manual,
+      supabase_synced: agro.supabase_synced === true,
+      supabase_synced_at: agro.supabase_synced_at || ''
+    };
   })));
   return lista;
 }
@@ -10827,12 +10850,15 @@ window.editarAgromercado = function(index){
   
   if(nuevoNombre && nuevoNombre.trim()){
     agromercados[index] = {
+      local_id: agromercados[index].local_id || ('agro-' + normalizarNombre(nuevoNombre.trim())),
       distrito: nuevoDistrito.trim(),
       municipio: nuevoMunicipio.trim(),
       nombre: nuevoNombre.trim(),
       tipo: nuevoTipo.trim(),
       referencia: nuevaReferencia.trim(),
-      manual: true
+      manual: true,
+      supabase_synced: false,
+      actualizado_en: new Date().toISOString()
     };
     localStorage.setItem('agromercados-data', JSON.stringify(agromercados));
     cargarAgromercados();
@@ -13437,7 +13463,9 @@ document.addEventListener('DOMContentLoaded', function(){
       return true;
     });
     localStorage.setItem('descargas-data', JSON.stringify(data));
-    eliminarSupabasePorLocalId('distribucion_tiendona', id);
+    eliminados.forEach(function(item){
+      eliminarSupabasePorLocalId('distribucion_tiendona', item.local_id || item.id);
+    });
     window.descargasData = data;
 
     var inv = JSON.parse(localStorage.getItem('inventario-data') || '[]');
@@ -19253,7 +19281,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function localId(record){
-    return String(record && (record.id || record.local_id || record.ts || record.timestamp) || Date.now());
+    if (!record) return String(Date.now());
+    if (record.local_id || record.id) return String(record.local_id || record.id);
+    if (record.key) return 'producto-' + String(record.key).trim();
+    if (record.nombre && (record.distrito || record.municipio || record.tipo || record.referencia)) {
+      var normalizador = typeof normalizarNombre === 'function'
+        ? normalizarNombre
+        : function(value){ return String(value || '').toUpperCase().trim().replace(/\s+/g, '-'); };
+      return 'agro-' + normalizador(record.nombre);
+    }
+    return String(record.ts || record.timestamp || Date.now());
   }
 
   function usuarioActualRegistro(){
@@ -19312,6 +19349,8 @@ document.addEventListener('DOMContentLoaded', function() {
       distribucion_tiendona: 'distribucion Tiendona',
       distribucion_cda: 'distribucion CDA',
       personas_sistema: 'personas',
+      productos_sistema: 'productos',
+      agromercados_sistema: 'agromercados',
       estado_cuadres: 'cuadres'
     }[table] || table;
   }
@@ -19332,7 +19371,9 @@ document.addEventListener('DOMContentLoaded', function() {
     { key:'inventario-data', label:'inventario' },
     { key:'descargas-data', label:'tiendona' },
     { key:'distribucion-cda-data', label:'cda' },
-    { key:'personas-data', label:'personas' }
+    { key:'personas-data', label:'personas' },
+    { key:'productos_sistema', label:'productos' },
+    { key:'agromercados-data', label:'agromercados' }
   ];
 
   function localStorageSyncEstado(){
@@ -19523,6 +19564,39 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
+  function productoToSupabase(record){
+    var id = localId(record);
+    if(!record.local_id) record.local_id = id;
+    return {
+      local_id: id,
+      user_id: authUserId() || null,
+      key: record.key || '',
+      nombre: record.nombre || '',
+      corto: record.corto || '',
+      inv: record.inv || '',
+      precio: num(record.precio),
+      activo: record.activo !== false,
+      payload: record,
+      actualizado_en: new Date().toISOString()
+    };
+  }
+
+  function agromercadoToSupabase(record){
+    var id = localId(record);
+    if(!record.local_id) record.local_id = id;
+    return {
+      local_id: id,
+      user_id: authUserId() || null,
+      distrito: record.distrito || '',
+      municipio: record.municipio || '',
+      nombre: record.nombre || record.agromercado || '',
+      tipo: record.tipo || '',
+      referencia: record.referencia || '',
+      payload: record,
+      actualizado_en: new Date().toISOString()
+    };
+  }
+
   async function uploadLocalTable(config){
     if (!window.supabaseRequest) return;
     window.supabaseRlsBlockedTables = window.supabaseRlsBlockedTables || {};
@@ -19584,7 +19658,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function downloadRemoteTable(config){
     if (!window.supabaseRequest) return 0;
-    var rows = await window.supabaseRequest('/rest/v1/' + config.table + '?select=local_id,payload,creado_en&order=creado_en.desc&limit=5000');
+    var rows = await window.supabaseRequest('/rest/v1/' + config.table + '?select=local_id,payload,creado_en,actualizado_en&order=actualizado_en.desc&limit=5000');
     var local = readLocalList(config.storageKey);
     var existing = {};
     local.forEach(function(record, index){ existing[localId(record)] = index; });
@@ -19618,7 +19692,7 @@ document.addEventListener('DOMContentLoaded', function() {
             remoteRecord.total = num(remoteRecord.arroz) + num(remoteRecord.precocido) + num(remoteRecord.frijol1) + num(remoteRecord.frijol4) + num(remoteRecord.aceite) + num(remoteRecord.harina) || num(remoteRecord.total);
           }
           remoteRecord.supabase_synced = true;
-          remoteRecord.supabase_synced_at = row.creado_en || row.actualizado_en || new Date().toISOString();
+          remoteRecord.supabase_synced_at = row.actualizado_en || row.creado_en || new Date().toISOString();
           var comparableCurrent = Object.assign({}, currentRecord);
           delete comparableCurrent.supabase_synced_at;
           var comparableRemote = Object.assign({}, remoteRecord);
@@ -19636,7 +19710,7 @@ document.addEventListener('DOMContentLoaded', function() {
         record.total = num(record.arroz) + num(record.precocido) + num(record.frijol1) + num(record.frijol4) + num(record.aceite) + num(record.harina) || num(record.total);
       }
       record.supabase_synced = true;
-      record.supabase_synced_at = row.creado_en || row.actualizado_en || new Date().toISOString();
+      record.supabase_synced_at = row.actualizado_en || row.creado_en || new Date().toISOString();
       local.unshift(record);
       existing[id] = 0;
       added++;
@@ -19722,7 +19796,9 @@ document.addEventListener('DOMContentLoaded', function() {
     { table: 'inventario_movimientos', storageKey: 'inventario-data', toSupabase: inventarioToSupabase, pruneMissing: true },
     { table: 'distribucion_tiendona', storageKey: 'descargas-data', toSupabase: distribucionTiendonaToSupabase, pruneMissing: true },
     { table: 'distribucion_cda', storageKey: 'distribucion-cda-data', toSupabase: distribucionCdaToSupabase, pruneMissing: true },
-    { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase }
+    { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase },
+    { table: 'productos_sistema', storageKey: 'productos_sistema', toSupabase: productoToSupabase },
+    { table: 'agromercados_sistema', storageKey: 'agromercados-data', toSupabase: agromercadoToSupabase }
   ];
 
   function reloadLocalCaches(){
@@ -19766,6 +19842,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderCuadreBodegas === 'function') renderCuadreBodegas();
     if (typeof renderCuadreCDA === 'function') renderCuadreCDA();
     if (typeof cargarPersonas === 'function') cargarPersonas();
+    if (window.productosSistema && typeof window.productosSistema.inicializar === 'function') window.productosSistema.inicializar();
+    if (typeof cargarProductosSistema === 'function') cargarProductosSistema();
+    if (typeof cargarAgromercados === 'function') cargarAgromercados();
     if (typeof renderResumenVentasPeriodo === 'function') renderResumenVentasPeriodo();
   }
 
@@ -19794,6 +19873,7 @@ document.addEventListener('DOMContentLoaded', function() {
       'devoluciones-data': true,
       'bancos-data': true,
       'personas-data': true,
+      'productos_sistema': true,
       'agromercados-data': true,
       'distritos-data': true,
       'municipios-data': true,
