@@ -16105,6 +16105,42 @@ document.addEventListener('DOMContentLoaded', function() {
     return totals;
   }
 
+  function destinoDistribucionRow(row, tipo){
+    row = row || {};
+    if (tipo === 'CDA') return row.cda || row.destino || row.agromercado || row.lugar || '';
+    return row.agromercado || row.destino || row.cda || row.lugar || '';
+  }
+
+  function sourceForDestino(destino, tipo){
+    if (typeof obtenerUbicacionesInventarioParaDestino === 'function') {
+      var opciones = obtenerUbicacionesInventarioParaDestino(destino, tipo);
+      if (opciones && opciones[0] && opciones[0].value) return opciones[0].value;
+    }
+    return SOURCE_LOCATIONS_DIST[tipo][0];
+  }
+
+  function getSavedDistributionTotalsForSource(tipo, source, fecha, reemplazosFechaDestino){
+    var totals = emptyTotals();
+    var key = tipo === 'CDA' ? 'distribucion-cda-data' : 'descargas-data';
+    var data = [];
+    try { data = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { data = []; }
+    (data || []).forEach(function(row){
+      if(!row) return;
+      var rowFecha = row.fecha || (row.payload && row.payload.fecha) || row.creado_en || row.timestamp;
+      if(fecha && !dateOnOrBefore(rowFecha, fecha)) return;
+      var destinoRow = destinoDistribucionRow(row, tipo);
+      if (fecha
+          && String(normalizeDistributionDate(rowFecha)).slice(0, 10) === String(fecha).slice(0, 10)
+          && reemplazosFechaDestino
+          && reemplazosFechaDestino[normTxt(destinoRow)]) {
+        return;
+      }
+      if (sourceForDestino(destinoRow, tipo) !== source) return;
+      addTotals(totals, row, 1);
+    });
+    return totals;
+  }
+
   function readMatrixRows(tipo){
     var tbodyId = tipo === 'CDA' ? 'tbody-distribucion-cda-fija' : 'tbody-distribucion-tiendona-fija';
     var tbody = document.getElementById(tbodyId);
@@ -16182,14 +16218,61 @@ document.addEventListener('DOMContentLoaded', function() {
     window.renderResumenDistribucionDisponible('CDA');
   };
 
-  function validateSourceStock(tipo, alertId){
-    var remaining = getRemainingTotals(tipo);
-    var faltantes = PRODUCT_KEYS_DIST.filter(function(key){ return remaining[key] < 0; });
-    if (!faltantes.length) return true;
+  function sourceLabelDist(source){
+    return {
+      'descargas-tiendona-abajo': 'Tiendona Abajo',
+      'descargas-tiendona-arriba': 'Tiendona Arriba',
+      'descargas-tiendona': 'Tiendona',
+      'distribucion-cda-soyapango': 'CDA Soyapango',
+      'distribucion-cda-usulutan': 'CDA Usulután',
+      'distribucion-cda': 'CDA',
+      'cda': 'CDA'
+    }[source] || source;
+  }
 
-    showAlert(alertId, 'Stock insuficiente: ' + faltantes.map(function(key){
-      return PRODUCT_LABELS_DIST[key] + ' queda en ' + formatNumberDist(remaining[key]);
-    }).join(' | '), 'err');
+  function getMatrixTotalsForSource(tipo, source, exceptInput){
+    var totals = emptyTotals();
+    var tbodyId = tipo === 'CDA' ? 'tbody-distribucion-cda-fija' : 'tbody-distribucion-tiendona-fija';
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody) return totals;
+    Array.from(tbody.querySelectorAll('tr[data-destino]')).forEach(function(row){
+      var destino = row.getAttribute('data-destino') || '';
+      if (sourceForDestino(destino, tipo) !== source) return;
+      PRODUCT_KEYS_DIST.forEach(function(prod){
+        var input = row.querySelector('input[data-prod="' + prod + '"]');
+        if (input === exceptInput) return;
+        totals[prod] += normalizeNumber(input && input.value);
+      });
+    });
+    return totals;
+  }
+
+  function validateSourceStock(tipo, alertId){
+    var fecha = distributionDateForTipo(tipo);
+    var rows = readMatrixRows(tipo);
+    var sources = {};
+    var reemplazos = {};
+    rows.forEach(function(row){
+      var source = sourceForDestino(row.destino, tipo);
+      if (!sources[source]) sources[source] = emptyTotals();
+      reemplazos[normTxt(row.destino)] = true;
+      addTotals(sources[source], row, 1);
+    });
+
+    var faltantes = [];
+    Object.keys(sources).forEach(function(source){
+      var disponible = getInventoryTotals([source]);
+      var guardado = getSavedDistributionTotalsForSource(tipo, source, fecha, reemplazos);
+      PRODUCT_KEYS_DIST.forEach(function(key){
+        var restante = disponible[key] - guardado[key] - sources[source][key];
+        if (restante < 0) {
+          faltantes.push(sourceLabelDist(source) + ' / ' + PRODUCT_LABELS_DIST[key] + ' queda en ' + formatNumberDist(restante));
+        }
+      });
+    });
+
+    if (!faltantes.length) return true;
+    showAlert(alertId, 'Stock insuficiente por bodega destino. ' + faltantes.join(' | '), 'err');
     return false;
   }
   window.validateSourceStockDistribucion = validateSourceStock;
@@ -16208,9 +16291,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var prod = input.getAttribute('data-prod') || '';
     if (PRODUCT_KEYS_DIST.indexOf(prod) < 0) return;
 
-    var disponible = getInventoryTotals(SOURCE_LOCATIONS_DIST[tipo])[prod] || 0;
-    var yaDistribuido = getSavedDistributionTotals(tipo)[prod] || 0;
-    var totalActual = getMatrixTotals(tipo)[prod] || 0;
+    var row = input.closest('tr[data-destino]');
+    var destino = row ? (row.getAttribute('data-destino') || '') : '';
+    var source = sourceForDestino(destino, tipo);
+    var fecha = distributionDateForTipo(tipo);
+    var reemplazos = {};
+    if (destino) reemplazos[normTxt(destino)] = true;
+    var disponible = getInventoryTotals([source])[prod] || 0;
+    var yaDistribuido = getSavedDistributionTotalsForSource(tipo, source, fecha, reemplazos)[prod] || 0;
+    var totalActual = getMatrixTotalsForSource(tipo, source)[prod] || 0;
     var valorActual = normalizeNumber(input.value);
     var otrosPedidos = Math.max(0, totalActual - valorActual);
     var maxCantidad = Math.max(0, Math.floor(disponible - yaDistribuido - otrosPedidos));
@@ -16220,19 +16309,11 @@ document.addEventListener('DOMContentLoaded', function() {
       input.classList.add('input-error');
       if (ajustar) {
         input.value = String(maxCantidad);
-        showAlert(alertIdDistribucion(tipo), 'No hay suficiente inventario de ' + PRODUCT_LABELS_DIST[prod] + '. Disponible para esta casilla: ' + maxCantidad + '.', 'err');
+        showAlert(alertIdDistribucion(tipo), 'No hay suficiente inventario de ' + PRODUCT_LABELS_DIST[prod] + ' en ' + sourceLabelDist(source) + '. Disponible para esta casilla: ' + maxCantidad + '.', 'err');
       }
     } else {
       input.classList.remove('input-error');
     }
-  }
-
-  function sourceForDestino(destino, tipo){
-    if (typeof obtenerUbicacionesInventarioParaDestino === 'function') {
-      var opciones = obtenerUbicacionesInventarioParaDestino(destino, tipo);
-      if (opciones && opciones[0] && opciones[0].value) return opciones[0].value;
-    }
-    return SOURCE_LOCATIONS_DIST[tipo][0];
   }
 
   function clearMatrixRows(tipo){
