@@ -931,7 +931,7 @@
       refrescarInventarioEnTiempoReal();
     }
 
-    if (opciones.sync !== false && typeof window.sincronizarPendientesSupabase === 'function') {
+    if (opciones.sync === true && typeof window.sincronizarPendientesSupabase === 'function') {
       window.sincronizarPendientesSupabase({ noInterrupt:true, silent:true }).catch(function(error){
         console.warn('No se pudo sincronizar saldo inicial de inventario:', error);
       });

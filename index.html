@@ -8420,6 +8420,11 @@ window.limpiarHistorialInventario = async function(opciones){
     var id = item && (item.local_id || item.id);
     if (id) idsMap[String(id)] = true;
   });
+  for (var iSaldo = 1; iSaldo <= 250; iSaldo++){
+    var sufijoSaldo = String(iSaldo).padStart(3, '0');
+    idsMap['saldo-inicial-agromercados-20260624-' + sufijoSaldo] = true;
+    idsMap['saldo-inicial-agromercados-20260629-' + sufijoSaldo] = true;
+  }
   var ids = Object.keys(idsMap);
 
   inventarioData = [];
