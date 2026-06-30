@@ -2176,6 +2176,8 @@
         <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirTablaPorTitulo('Historial de Inventario', '#tbl-inventario')">Imprimir</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); cargarVentasDesdeSupabase()">🔄 Actualizar</button>
         <button class="btn btn-sm btn-secondary" onclick="importarInventarioExcel()">📂 Importar Excel</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="event.stopPropagation(); limpiarHistorialInventario()">🗑️ Borrar todo</button>
+        <button type="button" class="btn btn-sm btn-success" onclick="event.stopPropagation(); borrarInventarioYCargarSaldo20260629()">Cargar 29/06</button>
       </div>
     </div>
     <div id="historial-inventario-content" style="display:none;">
@@ -2826,7 +2828,7 @@
 </div>
 <script src="./js/core/constants.js?v=20260617-productos-sistema"></script>
 <script src="./js/utils/helpers.js"></script>
-<script src="./js/data/inventario-inicial-agromercados-20260624.js?v=20260625-saldo-inicial"></script>
+<script src="./js/data/inventario-inicial-agromercados-20260629.js?v=20260630-saldo-inicial"></script>
 <script src="./js/core/storage.js?v=20260617-productos-sistema"></script>
 <script src="./js/core/app.js?v=20260617-productos-sistema"></script>
 <script>
@@ -8397,34 +8399,54 @@ window.eliminarInventario = function(id){
   showAlert('alert-inventario', idsRemotos.length > 1 ? 'Movimiento completo eliminado del inventario' : 'Registro eliminado', 'ok');
 };
 
-window.limpiarHistorialInventario = async function(){
-  if(!confirm('¿Eliminar todo el historial de inventario? Esta acción no se puede deshacer.')) return;
+window.limpiarHistorialInventario = async function(opciones){
+  opciones = opciones || {};
+  if(!opciones.sinConfirmacion){
+    if(!confirm('¿Borrar TODO el inventario? Esto elimina saldos, entradas y movimientos guardados de inventario.')) return { cancelado:true };
+    var frase = prompt('Para confirmar escribe BORRAR');
+    if(String(frase || '').trim().toUpperCase() !== 'BORRAR'){
+      showAlert('alert-inventario', 'No se borró inventario: confirmación cancelada.', 'err');
+      return { cancelado:true };
+    }
+  }
 
   var corteInventario = new Date().toISOString();
   var localActual = [];
   try { localActual = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(error) { localActual = []; }
+  if (!Array.isArray(localActual)) localActual = [];
+
   var idsMap = {};
   (inventarioData || []).concat(localActual || []).forEach(function(item){
-    if (!inventarioVisibleEnHistorial(item)) return;
     var id = item && (item.local_id || item.id);
     if (id) idsMap[String(id)] = true;
   });
   var ids = Object.keys(idsMap);
-  inventarioData = (localActual || []).filter(function(item){
-    return !inventarioVisibleEnHistorial(item);
-  });
-  localStorage.setItem('inventario-data', JSON.stringify(inventarioData));
+
+  inventarioData = [];
+  localStorage.setItem('inventario-data', '[]');
   localStorage.setItem('inventario-clear-before', corteInventario);
-  ['inventario-registros', 'inventario-historial', 'exc_inventario_hist'].forEach(function(key){
+  if(opciones.bloquearSaldoInicial !== false){
+    localStorage.setItem('inventario-saldo-inicial-agromercados-20260629-bloqueado', 'true');
+  }
+  [
+    'inventario-registros',
+    'inventario-historial',
+    'exc_inventario_hist',
+    'inventario-saldo-inicial-agromercados-20260624',
+    'inventario-saldo-inicial-agromercados-20260629'
+  ].forEach(function(key){
     localStorage.removeItem(key);
   });
 
+  var borradosRemotos = 0;
   if (window.supabaseRequest && window.haySesionSupabase && window.haySesionSupabase()) {
-    await Promise.all(ids.map(function(id){
+    var resultados = await Promise.all(ids.map(function(id){
       return eliminarSupabasePorLocalId('inventario_movimientos', id).catch(function(deleteError){
-        console.warn('No se pudo borrar registro manual de inventario en Supabase:', deleteError);
+        console.warn('No se pudo borrar movimiento de inventario en Supabase:', deleteError);
+        return false;
       });
     }));
+    borradosRemotos = resultados.filter(Boolean).length;
   }
 
   if (typeof window.supabaseRlsBlockedTables === 'object') {
@@ -8438,7 +8460,50 @@ window.limpiarHistorialInventario = async function(){
   }
 
   refrescarInventarioEnTiempoReal();
-  showAlert('alert-inventario', '🗑️ Historial eliminado', 'ok');
+  if(!opciones.silencioso){
+    var detalleSync = window.haySesionSupabase && window.haySesionSupabase()
+      ? ' También se intentó borrar en Supabase.'
+      : ' Sin sesión de Supabase: borrado solo en esta PC.';
+    showAlert('alert-inventario', 'Inventario borrado: ' + ids.length + ' movimiento(s).' + detalleSync, 'ok');
+  }
+  return { ok:true, ids:ids.length, remotos:borradosRemotos };
+};
+
+window.borrarInventarioYCargarSaldo20260629 = async function(){
+  if(!confirm('Esto borrará TODO el inventario actual y cargará el saldo del Excel Inventario al 29/06/2026. ¿Continuar?')) return;
+  var frase = prompt('Para confirmar escribe CARGAR');
+  if(String(frase || '').trim().toUpperCase() !== 'CARGAR'){
+    showAlert('alert-inventario', 'No se cargó el inventario: confirmación cancelada.', 'err');
+    return;
+  }
+
+  var resultadoBorrado = await limpiarHistorialInventario({
+    sinConfirmacion:true,
+    silencioso:true,
+    bloquearSaldoInicial:false
+  });
+  if(resultadoBorrado && resultadoBorrado.cancelado) return;
+
+  localStorage.removeItem('inventario-saldo-inicial-agromercados-20260629-bloqueado');
+  if(typeof window.aplicarSaldoInicialAgromercados20260629 !== 'function'){
+    showAlert('alert-inventario', 'No se encontró el inventario base del 29/06/2026.', 'err');
+    return;
+  }
+
+  var resultadoCarga = window.aplicarSaldoInicialAgromercados20260629({ force:true, refrescar:true, sync:false });
+  if (typeof inventarioData !== 'undefined') {
+    try { inventarioData = JSON.parse(localStorage.getItem('inventario-data') || '[]'); } catch(error) { inventarioData = []; }
+  }
+  refrescarInventarioEnTiempoReal();
+
+  if (typeof window.sincronizarPendientesSupabase === 'function') {
+    window.sincronizarPendientesSupabase({ noInterrupt:true, silent:true }).catch(function(error){
+      console.warn('No se pudo sincronizar inventario base 29/06/2026:', error);
+    });
+  }
+
+  var registros = resultadoCarga && resultadoCarga.registros ? resultadoCarga.registros : 0;
+  showAlert('alert-inventario', 'Inventario limpio y cargado con ' + registros + ' agromercado(s) del 29/06/2026.', 'ok');
 };
 
 window.toggleResumenInventario = function(){
@@ -19884,8 +19949,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function reloadLocalCaches(){
     try {
-      if (typeof window.aplicarSaldoInicialAgromercados20260624 === 'function') {
-        window.aplicarSaldoInicialAgromercados20260624();
+      if (typeof window.aplicarSaldoInicialAgromercados20260629 === 'function') {
+        window.aplicarSaldoInicialAgromercados20260629();
       }
     } catch(error) {}
     try {
