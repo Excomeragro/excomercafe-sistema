@@ -547,7 +547,7 @@ button.small{
 
 .history-table{
   width:100%;
-  min-width:760px;
+  min-width:680px;
   border-collapse:collapse;
   font-size:.82rem;
 }
@@ -574,6 +574,33 @@ button.small{
   color:#334155;
   font-weight:700;
   white-space:pre-wrap;
+}
+
+.history-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  padding:10px 12px 12px;
+  border-top:1px solid var(--border);
+  background:#f8fbff;
+}
+
+.history-action{
+  border:0;
+  border-radius:7px;
+  color:#fff;
+  cursor:pointer;
+  font-weight:900;
+  min-height:34px;
+  padding:7px 12px;
+}
+
+.history-action.edit{
+  background:#0f4f7a;
+}
+
+.history-action.delete{
+  background:#dc2626;
 }
 
 @media(max-width:720px){

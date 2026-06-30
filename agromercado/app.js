@@ -745,33 +745,117 @@ function reporteCanvas(){
 
 async function enviarReporteWhatsApp(){
   calcularTotales();
+  var canvas = reporteCanvas();
+  var pdfBlob = await pdfBlobDesdeCanvas(canvas);
   var fecha = document.getElementById('fecha') ? document.getElementById('fecha').value : hoy();
-  var encargado = document.getElementById('encargado') ? document.getElementById('encargado').value : '';
-  var banco = document.getElementById('banco') ? document.getElementById('banco').value : '';
-  var gastos = document.getElementById('gastos') ? document.getElementById('gastos').value : '0';
-  var observaciones = document.getElementById('observaciones') ? document.getElementById('observaciones').value : '';
-  var lineas = [
-    'Reporte EXCOMERCAFE',
-    'Agromercado: ' + (accesoActual ? accesoActual.nombre : ''),
-    'Fecha: ' + fechaVista(fecha),
-    'Encargado: ' + (encargado || 'Sin nombre'),
-    'Banco: ' + (banco || 'Pendiente'),
-    ''
-  ];
-  PRODUCTOS.forEach(function(prod){
-    var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
-    if(!row) return;
-    lineas.push(prod.nombre + ': venta ' + rowValue(row, 'venta') + ', faltante ' + rowValue(row, 'faltante') + ', danado ' + rowValue(row, 'danado') + ', final ' + rowValue(row, 'final'));
+  var nombreArchivo = 'reporte-agromercado-' + String(fecha || hoy()).replace(/[^0-9-]/g, '') + '.pdf';
+  var file = new File([pdfBlob], nombreArchivo, { type:'application/pdf' });
+
+  if(navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
+    try{
+      await navigator.share({
+        files:[file],
+        title:'Reporte agromercado',
+        text:'Reporte EXCOMERCAFE'
+      });
+      setMessage('submit-message', 'PDF compartido. Selecciona WhatsApp si no se abrio automaticamente.', 'ok');
+      return;
+    }catch(error){
+      if(error && error.name === 'AbortError') return;
+    }
+  }
+
+  var url = URL.createObjectURL(pdfBlob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+  window.open('https://wa.me/50379285503', '_blank');
+  setMessage('submit-message', 'PDF descargado. WhatsApp se abrira para que adjuntes el archivo.', 'ok');
+}
+
+function binarioDesdeDataUrl(dataUrl){
+  var base64 = String(dataUrl || '').split(',')[1] || '';
+  var binary = atob(base64);
+  var bytes = new Uint8Array(binary.length);
+  for(var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function asciiBytes(text){
+  var bytes = new Uint8Array(text.length);
+  for(var i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i) & 255;
+  return bytes;
+}
+
+function unirBytes(partes){
+  var total = partes.reduce(function(acc, parte){ return acc + parte.length; }, 0);
+  var out = new Uint8Array(total);
+  var offset = 0;
+  partes.forEach(function(parte){
+    out.set(parte, offset);
+    offset += parte.length;
   });
-  lineas.push('');
-  lineas.push('Ventas: ' + document.getElementById('total-ventas').textContent);
-  lineas.push('Gastos: $' + Number(gastos || 0).toFixed(2));
-  lineas.push('Remesa: ' + document.getElementById('total-remesa').textContent);
-  if(observaciones) lineas.push('Observaciones: ' + observaciones);
-  var texto = lineas.join('\n');
-  var url = 'https://wa.me/50379285503?text=' + encodeURIComponent(texto);
-  window.location.href = url;
-  setMessage('submit-message', 'Abriendo WhatsApp con el reporte escrito.', 'ok');
+  return out;
+}
+
+function pdfBlobDesdeCanvas(canvas){
+  var pageW = 612;
+  var pageH = 792;
+  var margin = 24;
+  var imgW = pageW - margin * 2;
+  var imgH = imgW * canvas.height / canvas.width;
+  if(imgH > pageH - margin * 2){
+    imgH = pageH - margin * 2;
+    imgW = imgH * canvas.width / canvas.height;
+  }
+  var imgX = (pageW - imgW) / 2;
+  var imgY = pageH - margin - imgH;
+  var jpg = binarioDesdeDataUrl(canvas.toDataURL('image/jpeg', 0.92));
+  var contenido = 'q\n' + imgW.toFixed(2) + ' 0 0 ' + imgH.toFixed(2) + ' ' + imgX.toFixed(2) + ' ' + imgY.toFixed(2) + ' cm\n/Im1 Do\nQ\n';
+  var objetos = [
+    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + pageW + ' ' + pageH + '] /Resources << /XObject << /Im1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
+    '4 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + canvas.width + ' /Height ' + canvas.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n',
+    '\nendstream\nendobj\n',
+    '5 0 obj\n<< /Length ' + contenido.length + ' >>\nstream\n' + contenido + 'endstream\nendobj\n'
+  ];
+
+  var partes = [asciiBytes('%PDF-1.4\n')];
+  var offsets = [0];
+  var posicion = partes[0].length;
+  for(var i = 0; i < 3; i++){
+    offsets.push(posicion);
+    var obj = asciiBytes(objetos[i]);
+    partes.push(obj);
+    posicion += obj.length;
+  }
+  offsets.push(posicion);
+  var imgHeader = asciiBytes(objetos[3]);
+  partes.push(imgHeader);
+  posicion += imgHeader.length;
+  partes.push(jpg);
+  posicion += jpg.length;
+  var imgFooter = asciiBytes(objetos[4]);
+  partes.push(imgFooter);
+  posicion += imgFooter.length;
+  offsets.push(posicion);
+  var contentObj = asciiBytes(objetos[5]);
+  partes.push(contentObj);
+  posicion += contentObj.length;
+
+  var xrefOffset = posicion;
+  var xref = 'xref\n0 6\n0000000000 65535 f \n';
+  for(var j = 1; j <= 5; j++){
+    xref += String(offsets[j]).padStart(10, '0') + ' 00000 n \n';
+  }
+  xref += 'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xrefOffset + '\n%%EOF';
+  partes.push(asciiBytes(xref));
+  return new Blob([unirBytes(partes)], { type:'application/pdf' });
 }
 
 function htmlEscape(value){
