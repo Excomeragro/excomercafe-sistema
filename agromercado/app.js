@@ -171,6 +171,8 @@ var hojaBloqueada = false;
 var refreshTimer = null;
 var refreshRunning = false;
 var REFRESH_MS = 20000;
+var historialVentasActual = [];
+var edicionEmergenciaReporte = null;
 
 function palabraClave(nombre){
   var ignorar = { EL:true, LA:true, LAS:true, LOS:true, DE:true, DEL:true, BO:true, BARRIO:true, PARQUE:true };
@@ -488,7 +490,6 @@ function renderProductos(){
     return '<tr data-prod="' + p.key + '">'
       + '<td data-label="Producto">' + p.nombre + '</td>'
       + '<td data-label="Inv. anterior"><input class="readonly-field" type="number" value="0" data-field="anterior" readonly></td>'
-      + '<td data-label="Mercaderia nueva"><input class="readonly-field" type="number" value="0" data-field="nuevo" readonly></td>'
       + '<td data-label="Venta"><input type="number" min="0" value="0" data-field="venta" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
       + '<td data-label="Faltante"><input type="number" min="0" value="0" data-field="faltante" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
       + '<td data-label="Danado"><input type="number" min="0" value="0" data-field="danado" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
@@ -517,7 +518,7 @@ function marcarErrorInventario(row, hasError){
 
 function calcularProducto(row, prod){
   var venta = rowValue(row, 'venta');
-  var final = rowValue(row, 'anterior') + rowValue(row, 'nuevo') - venta - rowValue(row, 'faltante') - rowValue(row, 'danado');
+  var final = rowValue(row, 'anterior') - venta - rowValue(row, 'faltante') - rowValue(row, 'danado');
   var dinero = venta * prod.precio;
   setRowValue(row, 'final', final);
   marcarErrorInventario(row, final < 0);
@@ -549,7 +550,7 @@ function validarInventarioDisponible(){
     }
   });
   if(errores.length){
-    setMessage('submit-message', 'No se puede enviar: hay ventas/faltantes/daÃ±ado mayores al inventario disponible. Revisa las casillas en rojo.', 'error');
+    setMessage('submit-message', 'No se puede enviar: hay ventas/faltantes/danado mayores al inventario disponible. Revisa las casillas en rojo.', 'error');
     alert('No se puede enviar el reporte. Inventario negativo en:\n\n' + errores.join('\n'));
     return false;
   }
@@ -691,8 +692,8 @@ function reporteCanvas(){
   box('BANCO', banco || 'Pendiente', x + 696, y, 220, 60);
 
   y += 82;
-  var cols = [230, 105, 115, 85, 90, 90, 105, 96];
-  var headers = ['Producto','Inv. ant.','Merc. nueva','Venta','Faltante','Danado','Inv. final','Total'];
+  var cols = [260, 120, 95, 100, 95, 120, 126];
+  var headers = ['Producto','Inv. ant.','Venta','Faltante','Danado','Inv. final','Total'];
   var rowH = 42;
   var cx = x;
   ctx.fillStyle = '#e8eef5';
@@ -710,7 +711,7 @@ function reporteCanvas(){
   y += rowH;
   PRODUCTOS.forEach(function(prod){
     var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
-    var values = [prod.nombre, rowValue(row, 'anterior'), rowValue(row, 'nuevo'), rowValue(row, 'venta'), rowValue(row, 'faltante'), rowValue(row, 'danado'), rowValue(row, 'final'), row ? row.querySelector('.dinero').textContent : '$0.00'];
+    var values = [prod.nombre, rowValue(row, 'anterior'), rowValue(row, 'venta'), rowValue(row, 'faltante'), rowValue(row, 'danado'), rowValue(row, 'final'), row ? row.querySelector('.dinero').textContent : '$0.00'];
     cx = x;
     ctx.font = '13px Arial';
     values.forEach(function(v, i){
@@ -743,17 +744,34 @@ function reporteCanvas(){
 }
 
 async function enviarReporteWhatsApp(){
-  var canvas = reporteCanvas();
-  var blob = await new Promise(function(resolve){ canvas.toBlob(resolve, 'image/png', 0.95); });
-  var file = new File([blob], 'reporte-agromercado.png', { type:'image/png' });
-  if(navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
-    await navigator.share({ files:[file], title:'Reporte agromercado', text:'Reporte EXCOMERCAFE' });
-    return;
-  }
-  var url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-  window.open('https://wa.me/50379285503', '_blank');
-  setMessage('submit-message', 'Se abriÃ³ la imagen y WhatsApp. Adjunta la imagen al chat.', 'ok');
+  calcularTotales();
+  var fecha = document.getElementById('fecha') ? document.getElementById('fecha').value : hoy();
+  var encargado = document.getElementById('encargado') ? document.getElementById('encargado').value : '';
+  var banco = document.getElementById('banco') ? document.getElementById('banco').value : '';
+  var gastos = document.getElementById('gastos') ? document.getElementById('gastos').value : '0';
+  var observaciones = document.getElementById('observaciones') ? document.getElementById('observaciones').value : '';
+  var lineas = [
+    'Reporte EXCOMERCAFE',
+    'Agromercado: ' + (accesoActual ? accesoActual.nombre : ''),
+    'Fecha: ' + fechaVista(fecha),
+    'Encargado: ' + (encargado || 'Sin nombre'),
+    'Banco: ' + (banco || 'Pendiente'),
+    ''
+  ];
+  PRODUCTOS.forEach(function(prod){
+    var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
+    if(!row) return;
+    lineas.push(prod.nombre + ': venta ' + rowValue(row, 'venta') + ', faltante ' + rowValue(row, 'faltante') + ', danado ' + rowValue(row, 'danado') + ', final ' + rowValue(row, 'final'));
+  });
+  lineas.push('');
+  lineas.push('Ventas: ' + document.getElementById('total-ventas').textContent);
+  lineas.push('Gastos: $' + Number(gastos || 0).toFixed(2));
+  lineas.push('Remesa: ' + document.getElementById('total-remesa').textContent);
+  if(observaciones) lineas.push('Observaciones: ' + observaciones);
+  var texto = lineas.join('\n');
+  var url = 'https://wa.me/50379285503?text=' + encodeURIComponent(texto);
+  window.location.href = url;
+  setMessage('submit-message', 'Abriendo WhatsApp con el reporte escrito.', 'ok');
 }
 
 function htmlEscape(value){
@@ -776,7 +794,6 @@ function buildPrintHtml(){
     return '<tr>'
       + '<td>' + htmlEscape(prod.nombre) + '</td>'
       + '<td>' + rowValue(row, 'anterior') + '</td>'
-      + '<td>' + rowValue(row, 'nuevo') + '</td>'
       + '<td>' + rowValue(row, 'venta') + '</td>'
       + '<td>' + rowValue(row, 'faltante') + '</td>'
       + '<td>' + rowValue(row, 'danado') + '</td>'
@@ -802,7 +819,7 @@ function buildPrintHtml(){
     + '<div class="box"><b>Encargado</b>' + htmlEscape(encargado) + '</div>'
     + '<div class="box"><b>Banco</b>' + htmlEscape(banco || 'Pendiente') + '</div>'
     + '</div>'
-    + '<table><thead><tr><th>Producto</th><th>Inv. ant.</th><th>Merc. nueva</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Inv. final</th><th>Total dinero</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<table><thead><tr><th>Producto</th><th>Inv. ant.</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Inv. final</th><th>Total dinero</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div class="totals"><div><b>Ventas</b><strong>' + htmlEscape(document.getElementById('total-ventas').textContent) + '</strong></div><div><b>Gastos</b><strong>' + htmlEscape(document.getElementById('total-gastos').textContent) + '</strong></div><div><b>Remesa</b><strong>' + htmlEscape(document.getElementById('total-remesa').textContent) + '</strong></div></div>'
     + '<div class="box"><b>Observaciones</b><div class="obs">' + htmlEscape(observaciones) + '</div></div>'
     + '<div class="actions"><button onclick="window.print()">Imprimir</button></div>'
@@ -920,7 +937,6 @@ function aplicarValoresProducto(key, anterior, nuevo){
   var row = document.querySelector('tr[data-prod="' + key + '"]');
   if(!row) return;
   setRowValue(row, 'anterior', anterior);
-  setRowValue(row, 'nuevo', nuevo);
   calcularProducto(row, PRODUCTOS.find(function(p){ return p.key === key; }) || { precio:0 });
 }
 
@@ -930,7 +946,6 @@ function aplicarReporteAprobadoEnFormulario(report){
     var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
     if(!row) return;
     setRowValue(row, 'anterior', productoValueFromPayload(payload.inventario_inicio, prod.key));
-    setRowValue(row, 'nuevo', productoValueFromPayload(payload.mercaderia_nueva, prod.key));
     setRowValue(row, 'venta', productoValueFromPayload(payload.ventas_unidades, prod.key));
     setRowValue(row, 'faltante', productoValueFromPayload(payload.faltante || payload.apartado || payload.faltantes_unidades, prod.key));
     setRowValue(row, 'danado', productoValueFromPayload(payload.danado || payload.danadas_unidades, prod.key));
@@ -958,13 +973,53 @@ async function fetchSupabase(path){
   return response.json();
 }
 
+async function supabasePortalRequest(path, options){
+  options = options || {};
+  var headers = Object.assign({
+    apikey: SUPABASE_CONFIG.key,
+    Authorization: 'Bearer ' + SUPABASE_CONFIG.key,
+    'Content-Type': 'application/json'
+  }, options.headers || {});
+  var response = await fetch(SUPABASE_CONFIG.url + path, Object.assign({}, options, { headers: headers }));
+  if(!response.ok){
+    var data = await response.json().catch(function(){ return null; });
+    throw new Error((data && data.message) || response.status + ' ' + response.statusText);
+  }
+  return response;
+}
+
+function tablaReportePortal(row){
+  var estado = String(row && row.estado || '').toLowerCase();
+  if(row && row.historial_tipo === 'oficial') return 'ventas_agromercado';
+  if(estado === 'aprobado') return 'ventas_agromercado';
+  return 'ventas_agromercado_pendientes';
+}
+
+function filtroReportePortal(row){
+  var localId = row && (row.local_id || row.id || (row.payload && row.payload.id));
+  if(localId) return '?local_id=eq.' + encodeURIComponent(localId);
+  var payload = payloadHistorial(row);
+  var fecha = String((row && row.fecha) || payload.fecha || fechaSeleccionada()).slice(0, 10);
+  var agromercado = (row && row.agromercado) || payload.agromercado || (accesoActual && accesoActual.nombre) || '';
+  return '?agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha);
+}
+
+async function borrarReporteRemotoPortal(row){
+  if(!row) return;
+  var table = tablaReportePortal(row);
+  await supabasePortalRequest('/rest/v1/' + table + filtroReportePortal(row), {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' }
+  });
+}
+
 async function buscarReportePorFecha(agromercado, fecha){
   fecha = String(fecha || fechaSeleccionada()).slice(0,10);
   var queryAgro = encodeURIComponent(agromercado);
   var queryFecha = encodeURIComponent(fecha);
-  var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,estado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.pendiente&limit=1');
+  var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=*&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.pendiente&limit=1');
   if(pending && pending.length) return Object.assign({ tipo:'pendiente' }, pending[0]);
-  var approved = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&limit=1');
+  var approved = await fetchSupabase('/rest/v1/ventas_agromercado?select=local_id,fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&limit=1');
   if(approved && approved.length) return Object.assign({ tipo:'aprobado' }, approved[0]);
   var rejected = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,estado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.rechazado&order=creado_en.desc&limit=1');
   if(rejected && rejected.length) return Object.assign({ tipo:'rechazado' }, rejected[0]);
@@ -1000,13 +1055,12 @@ function historialMapValue(map, key){
 function historialProductosHtml(payload, row){
   var unidades = payload.ventas_unidades || {};
   var inicio = payload.inventario_inicio || {};
-  var nuevo = payload.mercaderia_nueva || {};
   var final = payload.inventario_final || {};
   var faltante = payload.faltante || payload.apartado || {};
   var danado = payload.danado || {};
   var dinero = payload.dinero_productos || {};
   return '<div class="history-table-wrap"><table class="history-table"><thead><tr>'
-    + '<th>Producto</th><th>Anterior</th><th>Nueva</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
+    + '<th>Producto</th><th>Anterior</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
     + '</tr></thead><tbody>'
     + PRODUCTOS_TODOS.map(function(prod){
       var vendido = historialMapValue(unidades, prod.key);
@@ -1014,7 +1068,6 @@ function historialProductosHtml(payload, row){
       return '<tr>'
         + '<td>' + htmlEscape(prod.nombre) + '</td>'
         + '<td>' + historialMapValue(inicio, prod.key) + '</td>'
-        + '<td>' + historialMapValue(nuevo, prod.key) + '</td>'
         + '<td>' + vendido + '</td>'
         + '<td>' + historialMapValue(faltante, prod.key) + '</td>'
         + '<td>' + historialMapValue(danado, prod.key) + '</td>'
@@ -1028,13 +1081,14 @@ function historialProductosHtml(payload, row){
 function renderHistorialVentas(rows){
   var cont = document.getElementById('historial-ventas');
   var status = document.getElementById('historial-status');
+  historialVentasActual = rows || [];
   if(status) status.textContent = (rows || []).length ? (rows.length + ' reporte(s)') : 'Sin reportes';
   if(!cont) return;
   if(!rows || !rows.length){
     cont.innerHTML = '<div class="history-empty">No hay ventas registradas todavia para este agromercado.</div>';
     return;
   }
-  cont.innerHTML = rows.map(function(row){
+  cont.innerHTML = rows.map(function(row, index){
     var payload = payloadHistorial(row);
     var estado = String(row.estado || 'aprobado').toLowerCase();
     var banco = payload.banco || row.banco || 'Pendiente';
@@ -1054,6 +1108,10 @@ function renderHistorialVentas(rows){
       + '</div>'
       + historialProductosHtml(payload, row)
       + '<div class="history-obs"><b>Observaciones:</b> ' + htmlEscape(obs || 'Sin observaciones') + '</div>'
+      + '<div class="history-actions">'
+      + '<button type="button" class="history-action edit" onclick="editarReporteEmergencia(' + index + ')">Editar</button>'
+      + '<button type="button" class="history-action delete" onclick="borrarReporteEmergencia(' + index + ')">Borrar</button>'
+      + '</div>'
       + '</article>';
   }).join('');
 }
@@ -1065,6 +1123,46 @@ function historialPrioridad(row){
   if(estado === 'rechazado') return 2;
   return 1;
 }
+
+window.editarReporteEmergencia = function(index){
+  var row = historialVentasActual && historialVentasActual[index];
+  if(!row) {
+    setMessage('submit-message', 'No se encontro el reporte para editar.', 'error');
+    return;
+  }
+  edicionEmergenciaReporte = row;
+  setHojaBloqueada(false);
+  aplicarReporteAprobadoEnFormulario(row);
+  var fecha = row.fecha || (payloadHistorial(row) || {}).fecha;
+  if(fecha && document.getElementById('fecha')) document.getElementById('fecha').value = String(fecha).slice(0, 10);
+  setMessage('submit-message', 'Modo emergencia: edita y presiona Enviar para revision. Se reemplazara el envio anterior.', 'ok');
+  var form = document.getElementById('sales-form');
+  if(form) form.scrollIntoView({ behavior:'smooth', block:'start' });
+};
+
+window.borrarReporteEmergencia = async function(index){
+  var row = historialVentasActual && historialVentasActual[index];
+  if(!row) {
+    setMessage('submit-message', 'No se encontro el reporte para borrar.', 'error');
+    return;
+  }
+  var payload = payloadHistorial(row);
+  var fecha = row.fecha || payload.fecha || '';
+  var agromercado = row.agromercado || payload.agromercado || (accesoActual && accesoActual.nombre) || '';
+  if(!confirm('Borrar este envio del ' + fechaVista(fecha) + '? Esta accion es de emergencia y no se puede deshacer.')) return;
+  try{
+    setMessage('submit-message', 'Borrando envio...', '');
+    await borrarReporteRemotoPortal(row);
+    limpiarPendienteLocal(agromercado, fecha);
+    edicionEmergenciaReporte = null;
+    setHojaBloqueada(false);
+    await cargarHistorialVentas(accesoActual.nombre);
+    await refrescarHojaVendedor(true);
+    setMessage('submit-message', 'Envio borrado correctamente.', 'ok');
+  }catch(error){
+    setMessage('submit-message', 'No se pudo borrar: ' + (error.message || error), 'error');
+  }
+};
 
 function historialFecha(row){
   var payload = payloadHistorial(row);
@@ -1334,7 +1432,7 @@ function leerProductos(){
     var calc = row ? calcularProducto(row, prod) : { vendido:0, dinero:0 };
     ventasUnidades[prod.key] = calc.vendido;
     inventarioInicio[prod.key] = rowValue(row, 'anterior');
-    inventarioNuevo[prod.key] = rowValue(row, 'nuevo');
+    inventarioNuevo[prod.key] = 0;
     inventarioFinal[prod.key] = rowValue(row, 'final');
     faltante[prod.key] = rowValue(row, 'faltante');
     danado[prod.key] = rowValue(row, 'danado');
@@ -1387,7 +1485,8 @@ async function supabaseInsert(row){
 async function enviarControl(event){
   event.preventDefault();
   if(!accesoActual) return;
-  if(hojaBloqueada){
+  var modoEmergencia = !!edicionEmergenciaReporte;
+  if(hojaBloqueada && !modoEmergencia){
     setMessage('submit-message', 'Ya hay un reporte enviado y pendiente de revision. Espera aprobacion del encargado.', 'error');
     return;
   }
@@ -1396,14 +1495,14 @@ async function enviarControl(event){
   if(!validarInventarioDisponible()) return;
   var fechaReporte = document.getElementById('fecha').value;
   var pendienteLocal = leerPendienteLocal(accesoActual.nombre, fechaReporte);
-  if(pendienteLocal){
+  if(pendienteLocal && !modoEmergencia){
     setHojaBloqueada(true, pendienteLocal);
     setMessage('submit-message', 'Ya hay un reporte enviado y pendiente de revision. Espera aprobacion del encargado.', 'error');
     return;
   }
   try{
     var existente = await buscarReportePorFecha(accesoActual.nombre, fechaReporte);
-    if(existente){
+    if(existente && !modoEmergencia){
       setHojaBloqueada(true, existente);
       var esPendiente = existente.tipo === 'pendiente' || String(existente.estado || '').toLowerCase() === 'pendiente';
       setMessage('submit-message', esPendiente
@@ -1412,7 +1511,7 @@ async function enviarControl(event){
       return;
     }
   }catch(errorValidacion){
-    if(leerPendienteLocal(accesoActual.nombre, fechaReporte)){
+    if(leerPendienteLocal(accesoActual.nombre, fechaReporte) && !modoEmergencia){
       setHojaBloqueada(true, leerPendienteLocal(accesoActual.nombre, fechaReporte));
       setMessage('submit-message', 'Ya hay un reporte enviado y pendiente de revision. Espera aprobacion del encargado.', 'error');
       return;
@@ -1452,6 +1551,10 @@ async function enviarControl(event){
   };
 
   try{
+    if(modoEmergencia){
+      await borrarReporteRemotoPortal(edicionEmergenciaReporte);
+      limpiarPendienteLocal(accesoActual.nombre, fechaReporte);
+    }
     await supabaseInsert(row);
     guardarPendienteLocal(accesoActual.nombre, payload.fecha, {
       encargado: payload.encargado,
@@ -1465,6 +1568,7 @@ async function enviarControl(event){
     await cargarHistorialVentas(accesoActual.nombre);
     await refrescarHojaVendedor(true);
     setHojaBloqueada(true, leerPendienteLocal(accesoActual.nombre, payload.fecha) || { fecha: payload.fecha, estado:'pendiente', tipo:'pendiente' });
+    edicionEmergenciaReporte = null;
   }catch(error){
     setMessage('submit-message', 'No se pudo enviar: ' + error.message, 'error');
   }

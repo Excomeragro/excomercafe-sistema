@@ -1,0 +1,22 @@
+VIDEO: C?mo crear una venta en Agromercado
+
+1. Entr? al portal
+Abr? el enlace del agromercado en el navegador.
+
+2. Seleccion? el agromercado
+Busc? y eleg? el punto de venta correcto.
+
+3. Escrib? la clave
+Ingres? la clave asignada y presion? Entrar.
+
+4. Revis? los datos
+Confirm? fecha, encargado e inventario inicial.
+
+5. Registr? las ventas
+En la columna Venta escrib? las cantidades vendidas.
+
+6. Eleg? banco y observaciones
+Seleccion? banco, gastos si aplica y notas del d?a.
+
+7. Envi? para revisi?n
+Revis? los totales y toc? Enviar para revisi?n.
