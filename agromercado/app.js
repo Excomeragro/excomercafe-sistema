@@ -773,8 +773,7 @@ async function enviarReporteWhatsApp(){
   a.click();
   a.remove();
   setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
-  window.open('https://wa.me/50379285503', '_blank');
-  setMessage('submit-message', 'PDF descargado. WhatsApp se abrira para que adjuntes el archivo.', 'ok');
+  setMessage('submit-message', 'PDF descargado. Abre WhatsApp y adjunta el archivo al chat correcto.', 'ok');
 }
 
 function binarioDesdeDataUrl(dataUrl){
