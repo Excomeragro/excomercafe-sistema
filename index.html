@@ -8990,7 +8990,7 @@ window.importarInventarioExcel = function(){
     if(!file) return;
     
     var reader = new FileReader();
-    reader.onload = function(e){
+    reader.onload = async function(e){
       try{
         var data = new Uint8Array(e.target.result);
         var workbook = XLSX.read(data, {type: 'array'});
@@ -8999,6 +8999,156 @@ window.importarInventarioExcel = function(){
         
         if(jsonData.length < 2){
           showAlert('alert-inventario', 'El archivo no tiene datos válidos', 'err');
+          return;
+        }
+
+        function numeroImportado(valor){
+          var n = Number(valor || 0);
+          return isNaN(n) ? 0 : Math.round(n);
+        }
+
+        function fechaDesdeNombreArchivo(nombre){
+          var match = String(nombre || '').match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+          if(!match) return (typeof fechaHoy === 'function' ? fechaHoy() : fechaISOActualSistema());
+          var dia = String(match[1]).padStart(2, '0');
+          var mes = String(match[2]).padStart(2, '0');
+          var anio = String(match[3]);
+          if(anio.length === 2) anio = '20' + anio;
+          return anio + '-' + mes + '-' + dia;
+        }
+
+        function claveFechaSaldo(fecha){
+          return String(fecha || '').replace(/[^0-9]/g, '');
+        }
+
+        function esInventarioAgromercados(rows){
+          var texto = rows.slice(0, 5).map(function(row){ return (row || []).join(' '); }).join(' ').toUpperCase();
+          return texto.indexOf('AGROMERCADO') >= 0
+            && texto.indexOf('ARROZ') >= 0
+            && texto.indexOf('PRECOCIDO') >= 0
+            && texto.indexOf('FRIJOL') >= 0;
+        }
+
+        function distritoParaAgromercado(nombre){
+          var meta = '';
+          var target = normalizarNombre(nombre || '');
+          try {
+            if (target && typeof AGROMERCADOS_DATA !== 'undefined') {
+              Object.keys(AGROMERCADOS_DATA).some(function(distrito){
+                return (AGROMERCADOS_DATA[distrito] || []).some(function(item){
+                  var agro = item && (item.a || item.nombre || item.agromercado);
+                  if (normalizarNombre(agro || '') === target) {
+                    meta = distrito;
+                    return true;
+                  }
+                  return false;
+                });
+              });
+            }
+            if (!meta) {
+              (JSON.parse(localStorage.getItem('agromercados-data') || '[]') || []).some(function(item){
+                var agro = item && (item.agromercado || item.nombre || item.a);
+                if (normalizarNombre(agro || '') === target) {
+                  meta = item.distrito || item.departamento || '';
+                  return true;
+                }
+                return false;
+              });
+            }
+          } catch(error) {}
+          return meta;
+        }
+
+        if(esInventarioAgromercados(jsonData)){
+          var fechaSaldo = fechaDesdeNombreArchivo(file.name);
+          var fechaKey = claveFechaSaldo(fechaSaldo);
+          var importadosAgro = [];
+
+          for(var filaAgro = 3; filaAgro < jsonData.length; filaAgro++){
+            var rowAgro = jsonData[filaAgro] || [];
+            var agromercado = String(rowAgro[0] || '').trim().replace(/\s+/g, ' ');
+            var totalFilaSinNombre = numeroImportado(rowAgro[1]) + numeroImportado(rowAgro[2]) + numeroImportado(rowAgro[3]) + numeroImportado(rowAgro[4]) + numeroImportado(rowAgro[16]) + numeroImportado(rowAgro[17]);
+            if(!agromercado){
+              if(totalFilaSinNombre > 0) continue;
+              continue;
+            }
+            if(normalizarNombre(agromercado) === 'total' || normalizarNombre(agromercado) === 'totales') continue;
+
+            var arrozAgro = numeroImportado(rowAgro[1]);
+            var precocidoAgro = numeroImportado(rowAgro[2]);
+            var frijol1Agro = numeroImportado(rowAgro[3]);
+            var frijol4Agro = numeroImportado(rowAgro[4]);
+            var aceiteAgro = numeroImportado(rowAgro[16]);
+            var harinaAgro = numeroImportado(rowAgro[17]);
+            var totalAgro = arrozAgro + precocidoAgro + frijol1Agro + frijol4Agro + aceiteAgro + harinaAgro;
+            if(totalAgro === 0) continue;
+
+            importadosAgro.push({
+              id: 'saldo-inicial-agromercados-' + fechaKey + '-' + String(importadosAgro.length + 1).padStart(3, '0'),
+              local_id: 'saldo-inicial-agromercados-' + fechaKey + '-' + String(importadosAgro.length + 1).padStart(3, '0'),
+              fecha: fechaSaldo,
+              hora: '',
+              ubicacion: 'agromercados',
+              destino: agromercado,
+              lugar: agromercado,
+              lugarEspecifico: agromercado,
+              agromercado: agromercado,
+              distrito: distritoParaAgromercado(agromercado),
+              tipo: 'saldo-inicial',
+              referencia: 'Saldo inicial agromercados ' + fechaSaldo,
+              arroz: arrozAgro,
+              precocido: precocidoAgro,
+              frijol1: frijol1Agro,
+              frijol4: frijol4Agro,
+              aceite: aceiteAgro,
+              harina: harinaAgro,
+              total: totalAgro,
+              observaciones: 'Importado desde ' + file.name,
+              origen: file.name,
+              excelRow: filaAgro + 1,
+              timestamp: new Date().toISOString(),
+              supabase_synced: false
+            });
+          }
+
+          if(!importadosAgro.length){
+            showAlert('alert-inventario', 'No se encontraron agromercados con saldo en el archivo', 'err');
+            return;
+          }
+
+          if(!confirm('Este Excel parece ser inventario por agromercado. Para evitar duplicados, se borrará el inventario actual y se cargará este archivo. ¿Continuar?')) return;
+          var fraseImportar = prompt('Para confirmar escribe IMPORTAR');
+          if(String(fraseImportar || '').trim().toUpperCase() !== 'IMPORTAR'){
+            showAlert('alert-inventario', 'Importación cancelada.', 'err');
+            return;
+          }
+
+          if(typeof limpiarHistorialInventario === 'function'){
+            await limpiarHistorialInventario({
+              sinConfirmacion:true,
+              silencioso:true,
+              bloquearSaldoInicial:false
+            });
+          }
+
+          localStorage.removeItem('inventario-saldo-inicial-agromercados-20260629-bloqueado');
+          inventarioData = importadosAgro;
+          localStorage.setItem('inventario-data', JSON.stringify(inventarioData));
+          localStorage.setItem('inventario-saldo-inicial-agromercados-' + fechaKey, JSON.stringify({
+            version: fechaKey + '-excel',
+            fecha: fechaSaldo,
+            registros: importadosAgro.length,
+            fuente: file.name,
+            aplicado_en: new Date().toISOString()
+          }));
+          renderInventarioTable();
+          refrescarInventarioEnTiempoReal();
+          if (typeof window.sincronizarPendientesSupabase === 'function') {
+            window.sincronizarPendientesSupabase({ noInterrupt:true, silent:true }).catch(function(error){
+              console.warn('No se pudo sincronizar inventario importado:', error);
+            });
+          }
+          showAlert('alert-inventario', 'Inventario reemplazado con ' + importadosAgro.length + ' agromercado(s) desde Excel. Sincronizando...', 'ok');
           return;
         }
         
