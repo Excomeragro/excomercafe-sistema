@@ -5561,6 +5561,16 @@ var fechaISOActualSistema = window.fechaISOActualSistema;
 var horaVistaSistema = window.horaVistaSistema;
 var fechaHoraActualVistaSistema = window.fechaHoraActualVistaSistema;
 
+window.normText = window.normText || function(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+};
+var normText = window.normText;
+
 function renderHistorial(){
   var hist = JSON.parse(localStorage.getItem('exc_agro_hist')||'[]').map(function(row, index){
     return Object.assign({ __histIndex: index }, row || {});
@@ -9021,6 +9031,125 @@ window.importarInventarioExcel = function(){
           return String(fecha || '').replace(/[^0-9]/g, '');
         }
 
+        function textoImportado(valor){
+          return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^A-Z0-9]+/gi, '')
+            .toUpperCase();
+        }
+
+        function detectarColumnasProductos(rows){
+          for(var ri = 0; ri < Math.min(rows.length, 20); ri++){
+            var cols = {};
+            (rows[ri] || []).forEach(function(cell, ci){
+              var h = textoImportado(cell);
+              if(!h) return;
+              if(h.indexOf('ARROZ') >= 0 && h.indexOf('PRECO') < 0) cols.arroz = ci;
+              else if(h.indexOf('PRECO') >= 0) cols.precocido = ci;
+              else if(h.indexOf('FRIJOL1') >= 0 || h.indexOf('FRIJOL1LB') >= 0) cols.frijol1 = ci;
+              else if(h.indexOf('FRIJOL4') >= 0 || h.indexOf('FRIJOL4LB') >= 0) cols.frijol4 = ci;
+              else if(h.indexOf('ACEITE') >= 0) cols.aceite = ci;
+              else if(h.indexOf('HARINA') >= 0) cols.harina = ci;
+            });
+            if(cols.arroz != null && cols.precocido != null && cols.frijol1 != null && cols.frijol4 != null && cols.aceite != null && cols.harina != null){
+              return cols;
+            }
+          }
+          return null;
+        }
+
+        function detectarFilaPorEtiqueta(rows, patrones){
+          for(var ri = 0; ri < rows.length; ri++){
+            var row = rows[ri] || [];
+            for(var ci = 0; ci < Math.min(row.length, 4); ci++){
+              var label = textoImportado(row[ci]);
+              if(!label) continue;
+              for(var pi = 0; pi < patrones.length; pi++){
+                if(label.indexOf(patrones[pi]) >= 0) return row;
+              }
+            }
+          }
+          return null;
+        }
+
+        async function importarResumenProductos(rows){
+          var cols = detectarColumnasProductos(rows);
+          if(!cols) return false;
+          var saldoRow = detectarFilaPorEtiqueta(rows, ['NUEVOSALDO']) || detectarFilaPorEtiqueta(rows, ['INVENTARIOANTERIOR']);
+          if(!saldoRow) return false;
+
+          var ubicacionSelect = document.getElementById('inventario-ubicacion');
+          var ubicacion = ubicacionSelect ? String(ubicacionSelect.value || '').trim() : '';
+          if(!ubicacion){
+            showAlert('alert-inventario', 'Este Excel es un resumen por productos. Selecciona primero una Ubicación / Grupo en Inventario y vuelve a importar.', 'err');
+            return true;
+          }
+
+          var otros = document.getElementById('inventario-otros')?.value || '';
+          var lugarEspecifico = ubicacion === 'otros'
+            ? otros
+            : (ubicacionSelect && ubicacionSelect.selectedOptions[0] ? ubicacionSelect.selectedOptions[0].textContent : ubicacion);
+
+          if(ubicacion === 'otros' && !otros){
+            showAlert('alert-inventario', 'Especifica el lugar antes de importar este resumen.', 'err');
+            return true;
+          }
+
+          var fecha = document.getElementById('inventario-fecha')?.value || fechaDesdeNombreArchivo(file.name);
+          var arroz = numeroImportado(saldoRow[cols.arroz]);
+          var precocido = numeroImportado(saldoRow[cols.precocido]);
+          var frijol1 = numeroImportado(saldoRow[cols.frijol1]);
+          var frijol4 = numeroImportado(saldoRow[cols.frijol4]);
+          var aceite = numeroImportado(saldoRow[cols.aceite]);
+          var harina = numeroImportado(saldoRow[cols.harina]);
+          var total = arroz + precocido + frijol1 + frijol4 + aceite + harina;
+
+          if(total === 0){
+            showAlert('alert-inventario', 'El resumen no trae cantidades para cargar.', 'err');
+            return true;
+          }
+
+          if(!confirm('Se cargara la fila NUEVO SALDO del Excel en "' + lugarEspecifico + '". ¿Continuar?')) return true;
+
+          var registroId = 'inv-excel-resumen-' + Date.now();
+          var registro = {
+            id: registroId,
+            local_id: registroId,
+            fecha: fecha,
+            hora: typeof window.obtenerHoraActual === 'function' ? window.obtenerHoraActual() : horaVistaSistema({timestamp: new Date().toISOString()}),
+            ubicacion: ubicacion,
+            lugarEspecifico: lugarEspecifico,
+            destino: lugarEspecifico,
+            lugar: lugarEspecifico,
+            tipo: 'registro-inventario',
+            referencia: 'Resumen inventario importado',
+            arroz: arroz,
+            precocido: precocido,
+            frijol1: frijol1,
+            frijol4: frijol4,
+            aceite: aceite,
+            harina: harina,
+            total: total,
+            observaciones: 'Importado desde ' + file.name + ' - fila NUEVO SALDO',
+            origen: file.name,
+            timestamp: new Date().toISOString(),
+            supabase_synced: false
+          };
+
+          inventarioData = [registro].concat(Array.isArray(inventarioData) ? inventarioData : []);
+          localStorage.setItem('inventario-data', JSON.stringify(inventarioData));
+          renderInventarioTable();
+          refrescarInventarioEnTiempoReal();
+          if (typeof window.sincronizarPendientesSupabase === 'function') {
+            window.sincronizarPendientesSupabase({ noInterrupt:true, silent:true }).catch(function(error){
+              console.warn('No se pudo sincronizar inventario importado:', error);
+            });
+          }
+          showAlert('alert-inventario', 'Resumen importado correctamente en ' + lugarEspecifico + '.', 'ok');
+          return true;
+        }
+
         function esInventarioAgromercados(rows){
           var texto = rows.slice(0, 5).map(function(row){ return (row || []).join(' '); }).join(' ').toUpperCase();
           return texto.indexOf('AGROMERCADO') >= 0
@@ -9058,6 +9187,8 @@ window.importarInventarioExcel = function(){
           } catch(error) {}
           return meta;
         }
+
+        if(await importarResumenProductos(jsonData)) return;
 
         if(esInventarioAgromercados(jsonData)){
           var fechaSaldo = fechaDesdeNombreArchivo(file.name);
@@ -20097,9 +20228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     { table: 'inventario_movimientos', storageKey: 'inventario-data', toSupabase: inventarioToSupabase, pruneMissing: true },
     { table: 'distribucion_tiendona', storageKey: 'descargas-data', toSupabase: distribucionTiendonaToSupabase, pruneMissing: true },
     { table: 'distribucion_cda', storageKey: 'distribucion-cda-data', toSupabase: distribucionCdaToSupabase, pruneMissing: true },
-    { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase },
-    { table: 'productos_sistema', storageKey: 'productos_sistema', toSupabase: productoToSupabase },
-    { table: 'agromercados_sistema', storageKey: 'agromercados-data', toSupabase: agromercadoToSupabase }
+    { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase }
   ];
 
   function reloadLocalCaches(){
