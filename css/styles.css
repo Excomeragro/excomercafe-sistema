@@ -1397,6 +1397,39 @@ datalist {
   font-weight: 800;
 }
 
+.inventory-advanced-panel {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 16px 14px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fff7f7;
+}
+
+.inventory-advanced-copy {
+  display: grid;
+  gap: 3px;
+  color: #7f1d1d;
+}
+
+.inventory-advanced-copy strong {
+  font-weight: 900;
+}
+
+.inventory-advanced-copy span {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.inventory-advanced-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .resumen-stock-live small {
   display: block;
   margin-top: 3px;

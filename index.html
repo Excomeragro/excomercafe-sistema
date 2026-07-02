@@ -2130,8 +2130,8 @@
         <div class="flex gap-8 items-center flex-wrap">
           <input type="date" id="cuadre-bodega-fecha" onchange="renderCuadreBodegas()" style="max-width:160px;">
           <button type="button" class="btn btn-sm btn-primary" onclick="imprimirTablasPorTitulo('Cuadre de Bodegas', ['#cuadre-bodegas-card'])">Imprimir</button>
-          <button class="btn btn-sm btn-success" onclick="guardarCuadreBodegas()">Guardar Cuadre</button>
-          <button class="btn btn-sm btn-secondary" onclick="toggleInventarioManual()">Ir al Registro</button>
+          <button class="btn btn-sm btn-success" onclick="guardarCuadreBodegas()">Guardar cuadre del dia</button>
+          <button class="btn btn-sm btn-secondary" onclick="toggleInventarioManual()">Registrar inventario</button>
         </div>
       </div>
       <div id="alert-cuadre-bodegas" class="alert alert-ok"></div>
@@ -2174,10 +2174,19 @@
           "
         >
         <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); imprimirTablaPorTitulo('Historial de Inventario', '#tbl-inventario')">Imprimir</button>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); cargarVentasDesdeSupabase()">🔄 Actualizar</button>
-        <button class="btn btn-sm btn-secondary" onclick="importarInventarioExcel()">📂 Importar Excel</button>
-        <button type="button" class="btn btn-sm btn-danger" onclick="event.stopPropagation(); limpiarHistorialInventario()">🗑️ Borrar todo</button>
-        <button type="button" class="btn btn-sm btn-success" onclick="event.stopPropagation(); borrarInventarioYCargarSaldo20260629()">Cargar 29/06</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); actualizarInventarioSeguro()">Sincronizar</button>
+        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); importarInventarioExcel()">Importar Excel</button>
+        <button type="button" class="btn btn-sm btn-warning" onclick="toggleInventarioAvanzado(this, event)">Opciones avanzadas</button>
+      </div>
+    </div>
+    <div id="inventario-opciones-avanzadas" class="inventory-advanced-panel" style="display:none;" onclick="event.stopPropagation();">
+      <div class="inventory-advanced-copy">
+        <strong>Zona de cuidado</strong>
+        <span>Usa estas acciones solo para corregir o reiniciar inventario. Siempre piden confirmacion antes de ejecutar.</span>
+      </div>
+      <div class="inventory-advanced-actions">
+        <button type="button" class="btn btn-sm btn-danger" onclick="limpiarHistorialInventario()">Borrar inventario completo</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="borrarInventarioYCargarSaldo20260629()">Reiniciar con saldo 29/06</button>
       </div>
     </div>
     <div id="historial-inventario-content" style="display:none;">
@@ -8519,6 +8528,30 @@ window.borrarInventarioYCargarSaldo20260629 = async function(){
 
   var registros = resultadoCarga && resultadoCarga.registros ? resultadoCarga.registros : 0;
   showAlert('alert-inventario', 'Inventario limpio y cargado con ' + registros + ' agromercado(s) del 29/06/2026.', 'ok');
+};
+
+window.toggleInventarioAvanzado = function(btn, event){
+  if(event && event.stopPropagation) event.stopPropagation();
+  var panel = document.getElementById('inventario-opciones-avanzadas');
+  if(!panel) return;
+  var abrir = panel.style.display === 'none' || !panel.style.display;
+  panel.style.display = abrir ? 'flex' : 'none';
+  if(btn) btn.textContent = abrir ? 'Ocultar opciones' : 'Opciones avanzadas';
+};
+
+window.actualizarInventarioSeguro = async function(){
+  try {
+    showAlert('alert-inventario', 'Sincronizando inventario...', 'ok');
+    if(typeof window.sincronizarPendientesSupabase === 'function'
+        && window.haySesionSupabase && window.haySesionSupabase()) {
+      await window.sincronizarPendientesSupabase({ noInterrupt:true, silent:true });
+    }
+    if(typeof refrescarInventarioEnTiempoReal === 'function') refrescarInventarioEnTiempoReal();
+    if(typeof renderCuadreBodegas === 'function') renderCuadreBodegas();
+    showAlert('alert-inventario', 'Inventario actualizado.', 'ok');
+  } catch(error) {
+    showAlert('alert-inventario', 'No se pudo sincronizar inventario: ' + (error.message || error), 'err');
+  }
 };
 
 window.toggleResumenInventario = function(){
