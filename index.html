@@ -20330,9 +20330,7 @@ document.addEventListener('DOMContentLoaded', function() {
     { table: 'inventario_movimientos', storageKey: 'inventario-data', toSupabase: inventarioToSupabase, pruneMissing: true },
     { table: 'distribucion_tiendona', storageKey: 'descargas-data', toSupabase: distribucionTiendonaToSupabase, pruneMissing: true },
     { table: 'distribucion_cda', storageKey: 'distribucion-cda-data', toSupabase: distribucionCdaToSupabase, pruneMissing: true },
-    { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase },
-    { table: 'productos_sistema', storageKey: 'productos_sistema', toSupabase: productoToSupabase },
-    { table: 'agromercados_sistema', storageKey: 'agromercados-data', toSupabase: agromercadoToSupabase }
+    { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase }
   ];
 
   function reloadLocalCaches(){
