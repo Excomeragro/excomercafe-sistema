@@ -18843,7 +18843,14 @@ document.addEventListener('DOMContentLoaded', function() {
       key: 'tiendona',
       title: 'Bodega Tiendona',
       locations: ['descargas-tiendona','descargas-tiendona-abajo','descargas-tiendona-arriba'],
-      distributionKey: 'descargas-data'
+      distributionKey: 'descargas-data',
+      salesFilter: function(row){
+        var payload = ventaPayload(row);
+        var agro = ventaAgromercado(row, payload);
+        if (typeof obtenerGrupoCDAParaDestino === 'function' && obtenerGrupoCDAParaDestino(agro, row || payload)) return false;
+        var tipo = String((row && row.tipo) || payload.tipo || '').toUpperCase();
+        return tipo !== 'CDA';
+      }
     },
     {
       key: 'cda-soyapango',
@@ -18854,6 +18861,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return typeof obtenerGrupoCDAParaDestino === 'function'
           ? obtenerGrupoCDAParaDestino(row && (row.cda || row.agromercado || row.destino || ''), row) === 'soyapango'
           : true;
+      },
+      salesFilter: function(row){
+        var payload = ventaPayload(row);
+        return typeof obtenerGrupoCDAParaDestino === 'function'
+          ? obtenerGrupoCDAParaDestino(ventaAgromercado(row, payload), row || payload) === 'soyapango'
+          : false;
       }
     },
     {
@@ -18864,6 +18877,12 @@ document.addEventListener('DOMContentLoaded', function() {
       distributionFilter: function(row){
         return typeof obtenerGrupoCDAParaDestino === 'function'
           ? obtenerGrupoCDAParaDestino(row && (row.cda || row.agromercado || row.destino || ''), row) === 'usulutan'
+          : false;
+      },
+      salesFilter: function(row){
+        var payload = ventaPayload(row);
+        return typeof obtenerGrupoCDAParaDestino === 'function'
+          ? obtenerGrupoCDAParaDestino(ventaAgromercado(row, payload), row || payload) === 'usulutan'
           : false;
       }
     }
@@ -18989,11 +19008,92 @@ document.addEventListener('DOMContentLoaded', function() {
     return totals;
   }
 
+  function ventaPayload(row){
+    if(!row) return {};
+    if(row.payload && typeof row.payload === 'object') return row.payload;
+    if(row.payload && typeof row.payload === 'string') {
+      try { return JSON.parse(row.payload); } catch(e) { return {}; }
+    }
+    return row || {};
+  }
+
+  function ventaFecha(row, payload){
+    payload = payload || ventaPayload(row);
+    return String((row && row.fecha) || payload.fecha || '').slice(0, 10);
+  }
+
+  function ventaAgromercado(row, payload){
+    payload = payload || ventaPayload(row);
+    return String((row && (row.agromercado || row.nombre)) || payload.agromercado || payload.nombre || '').trim();
+  }
+
+  function ventaKey(row){
+    var payload = ventaPayload(row);
+    var normalizer = typeof normText === 'function'
+      ? normText
+      : function(value){ return String(value || '').toUpperCase().trim().replace(/\s+/g, ' '); };
+    return ventaFecha(row, payload) + '|' + normalizer(ventaAgromercado(row, payload));
+  }
+
+  function ventaStamp(row){
+    var payload = ventaPayload(row);
+    return String((row && (row.actualizado_en || row.creado_en || row.timestamp || row.id || row.local_id))
+      || payload.supabase_synced_at || payload.timestamp || payload.id || payload.local_id || '');
+  }
+
+  function ventasUnicasPorAgroFecha(fecha){
+    var hist = [];
+    var byKey = {};
+    try { hist = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); } catch(e) {}
+    (hist || []).forEach(function(row){
+      if(!row || ventaFecha(row) !== fecha) return;
+      var key = ventaKey(row);
+      if(!key || key === fecha + '|') return;
+      if(!byKey[key] || ventaStamp(row) >= ventaStamp(byKey[key])) byKey[key] = row;
+    });
+    return Object.keys(byKey).map(function(key){ return byKey[key]; });
+  }
+
+  function ventaMapValue(map, productKey){
+    map = map || {};
+    var aliases = {
+      arroz: ['arroz', 'ab1'],
+      precocido: ['precocido', 'ap1', 'arroz_precocido', 'arrozPrecocido'],
+      frijol1: ['frijol1', 'fr1', 'frijol_1lb', 'frijol_1_lb'],
+      frijol4: ['frijol4', 'fr4', 'frijol_4lb', 'frijol_4_lb'],
+      aceite: ['aceite', 'ac', 'aceite_750ml', 'aceite_750_ml'],
+      harina: ['harina', 'ha', 'harina_820grs', 'harina_820_grs']
+    };
+    var keys = aliases[productKey] || [productKey];
+    for(var i = 0; i < keys.length; i++){
+      if(map[keys[i]] !== undefined && map[keys[i]] !== null && map[keys[i]] !== '') return num(map[keys[i]]);
+    }
+    return 0;
+  }
+
+  function sumSuggestedShipment(config, fecha){
+    var totals = emptyProducts();
+    ventasUnicasPorAgroFecha(fecha).forEach(function(row){
+      if(typeof config.salesFilter === 'function' && !config.salesFilter(row)) return;
+      var payload = ventaPayload(row);
+      var ventas = payload.ventas_unidades || payload.ventas || row.ventas_unidades || {};
+      var final = payload.inventario_final || payload.inventario || row.inventario_final || {};
+      BODEGA_PRODUCTS.forEach(function(p){
+        var venta = ventaMapValue(ventas, p.key);
+        var saldo = ventaMapValue(final, p.key);
+        totals[p.key] += Math.max(0, (venta * 2) - saldo);
+      });
+    });
+    BODEGA_PRODUCTS.forEach(function(p){ totals[p.key] = round2(totals[p.key]); });
+    return totals;
+  }
+
   function calculateWarehouseBalance(config, fecha){
     var anterior = sumManualInventoryByLocation(config.locations, fecha, 'before');
     var enviadoAnterior = sumWarehouseDistributions(config, fecha, 'before');
     var nuevo = sumManualInventoryByLocation(config.locations, fecha, 'same');
     var enviado = sumWarehouseDistributions(config, fecha, 'same');
+    var sugerido = sumSuggestedShipment(config, fecha);
     var suma = emptyProducts();
     var final = emptyProducts();
     var diferencia = emptyProducts();
@@ -19008,6 +19108,7 @@ document.addEventListener('DOMContentLoaded', function() {
       nuevo: nuevo,
       suma: suma,
       enviado: enviado,
+      sugerido: sugerido,
       final: final,
       diferencia: diferencia
     };
@@ -19120,6 +19221,7 @@ document.addEventListener('DOMContentLoaded', function() {
       { key:'suma', label:'SUMA INVENTARIO', className:'warehouse-sum-row' },
       { key:'enviado', label:'Envio Agromercado' },
       { key:'final', label:'Inventario Final' },
+      { key:'sugerido', label:'Sugerido manana', className:'warehouse-suggest-row' },
       { key:'diferencia', label:'DIFERENCIA', className:'warehouse-diff-row', diff:true }
     ];
     return '<div class="warehouse-bodega-card">'

@@ -550,6 +550,16 @@
   font-weight: 900;
 }
 
+.warehouse-suggest-row td {
+  background: #eef6ff;
+  color: #0f3f66;
+  font-weight: 900;
+}
+
+.warehouse-suggest-row td:first-child {
+  background: #dcecff;
+}
+
 .warehouse-diff-row td:first-child,
 .warehouse-total-row td:first-child {
   font-size: 1rem;
