@@ -148,41 +148,38 @@ function createMainWindow() {
 
   const template = [
     {
-      label: 'Help',
+      label: 'Ayuda',
       submenu: [
-
         {
-          label: '📘 Manual rápido',
+          label: 'Manual rapido',
           click: () => {
             dialog.showMessageBox({
               type: 'info',
-              title: 'Manual rápido',
+              title: 'Manual rapido',
               message: 'EXCOMERCAFE',
               detail:
-                '• Guardar registros\n' +
-                '• Sincronizar datos\n' +
-                '• Exportar Excel/PDF\n' +
-                '• Imprimir comprobantes\n' +
-                '• Crear respaldos'
+                '- Guardar registros\n' +
+                '- Sincronizar datos\n' +
+                '- Exportar Excel/PDF\n' +
+                '- Imprimir comprobantes\n' +
+                '- Crear respaldos'
             });
           }
         },
-
         {
-          label: '🌐 Página web',
+          label: 'Pagina web',
           click: () => {
             shell.openExternal(
               'https://excomeragro.github.io/excomercafe-sistema/'
             );
           }
         },
-
         {
-          label: '☎️ Soporte técnico',
+          label: 'Soporte tecnico',
           click: () => {
             dialog.showMessageBox({
               type: 'info',
-              title: 'Soporte técnico',
+              title: 'Soporte tecnico',
               message: 'EXCOMERCAFE',
               detail:
                 'Sistema Administrativo\n\n' +
@@ -190,35 +187,31 @@ function createMainWindow() {
             });
           }
         },
-
         {
-          label: '🔄 Buscar actualizaciones',
+          label: 'Buscar actualizaciones',
           click: () => {
             dialog.showMessageBox({
               type: 'info',
               title: 'Actualizaciones',
-              message: 'El sistema está actualizado.'
+              message: 'El sistema esta actualizado.'
             });
           }
         },
-
         { type: 'separator' },
-
         {
-          label: 'ℹ️ Acerca de EXCOMERCAFE',
+          label: 'Acerca de EXCOMERCAFE',
           click: () => {
             dialog.showMessageBox({
               type: 'info',
               title: 'Acerca de',
               message: 'EXCOMERCAFE',
               detail:
-                'Versión 1.0.1\n' +
+                'Version 1.0.1\n' +
                 'Sistema Administrativo\n\n' +
                 'Desarrollado con Electron'
             });
           }
         }
-
       ]
     }
   ];
