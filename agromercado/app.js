@@ -489,6 +489,7 @@ function renderProductos(){
   body.innerHTML = PRODUCTOS.map(function(p){
     return '<tr data-prod="' + p.key + '">'
       + '<td data-label="Producto">' + p.nombre + '</td>'
+      + '<td data-label="Saldo anterior"><input class="readonly-field" type="number" value="0" data-field="saldo_anterior" readonly></td>'
       + '<td data-label="Inv. disponible"><input class="readonly-field" type="number" value="0" data-field="anterior" readonly></td>'
       + '<td data-label="Venta"><input type="number" min="0" value="0" data-field="venta" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
       + '<td data-label="Faltante"><input type="number" min="0" value="0" data-field="faltante" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
@@ -692,8 +693,8 @@ function reporteCanvas(){
   box('BANCO', banco || 'Pendiente', x + 696, y, 220, 60);
 
   y += 82;
-  var cols = [260, 120, 95, 100, 95, 120, 126];
-  var headers = ['Producto','Disponible','Venta','Faltante','Danado','Inv. final','Total'];
+  var cols = [250, 95, 105, 80, 90, 80, 100, 118];
+  var headers = ['Producto','Saldo ant.','Disponible','Venta','Faltante','Danado','Inv. final','Total'];
   var rowH = 42;
   var cx = x;
   ctx.fillStyle = '#e8eef5';
@@ -711,7 +712,7 @@ function reporteCanvas(){
   y += rowH;
   PRODUCTOS.forEach(function(prod){
     var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
-    var values = [prod.nombre, rowValue(row, 'anterior'), rowValue(row, 'venta'), rowValue(row, 'faltante'), rowValue(row, 'danado'), rowValue(row, 'final'), row ? row.querySelector('.dinero').textContent : '$0.00'];
+    var values = [prod.nombre, rowValue(row, 'saldo_anterior'), rowValue(row, 'anterior'), rowValue(row, 'venta'), rowValue(row, 'faltante'), rowValue(row, 'danado'), rowValue(row, 'final'), row ? row.querySelector('.dinero').textContent : '$0.00'];
     cx = x;
     ctx.font = '13px Arial';
     values.forEach(function(v, i){
@@ -1021,6 +1022,7 @@ function aplicarValoresProducto(key, anterior, nuevo){
   if(!row) return;
   row.dataset.inventarioAnterior = String(n(anterior));
   row.dataset.mercaderiaNueva = String(n(nuevo));
+  setRowValue(row, 'saldo_anterior', anterior);
   setRowValue(row, 'anterior', n(anterior) + n(nuevo));
   calcularProducto(row, PRODUCTOS.find(function(p){ return p.key === key; }) || { precio:0 });
 }
@@ -1030,7 +1032,12 @@ function aplicarReporteAprobadoEnFormulario(report){
   PRODUCTOS.forEach(function(prod){
     var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
     if(!row) return;
-    setRowValue(row, 'anterior', productoValueFromPayload(payload.inventario_inicio, prod.key));
+    var anterior = productoValueFromPayload(payload.inventario_inicio, prod.key);
+    var nuevo = productoValueFromPayload(payload.mercaderia_nueva || payload.nuevo, prod.key);
+    row.dataset.inventarioAnterior = String(n(anterior));
+    row.dataset.mercaderiaNueva = String(n(nuevo));
+    setRowValue(row, 'saldo_anterior', anterior);
+    setRowValue(row, 'anterior', n(anterior) + n(nuevo));
     setRowValue(row, 'venta', productoValueFromPayload(payload.ventas_unidades, prod.key));
     setRowValue(row, 'faltante', productoValueFromPayload(payload.faltante || payload.apartado || payload.faltantes_unidades, prod.key));
     setRowValue(row, 'danado', productoValueFromPayload(payload.danado || payload.danadas_unidades, prod.key));
@@ -1146,13 +1153,14 @@ function historialProductosHtml(payload, row){
   var danado = payload.danado || {};
   var dinero = payload.dinero_productos || {};
   return '<div class="history-table-wrap"><table class="history-table"><thead><tr>'
-    + '<th>Producto</th><th>Disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
+    + '<th>Producto</th><th>Saldo anterior</th><th>Disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
     + '</tr></thead><tbody>'
     + PRODUCTOS_TODOS.map(function(prod){
       var vendido = historialMapValue(unidades, prod.key);
       var dineroProducto = dinero && dinero[prod.key] != null ? n(dinero[prod.key]) : vendido * prod.precio;
       return '<tr>'
         + '<td>' + htmlEscape(prod.nombre) + '</td>'
+        + '<td>' + historialMapValue(inicio, prod.key) + '</td>'
         + '<td>' + (historialMapValue(inicio, prod.key) + historialMapValue(nuevo, prod.key)) + '</td>'
         + '<td>' + vendido + '</td>'
         + '<td>' + historialMapValue(faltante, prod.key) + '</td>'
