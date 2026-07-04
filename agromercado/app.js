@@ -489,7 +489,7 @@ function renderProductos(){
   body.innerHTML = PRODUCTOS.map(function(p){
     return '<tr data-prod="' + p.key + '">'
       + '<td data-label="Producto">' + p.nombre + '</td>'
-      + '<td data-label="Inv. anterior"><input class="readonly-field" type="number" value="0" data-field="anterior" readonly></td>'
+      + '<td data-label="Inv. disponible"><input class="readonly-field" type="number" value="0" data-field="anterior" readonly></td>'
       + '<td data-label="Venta"><input type="number" min="0" value="0" data-field="venta" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
       + '<td data-label="Faltante"><input type="number" min="0" value="0" data-field="faltante" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
       + '<td data-label="Danado"><input type="number" min="0" value="0" data-field="danado" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
@@ -693,7 +693,7 @@ function reporteCanvas(){
 
   y += 82;
   var cols = [260, 120, 95, 100, 95, 120, 126];
-  var headers = ['Producto','Inv. ant.','Venta','Faltante','Danado','Inv. final','Total'];
+  var headers = ['Producto','Disponible','Venta','Faltante','Danado','Inv. final','Total'];
   var rowH = 42;
   var cx = x;
   ctx.fillStyle = '#e8eef5';
@@ -1019,7 +1019,9 @@ async function cargarSaldosInicialesInventario(agromercado, fecha){
 function aplicarValoresProducto(key, anterior, nuevo){
   var row = document.querySelector('tr[data-prod="' + key + '"]');
   if(!row) return;
-  setRowValue(row, 'anterior', anterior);
+  row.dataset.inventarioAnterior = String(n(anterior));
+  row.dataset.mercaderiaNueva = String(n(nuevo));
+  setRowValue(row, 'anterior', n(anterior) + n(nuevo));
   calcularProducto(row, PRODUCTOS.find(function(p){ return p.key === key; }) || { precio:0 });
 }
 
@@ -1138,19 +1140,20 @@ function historialMapValue(map, key){
 function historialProductosHtml(payload, row){
   var unidades = payload.ventas_unidades || {};
   var inicio = payload.inventario_inicio || {};
+  var nuevo = payload.mercaderia_nueva || {};
   var final = payload.inventario_final || {};
   var faltante = payload.faltante || payload.apartado || {};
   var danado = payload.danado || {};
   var dinero = payload.dinero_productos || {};
   return '<div class="history-table-wrap"><table class="history-table"><thead><tr>'
-    + '<th>Producto</th><th>Anterior</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
+    + '<th>Producto</th><th>Disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
     + '</tr></thead><tbody>'
     + PRODUCTOS_TODOS.map(function(prod){
       var vendido = historialMapValue(unidades, prod.key);
       var dineroProducto = dinero && dinero[prod.key] != null ? n(dinero[prod.key]) : vendido * prod.precio;
       return '<tr>'
         + '<td>' + htmlEscape(prod.nombre) + '</td>'
-        + '<td>' + historialMapValue(inicio, prod.key) + '</td>'
+        + '<td>' + (historialMapValue(inicio, prod.key) + historialMapValue(nuevo, prod.key)) + '</td>'
         + '<td>' + vendido + '</td>'
         + '<td>' + historialMapValue(faltante, prod.key) + '</td>'
         + '<td>' + historialMapValue(danado, prod.key) + '</td>'
@@ -1514,8 +1517,8 @@ function leerProductos(){
     var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
     var calc = row ? calcularProducto(row, prod) : { vendido:0, dinero:0 };
     ventasUnidades[prod.key] = calc.vendido;
-    inventarioInicio[prod.key] = rowValue(row, 'anterior');
-    inventarioNuevo[prod.key] = 0;
+    inventarioInicio[prod.key] = n(row && row.dataset ? row.dataset.inventarioAnterior : rowValue(row, 'anterior'));
+    inventarioNuevo[prod.key] = n(row && row.dataset ? row.dataset.mercaderiaNueva : 0);
     inventarioFinal[prod.key] = rowValue(row, 'final');
     faltante[prod.key] = rowValue(row, 'faltante');
     danado[prod.key] = rowValue(row, 'danado');

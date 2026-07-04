@@ -3353,3 +3353,20 @@ body.theme-oscuro .settings-panel select option{
   }
 }
 
+body.role-bodega .tab-btn,
+body.role-bodega #tab-inicio .home-card{
+  display:none !important;
+}
+
+body.role-bodega .tab-btn[href="distribucion-tiendona.html"],
+body.role-bodega .tab-btn[href="distribucion-cda.html"],
+body.role-bodega #tab-inicio .home-card[onclick*="tab-descargas"],
+body.role-bodega #tab-inicio .home-card[onclick*="tab-distribucion"]{
+  display:flex !important;
+}
+
+body.role-bodega .tab-btn[href="distribucion-tiendona.html"],
+body.role-bodega .tab-btn[href="distribucion-cda.html"]{
+  align-items:center !important;
+}
+

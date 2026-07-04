@@ -2878,6 +2878,31 @@ function normalizarUsuarioRol(value){
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
 }
 
+function authRolSistema(session){
+  if(!session) return 'usuario';
+  if(window.esDuenoSistema(session)) return 'dueno';
+  var user = session && session.user ? session.user : {};
+  var meta = user.user_metadata || {};
+  var textoRol = [
+    authUserNameFromSession(session),
+    user.email,
+    meta.rol,
+    meta.role,
+    meta.tipo,
+    meta.area
+  ].join(' ');
+  var normalizado = normalizarUsuarioRol(textoRol);
+  if(/bodega|tiendona|cda/.test(normalizado)) return 'bodega';
+  return 'usuario';
+}
+
+window.esUsuarioBodega = function(sessionOrName){
+  if(typeof sessionOrName === 'string') {
+    return /bodega|tiendona|cda/.test(normalizarUsuarioRol(sessionOrName));
+  }
+  return authRolSistema(sessionOrName || window.authSession) === 'bodega';
+};
+
 window.esDuenoSistema = function(sessionOrName){
   var nombre = typeof sessionOrName === 'string' ? sessionOrName : authUserNameFromSession(sessionOrName || window.authSession);
   return window.OWNER_USER_ALIASES.indexOf(normalizarUsuarioRol(nombre)) >= 0;
@@ -2996,23 +3021,30 @@ function aplicarSesionAuth(session){
   window.presenceRlsBlocked = false;
   if(typeof actualizarChatClientIdSesion === 'function') actualizarChatClientIdSesion();
   var nombre = authUserNameFromSession(session);
-  var esDueno = !!(session && window.esDuenoSistema(session));
+  var rolSistema = session ? authRolSistema(session) : 'usuario';
+  var esDueno = rolSistema === 'dueno';
+  var esBodega = rolSistema === 'bodega';
+  document.body.classList.toggle('role-bodega', !!(session && esBodega));
   window.usuarioActual = {
     nombre: nombre,
-    rol: esDueno ? 'dueno' : 'usuario',
+    rol: rolSistema,
     admin: esDueno,
-    dueno: esDueno
+    dueno: esDueno,
+    bodega: esBodega
   };
   var badge = document.getElementById('auth-user-badge');
   if(badge) {
-    badge.textContent = esDueno ? (nombre + ' - Administrador') : nombre;
+    badge.textContent = esDueno ? (nombre + ' - Administrador') : (esBodega ? (nombre + ' - Bodega') : nombre);
     badge.classList.toggle('owner', esDueno);
-    badge.title = esDueno ? 'Administrador' : 'Usuario activo';
+    badge.title = esDueno ? 'Administrador' : (esBodega ? 'Acceso de bodega' : 'Usuario activo');
   }
   var overlay = document.getElementById('auth-overlay');
   if(overlay) overlay.classList.toggle('auth-hidden', !!session);
   actualizarRadioSupraVisible(session);
   if(typeof actualizarUsuarioActualUI === 'function') actualizarUsuarioActualUI();
+  setTimeout(function(){
+    if(typeof window.aplicarAccesoBodega === 'function') window.aplicarAccesoBodega();
+  }, 0);
 }
 
 async function refrescarSesionAuth(force){
@@ -3151,8 +3183,9 @@ window.crearUsuarioSistema = async function(event){
 
 window.logoutUsuarioSistema = function(){
   document.body.classList.add('auth-locked');
+  document.body.classList.remove('role-bodega');
   guardarSesionAuth(null);
-  window.usuarioActual = { nombre:'Usuario', rol:'usuario', admin:false, dueno:false };
+  window.usuarioActual = { nombre:'Usuario', rol:'usuario', admin:false, dueno:false, bodega:false };
   actualizarRadioSupraVisible(null);
   localStorage.removeItem(window.AUTH_REMEMBER_KEY);
   var overlay = document.getElementById('auth-overlay');
@@ -20956,6 +20989,59 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   window.addEventListener('hashchange', function(){
     setTimeout(openLinkedTab, 80);
+  });
+})();
+</script>
+<script>
+(function(){
+  window.BODEGA_ALLOWED_TABS = {
+    'tab-descargas': true,
+    'tab-distribucion': true
+  };
+
+  function usuarioBodegaActivo(){
+    return !!(window.usuarioActual && window.usuarioActual.rol === 'bodega');
+  }
+
+  function botonTabBodega(tabId){
+    var href = tabId === 'tab-distribucion' ? 'distribucion-cda.html' : 'distribucion-tiendona.html';
+    return document.querySelector('.main-tabs .tab-btn[href="' + href + '"]') ||
+      document.querySelector('.tab-btn[href="' + href + '"]') ||
+      null;
+  }
+
+  window.aplicarAccesoBodega = function(){
+    document.body.classList.toggle('role-bodega', usuarioBodegaActivo());
+    if(!usuarioBodegaActivo()) return;
+    var active = document.querySelector('.tab-content.active');
+    if(!active || !window.BODEGA_ALLOWED_TABS[active.id]) {
+      if(typeof window.switchTab === 'function') {
+        window.switchTab('tab-descargas', botonTabBodega('tab-descargas'));
+      }
+    }
+  };
+
+  function instalarProteccionBodega(){
+    if(window.switchTab && !window.switchTab.__bodegaGuard){
+      var previousSwitchTab = window.switchTab;
+      var guardedSwitchTab = function(tabId, btn){
+        if(usuarioBodegaActivo() && !window.BODEGA_ALLOWED_TABS[tabId]) {
+          tabId = 'tab-descargas';
+          btn = botonTabBodega(tabId);
+        }
+        return previousSwitchTab.call(this, tabId, btn);
+      };
+      guardedSwitchTab.__bodegaGuard = true;
+      window.switchTab = guardedSwitchTab;
+    }
+    window.aplicarAccesoBodega();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(instalarProteccionBodega, 1200);
+  });
+  window.addEventListener('hashchange', function(){
+    setTimeout(instalarProteccionBodega, 120);
   });
 })();
 </script>
