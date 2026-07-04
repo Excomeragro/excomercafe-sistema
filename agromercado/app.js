@@ -489,12 +489,13 @@ function renderProductos(){
   body.innerHTML = PRODUCTOS.map(function(p){
     return '<tr data-prod="' + p.key + '">'
       + '<td data-label="Producto">' + p.nombre + '</td>'
-      + '<td data-label="Saldo anterior"><input class="readonly-field" type="number" value="0" data-field="saldo_anterior" readonly></td>'
-      + '<td data-label="Inv. disponible"><input class="readonly-field" type="number" value="0" data-field="anterior" readonly></td>'
+      + '<td data-label="Inv. disponible"><input class="readonly-field" type="number" value="0" data-field="saldo_anterior" readonly></td>'
+      + '<td data-label="Inv. nuevo"><input class="readonly-field" type="number" value="0" data-field="nuevo" readonly></td>'
+      + '<td data-label="Saldo disponible"><input class="readonly-field" type="number" value="0" data-field="anterior" readonly></td>'
       + '<td data-label="Venta"><input type="number" min="0" value="0" data-field="venta" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
       + '<td data-label="Faltante"><input type="number" min="0" value="0" data-field="faltante" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
       + '<td data-label="Danado"><input type="number" min="0" value="0" data-field="danado" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
-      + '<td data-label="Inv. final"><input class="readonly-field" type="number" value="0" data-field="final" readonly></td>'
+      + '<td data-label="Saldo final"><input class="readonly-field" type="number" value="0" data-field="final" readonly></td>'
       + '<td data-label="Total dinero" class="money-cell dinero" data-field="dinero">$0.00</td>'
       + '</tr>';
   }).join('');
@@ -693,8 +694,8 @@ function reporteCanvas(){
   box('BANCO', banco || 'Pendiente', x + 696, y, 220, 60);
 
   y += 82;
-  var cols = [250, 95, 105, 80, 90, 80, 100, 118];
-  var headers = ['Producto','Saldo ant.','Disponible','Venta','Faltante','Danado','Inv. final','Total'];
+  var cols = [200, 95, 80, 95, 70, 80, 70, 95, 133];
+  var headers = ['Producto','Disponible','Nuevo','Saldo disp.','Venta','Faltante','Danado','Saldo final','Total'];
   var rowH = 42;
   var cx = x;
   ctx.fillStyle = '#e8eef5';
@@ -712,7 +713,7 @@ function reporteCanvas(){
   y += rowH;
   PRODUCTOS.forEach(function(prod){
     var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
-    var values = [prod.nombre, rowValue(row, 'saldo_anterior'), rowValue(row, 'anterior'), rowValue(row, 'venta'), rowValue(row, 'faltante'), rowValue(row, 'danado'), rowValue(row, 'final'), row ? row.querySelector('.dinero').textContent : '$0.00'];
+    var values = [prod.nombre, rowValue(row, 'saldo_anterior'), rowValue(row, 'nuevo'), rowValue(row, 'anterior'), rowValue(row, 'venta'), rowValue(row, 'faltante'), rowValue(row, 'danado'), rowValue(row, 'final'), row ? row.querySelector('.dinero').textContent : '$0.00'];
     cx = x;
     ctx.font = '13px Arial';
     values.forEach(function(v, i){
@@ -877,6 +878,8 @@ function buildPrintHtml(){
     var row = document.querySelector('tr[data-prod="' + prod.key + '"]');
     return '<tr>'
       + '<td>' + htmlEscape(prod.nombre) + '</td>'
+      + '<td>' + rowValue(row, 'saldo_anterior') + '</td>'
+      + '<td>' + rowValue(row, 'nuevo') + '</td>'
       + '<td>' + rowValue(row, 'anterior') + '</td>'
       + '<td>' + rowValue(row, 'venta') + '</td>'
       + '<td>' + rowValue(row, 'faltante') + '</td>'
@@ -903,7 +906,7 @@ function buildPrintHtml(){
     + '<div class="box"><b>Encargado</b>' + htmlEscape(encargado) + '</div>'
     + '<div class="box"><b>Banco</b>' + htmlEscape(banco || 'Pendiente') + '</div>'
     + '</div>'
-    + '<table><thead><tr><th>Producto</th><th>Inv. ant.</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Inv. final</th><th>Total dinero</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<table><thead><tr><th>Producto</th><th>Disponible</th><th>Nuevo</th><th>Saldo disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Saldo final</th><th>Total dinero</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div class="totals"><div><b>Ventas</b><strong>' + htmlEscape(document.getElementById('total-ventas').textContent) + '</strong></div><div><b>Gastos</b><strong>' + htmlEscape(document.getElementById('total-gastos').textContent) + '</strong></div><div><b>Remesa</b><strong>' + htmlEscape(document.getElementById('total-remesa').textContent) + '</strong></div></div>'
     + '<div class="box"><b>Observaciones</b><div class="obs">' + htmlEscape(observaciones) + '</div></div>'
     + '<div class="actions"><button onclick="window.print()">Imprimir</button></div>'
@@ -1023,6 +1026,7 @@ function aplicarValoresProducto(key, anterior, nuevo){
   row.dataset.inventarioAnterior = String(n(anterior));
   row.dataset.mercaderiaNueva = String(n(nuevo));
   setRowValue(row, 'saldo_anterior', anterior);
+  setRowValue(row, 'nuevo', nuevo);
   setRowValue(row, 'anterior', n(anterior) + n(nuevo));
   calcularProducto(row, PRODUCTOS.find(function(p){ return p.key === key; }) || { precio:0 });
 }
@@ -1037,6 +1041,7 @@ function aplicarReporteAprobadoEnFormulario(report){
     row.dataset.inventarioAnterior = String(n(anterior));
     row.dataset.mercaderiaNueva = String(n(nuevo));
     setRowValue(row, 'saldo_anterior', anterior);
+    setRowValue(row, 'nuevo', nuevo);
     setRowValue(row, 'anterior', n(anterior) + n(nuevo));
     setRowValue(row, 'venta', productoValueFromPayload(payload.ventas_unidades, prod.key));
     setRowValue(row, 'faltante', productoValueFromPayload(payload.faltante || payload.apartado || payload.faltantes_unidades, prod.key));
@@ -1153,7 +1158,7 @@ function historialProductosHtml(payload, row){
   var danado = payload.danado || {};
   var dinero = payload.dinero_productos || {};
   return '<div class="history-table-wrap"><table class="history-table"><thead><tr>'
-    + '<th>Producto</th><th>Saldo anterior</th><th>Disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Final</th><th>Dinero</th>'
+    + '<th>Producto</th><th>Disponible</th><th>Nuevo</th><th>Saldo disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Saldo final</th><th>Dinero</th>'
     + '</tr></thead><tbody>'
     + PRODUCTOS_TODOS.map(function(prod){
       var vendido = historialMapValue(unidades, prod.key);
@@ -1161,6 +1166,7 @@ function historialProductosHtml(payload, row){
       return '<tr>'
         + '<td>' + htmlEscape(prod.nombre) + '</td>'
         + '<td>' + historialMapValue(inicio, prod.key) + '</td>'
+        + '<td>' + historialMapValue(nuevo, prod.key) + '</td>'
         + '<td>' + (historialMapValue(inicio, prod.key) + historialMapValue(nuevo, prod.key)) + '</td>'
         + '<td>' + vendido + '</td>'
         + '<td>' + historialMapValue(faltante, prod.key) + '</td>'
