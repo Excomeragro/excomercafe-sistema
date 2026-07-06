@@ -892,6 +892,10 @@
   function importarSaldoInicial(opciones){
     opciones = opciones || {};
     if (!window.localStorage || !ROWS.length) return { ok:false, registros:0 };
+    if (localStorage.getItem('excomercafe_reset_applied') === 'reset-20260706-inventario-limpio') {
+      localStorage.setItem(STORAGE_DISABLED, 'true');
+      return { ok:false, skipped:true, reset:true, registros:0 };
+    }
     if (!opciones.force && localStorage.getItem(STORAGE_DISABLED) === 'true') {
       return { ok:false, skipped:true, disabled:true, registros:0 };
     }
