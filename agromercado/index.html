@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EXCOMERCAFE - Control Agromercado</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="./styles.css?v=20260523-portal-loading">
+  <link rel="stylesheet" href="./styles.css?v=20260706-whatsapp-bloqueo">
 </head>
 <body>
   <main class="portal-shell">
@@ -114,7 +114,7 @@
         <label>Observaciones<textarea id="observaciones" rows="4" placeholder="Notas del dia"></textarea></label>
         <div class="submit-actions">
           <button class="primary submit-small" type="submit">Enviar para revision</button>
-          <button class="whatsapp-btn submit-small" type="button" onclick="enviarReporteWhatsApp()">Enviar por WhatsApp</button>
+          <button class="whatsapp-btn submit-small" type="button" onclick="enviarReporteWhatsApp(event)">Enviar por WhatsApp</button>
         </div>
         <p class="message" id="submit-message"></p>
       </section>
@@ -133,7 +133,7 @@
     </form>
   </main>
 
-  <script src="./app.js?v=20260706-reset-limpio"></script>
+  <script src="./app.js?v=20260706-whatsapp-bloqueo"></script>
 </body>
 </html>
 

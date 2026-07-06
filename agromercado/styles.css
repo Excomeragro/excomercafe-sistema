@@ -585,6 +585,14 @@ button.small{
   background:#f8fbff;
 }
 
+.history-actions.locked{
+  color:#047857;
+  font-size:.82rem;
+  font-weight:900;
+  justify-content:flex-start;
+  text-transform:uppercase;
+}
+
 .history-action{
   border:0;
   border-radius:7px;

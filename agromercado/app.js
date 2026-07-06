@@ -485,7 +485,7 @@ function setHojaBloqueada(locked, info){
     el.disabled = hojaBloqueada && el.id !== 'fecha';
   });
   document.querySelectorAll('#sales-form .submit-actions button').forEach(function(btn){
-    btn.disabled = hojaBloqueada;
+    btn.disabled = hojaBloqueada && !btn.classList.contains('whatsapp-btn');
   });
   if(hojaBloqueada){
     var fecha = info && info.fecha ? (' del ' + fechaVista(info.fecha)) : '';
@@ -769,37 +769,59 @@ function reporteCanvas(){
   return canvas;
 }
 
-async function enviarReporteWhatsApp(){
-  calcularTotales();
-  var canvas = reporteCanvas();
-  var pdfBlob = await pdfBlobDesdeCanvas(canvas);
-  var fecha = document.getElementById('fecha') ? document.getElementById('fecha').value : hoy();
-  var nombreArchivo = 'reporte-agromercado-' + String(fecha || hoy()).replace(/[^0-9-]/g, '') + '.pdf';
-  var file = new File([pdfBlob], nombreArchivo, { type:'application/pdf' });
+async function enviarReporteWhatsApp(event){
+  var btn = event && event.currentTarget ? event.currentTarget : null;
+  if(btn) btn.disabled = true;
+  try{
+    setMessage('submit-message', 'Preparando PDF...', '');
+    calcularTotales();
+    var canvas = reporteCanvas();
+    var pdfBlob = await pdfBlobDesdeCanvas(canvas);
+    var fecha = document.getElementById('fecha') ? document.getElementById('fecha').value : hoy();
+    var nombreAgro = accesoActual && accesoActual.nombre ? accesoActual.nombre : 'agromercado';
+    var nombreArchivo = ('reporte-' + nombreAgro + '-' + String(fecha || hoy()))
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, '') + '.pdf';
+    var file = typeof File !== 'undefined'
+      ? new File([pdfBlob], nombreArchivo, { type:'application/pdf' })
+      : null;
 
-  if(navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
-    try{
-      await navigator.share({
-        files:[file],
-        title:'Reporte agromercado',
-        text:'Reporte EXCOMERCAFE'
-      });
-      setMessage('submit-message', 'PDF compartido. Selecciona WhatsApp si no se abrio automaticamente.', 'ok');
-      return;
-    }catch(error){
-      if(error && error.name === 'AbortError') return;
+    if(file && navigator.share && (!navigator.canShare || navigator.canShare({ files:[file] }))){
+      try{
+        await navigator.share({
+          files:[file],
+          title:'Reporte EXCOMERCAFE',
+          text:'Reporte de venta ' + fechaVista(fecha)
+        });
+        setMessage('submit-message', 'PDF listo. Si se abrio el menu de compartir, selecciona WhatsApp.', 'ok');
+        return;
+      }catch(error){
+        if(error && error.name === 'AbortError') {
+          setMessage('submit-message', 'Envio cancelado. El PDF no se envio.', 'error');
+          return;
+        }
+      }
     }
-  }
 
+    descargarPdfReporte(pdfBlob, nombreArchivo);
+    setMessage('submit-message', 'Este navegador no permite enviar PDF directo a WhatsApp. Descargue el PDF y adjuntelo en WhatsApp.', 'ok');
+  }catch(error){
+    setMessage('submit-message', 'No se pudo preparar el PDF: ' + (error.message || error), 'error');
+  }finally{
+    if(btn) btn.disabled = false;
+  }
+}
+
+function descargarPdfReporte(pdfBlob, nombreArchivo){
   var url = URL.createObjectURL(pdfBlob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = nombreArchivo;
+  a.download = nombreArchivo || 'reporte-agromercado.pdf';
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
-  setMessage('submit-message', 'PDF descargado. Abre WhatsApp y adjunta el archivo al chat correcto.', 'ok');
 }
 
 function binarioDesdeDataUrl(dataUrl){
@@ -1223,6 +1245,7 @@ function renderHistorialVentas(rows){
   cont.innerHTML = rows.map(function(row, index){
     var payload = payloadHistorial(row);
     var estado = String(row.estado || 'aprobado').toLowerCase();
+    var editable = estado !== 'aprobado';
     var banco = payload.banco || row.banco || 'Pendiente';
     var ventas = row.ventas != null ? row.ventas : payload.ventas;
     var gastos = row.gastos != null ? row.gastos : payload.gastos;
@@ -1240,10 +1263,12 @@ function renderHistorialVentas(rows){
       + '</div>'
       + historialProductosHtml(payload, row)
       + '<div class="history-obs"><b>Observaciones:</b> ' + htmlEscape(obs || 'Sin observaciones') + '</div>'
-      + '<div class="history-actions">'
-      + '<button type="button" class="history-action edit" onclick="editarReporteEmergencia(' + index + ')">Editar</button>'
-      + '<button type="button" class="history-action delete" onclick="borrarReporteEmergencia(' + index + ')">Borrar</button>'
-      + '</div>'
+      + (editable
+        ? '<div class="history-actions">'
+          + '<button type="button" class="history-action edit" onclick="editarReporteEmergencia(' + index + ')">Editar</button>'
+          + '<button type="button" class="history-action delete" onclick="borrarReporteEmergencia(' + index + ')">Borrar</button>'
+          + '</div>'
+        : '<div class="history-actions locked">Venta aprobada: no editable por vendedor</div>')
       + '</article>';
   }).join('');
 }
@@ -1262,6 +1287,10 @@ window.editarReporteEmergencia = function(index){
     setMessage('submit-message', 'No se encontro el reporte para editar.', 'error');
     return;
   }
+  if(String(row.estado || '').toLowerCase() === 'aprobado'){
+    setMessage('submit-message', 'Esta venta ya fue aprobada y no puede editarse desde el vendedor.', 'error');
+    return;
+  }
   edicionEmergenciaReporte = row;
   setHojaBloqueada(false);
   aplicarReporteAprobadoEnFormulario(row);
@@ -1276,6 +1305,10 @@ window.borrarReporteEmergencia = async function(index){
   var row = historialVentasActual && historialVentasActual[index];
   if(!row) {
     setMessage('submit-message', 'No se encontro el reporte para borrar.', 'error');
+    return;
+  }
+  if(String(row.estado || '').toLowerCase() === 'aprobado'){
+    setMessage('submit-message', 'Esta venta ya fue aprobada y no puede borrarse desde el vendedor.', 'error');
     return;
   }
   var payload = payloadHistorial(row);
@@ -1433,7 +1466,9 @@ async function cargarValoresInicialesAgromercado(agromercado){
   try{
     var approvedRows = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&order=creado_en.desc&limit=1');
     if(approvedRows && approvedRows.length) {
-      aplicarReporteAprobadoEnFormulario(Object.assign({ estado:'aprobado', historial_tipo:'oficial' }, approvedRows[0]));
+      var aprobadoActual = Object.assign({ estado:'aprobado', tipo:'aprobado', historial_tipo:'oficial' }, approvedRows[0]);
+      aplicarReporteAprobadoEnFormulario(aprobadoActual);
+      setHojaBloqueada(true, aprobadoActual);
       return;
     }
   }catch(e){}
