@@ -8120,10 +8120,7 @@ window.guardarInventario = function(){
     aceite: numeroEntradaInventario('inventario-aceite'),
     harina: numeroEntradaInventario('inventario-harina')
   };
-  var registroPrevio = inventarioEditandoId
-    ? (inventarioData || []).find(function(item){ return item && item.id === inventarioEditandoId; })
-    : null;
-  var convertirEntrada = !registroPrevio || registroPrevio.conversionUnidadInventario === true;
+  var convertirEntrada = false;
   var cantidadesInventario = convertirEntradaInventario(entradaOriginalInventario, convertirEntrada);
   var arroz = cantidadesInventario.arroz;
   var precocido = cantidadesInventario.precocido;
