@@ -4,7 +4,7 @@
 <title>EXCOMERCAFE — Reporte Agromercados</title>
 <link rel="icon" href="./favicon.ico"> <!-- icon -->
 <link rel="apple-touch-icon" href="./favicon.png">
-<link href="./css/styles.css?v=20260704-acceso-bodega" rel="stylesheet">
+<link href="./css/styles.css?v=20260706-inventario-ordenado" rel="stylesheet">
 <link href="./css/components.css?v=20260528-toggle-signs" rel="stylesheet">
 <link href="./css/distribution-matrix.css?v=20260528-cda-grupos" rel="stylesheet">
 <script>
@@ -2067,7 +2067,7 @@
       <span>📦 Control de Inventario · 📋 Registro de Inventario</span>
     </div>
     <div class="card-body">
-      <div class="form-row" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+      <div class="inventory-main-row">
         <div class="fg">
           <label>Fecha</label>
           <input type="date" id="inventario-fecha" value="">
@@ -2085,29 +2085,29 @@
         </div>
       </div>
       
-      <div class="form-row" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-top:12px;">
+      <div class="inventory-products-grid">
         <div class="fg">
-          <label>Arroz (sacos 80 lb)</label>
+          <label><span>Arroz</span><small>Sacos 80 lb</small></label>
           <input type="number" id="inventario-arroz" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Arroz Precocido (sacos 80 lb)</label>
+          <label><span>Arroz precocido</span><small>Sacos 80 lb</small></label>
           <input type="number" id="inventario-precocido" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Frijol 1 Lb (sacos 80 lb)</label>
+          <label><span>Frijol 1 lb</span><small>Sacos 80 lb</small></label>
           <input type="number" id="inventario-frijol1" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Frijol 4 Lb (sacos 80 lb)</label>
+          <label><span>Frijol 4 lb</span><small>Sacos 80 lb</small></label>
           <input type="number" id="inventario-frijol4" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Aceite 750 ML (cajas 20)</label>
+          <label><span>Aceite 750 ml</span><small>Cajas 20</small></label>
           <input type="number" id="inventario-aceite" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Harina 820 GRS (sacos 25 lb)</label>
+          <label><span>Harina 820 grs</span><small>Sacos 25 lb</small></label>
           <input type="number" id="inventario-harina" min="0" value="0" placeholder="0">
         </div>
       </div>

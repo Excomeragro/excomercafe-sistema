@@ -1512,6 +1512,61 @@ datalist {
   flex: 0 0 auto;
 }
 
+#inventario-registro-card .card-body {
+  display: grid;
+  gap: 18px;
+}
+
+.inventory-main-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.2fr);
+  gap: 18px;
+  align-items: end;
+}
+
+.inventory-products-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.inventory-products-grid .fg {
+  min-width: 0;
+}
+
+.inventory-products-grid .fg label {
+  min-height: 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  line-height: 1.15;
+  letter-spacing: 0.4px;
+}
+
+.inventory-products-grid .fg label span {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.inventory-products-grid .fg label small {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.inventory-products-grid input,
+.inventory-main-row input,
+.inventory-main-row select {
+  width: 100%;
+  min-width: 0;
+}
+
 .tbl thead th,
 table thead th {
   letter-spacing: 0.1px;
@@ -1523,6 +1578,14 @@ table thead th {
 }
 
 @media (max-width: 900px) {
+  .inventory-main-row {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-products-grid {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+
   .inventory-save-row,
   .distribution-save-row {
     align-items: stretch;
