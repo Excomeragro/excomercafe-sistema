@@ -2087,27 +2087,27 @@
       
       <div class="form-row" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-top:12px;">
         <div class="fg">
-          <label>Arroz</label>
+          <label>Arroz (sacos 80 lb)</label>
           <input type="number" id="inventario-arroz" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Arroz Precocido</label>
+          <label>Arroz Precocido (sacos 80 lb)</label>
           <input type="number" id="inventario-precocido" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Frijol 1 Lb</label>
+          <label>Frijol 1 Lb (sacos 80 lb)</label>
           <input type="number" id="inventario-frijol1" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Frijol 4 Lb</label>
+          <label>Frijol 4 Lb (sacos 80 lb)</label>
           <input type="number" id="inventario-frijol4" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Aceite 750 ML</label>
+          <label>Aceite 750 ML (cajas 20)</label>
           <input type="number" id="inventario-aceite" min="0" value="0" placeholder="0">
         </div>
         <div class="fg">
-          <label>Harina 820 GRS</label>
+          <label>Harina 820 GRS (sacos 25 lb)</label>
           <input type="number" id="inventario-harina" min="0" value="0" placeholder="0">
         </div>
       </div>
@@ -7982,8 +7982,7 @@ window.obtenerUbicacionesInventarioParaDestino = function(destino, tipo){
   tipo = tipo === 'CDA' ? 'CDA' : 'TIENDONA';
 
   var opcionesTiendona = {
-    abajo: { value:'descargas-tiendona-abajo', text:'DESCARGAS TIENDONA - ABAJO (PLATANERA)' },
-    arriba: { value:'descargas-tiendona-arriba', text:'DESCARGAS TIENDONA - ARRIBA (AFUERA)' }
+    general: { value:'descargas-tiendona', text:'TIENDONA' }
   };
 
   var opcionesCDA = {
@@ -8005,14 +8004,13 @@ window.obtenerUbicacionesInventarioParaDestino = function(destino, tipo){
         var lugares = TIENDONA_DATOS[grupo] || [];
         for (var j = 0; j < lugares.length; j++) {
           if (coincide(lugares[j])) {
-            if (normalizarNombre(grupo).indexOf('ABAJO') >= 0) return [opcionesTiendona.abajo];
-            if (normalizarNombre(grupo).indexOf('ARRIBA') >= 0) return [opcionesTiendona.arriba];
+            return [opcionesTiendona.general];
           }
         }
       }
     }
 
-    return [opcionesTiendona.abajo, opcionesTiendona.arriba];
+    return [opcionesTiendona.general];
   }
 
   var grupoCDA = typeof obtenerGrupoCDAParaDestino === 'function' ? obtenerGrupoCDAParaDestino(destino) : '';
@@ -8024,8 +8022,7 @@ window.obtenerUbicacionesInventarioParaDestino = function(destino, tipo){
 
 window.obtenerUbicacionesInventarioGenerales = function(){
   return [
-    { value:'descargas-tiendona-abajo', text:'INGRESO TIENDONA - ABAJO (PLATANERA)' },
-    { value:'descargas-tiendona-arriba', text:'INGRESO TIENDONA - ARRIBA (AFUERA)' },
+    { value:'descargas-tiendona', text:'TIENDONA' },
     { value:'distribucion-cda-soyapango', text:'CDA SOYAPANGO' },
     { value:'distribucion-cda-usulutan', text:'CDA USULUTÁN' },
   ];
@@ -8072,19 +8069,68 @@ window.actualizarCampoOtrosInventario = function(){
   if (ubicacion.value === 'otros' || ubicacion.value === 'bodega-local') ubicacion.value = '';
   otrosContainer.style.display = ubicacion.value === 'otros' ? 'block' : 'none';
 };
+
+var INVENTARIO_FACTORES_ENTRADA = {
+  arroz: 80,
+  precocido: 80,
+  frijol1: 80,
+  frijol4: 80,
+  aceite: 20,
+  harina: 25
+};
+
+function numeroEntradaInventario(id){
+  var el = document.getElementById(id);
+  var n = Number(el && el.value ? el.value : 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function convertirEntradaInventario(entrada, convertir){
+  var salida = {};
+  Object.keys(INVENTARIO_FACTORES_ENTRADA).forEach(function(producto){
+    var cantidad = Number(entrada[producto] || 0) || 0;
+    salida[producto] = convertir ? cantidad * INVENTARIO_FACTORES_ENTRADA[producto] : cantidad;
+  });
+  return salida;
+}
+
+function entradaVisibleInventario(inv, producto){
+  if (!inv) return 0;
+  if (inv.conversionUnidadInventario && inv.entradaOriginalInventario && inv.entradaOriginalInventario[producto] !== undefined) {
+    return inv.entradaOriginalInventario[producto] || 0;
+  }
+  if (inv.conversionUnidadInventario) {
+    var factor = INVENTARIO_FACTORES_ENTRADA[producto] || 1;
+    return Math.round(((Number(inv[producto] || 0) || 0) / factor) * 100) / 100;
+  }
+  return inv[producto] || 0;
+}
 window.guardarInventario = function(){
   console.log('Ejecutando guardarInventario');
   var fecha = document.getElementById('inventario-fecha')?.value || '';
-  
+
   var destino = document.getElementById('inventario-destino')?.value?.trim() || '';
   var ubicacion = document.querySelector('#tab-inventario select#inventario-ubicacion')?.value?.trim() || '';
   var otros = document.getElementById('inventario-otros')?.value || '';
-  var arroz = parseInt(document.getElementById('inventario-arroz')?.value || 0) || 0;
-  var precocido = parseInt(document.getElementById('inventario-precocido')?.value || 0) || 0;
-  var frijol1 = parseInt(document.getElementById('inventario-frijol1')?.value || 0) || 0;
-  var frijol4 = parseInt(document.getElementById('inventario-frijol4')?.value || 0) || 0;
-  var aceite = parseInt(document.getElementById('inventario-aceite')?.value || 0) || 0;
-  var harina = parseInt(document.getElementById('inventario-harina')?.value || 0) || 0;
+  var entradaOriginalInventario = {
+    arroz: numeroEntradaInventario('inventario-arroz'),
+    precocido: numeroEntradaInventario('inventario-precocido'),
+    frijol1: numeroEntradaInventario('inventario-frijol1'),
+    frijol4: numeroEntradaInventario('inventario-frijol4'),
+    aceite: numeroEntradaInventario('inventario-aceite'),
+    harina: numeroEntradaInventario('inventario-harina')
+  };
+  var registroPrevio = inventarioEditandoId
+    ? (inventarioData || []).find(function(item){ return item && item.id === inventarioEditandoId; })
+    : null;
+  var convertirEntrada = !registroPrevio || registroPrevio.conversionUnidadInventario === true;
+  var cantidadesInventario = convertirEntradaInventario(entradaOriginalInventario, convertirEntrada);
+  var arroz = cantidadesInventario.arroz;
+  var precocido = cantidadesInventario.precocido;
+  var frijol1 = cantidadesInventario.frijol1;
+  var frijol4 = cantidadesInventario.frijol4;
+  var aceite = cantidadesInventario.aceite;
+  var harina = cantidadesInventario.harina;
   var observaciones = document.getElementById('inventario-observaciones')?.value || '';
   
   if(!fecha){
@@ -8130,6 +8176,9 @@ window.guardarInventario = function(){
     harina: harina,
     total: total,
     observaciones: observaciones,
+    conversionUnidadInventario: convertirEntrada,
+    entradaOriginalInventario: entradaOriginalInventario,
+    factoresEntradaInventario: convertirEntrada ? INVENTARIO_FACTORES_ENTRADA : null,
     timestamp: new Date().toISOString()
   };
   
@@ -8432,12 +8481,12 @@ window.editarInventario = function(id){
   if (typeof actualizarCampoOtrosInventario === 'function') actualizarCampoOtrosInventario();
   var otros = document.getElementById('inventario-otros');
   if (otros) otros.value = inv.lugarEspecifico || inv.lugar || '';
-  document.getElementById('inventario-arroz').value = parseInt(inv.arroz) || 0;
-  document.getElementById('inventario-precocido').value = parseInt(inv.precocido) || 0;
-  document.getElementById('inventario-frijol1').value = parseInt(inv.frijol1) || 0;
-  document.getElementById('inventario-frijol4').value = parseInt(inv.frijol4) || 0;
-  document.getElementById('inventario-aceite').value = parseInt(inv.aceite) || 0;
-  document.getElementById('inventario-harina').value = parseInt(inv.harina) || 0;
+  document.getElementById('inventario-arroz').value = entradaVisibleInventario(inv, 'arroz');
+  document.getElementById('inventario-precocido').value = entradaVisibleInventario(inv, 'precocido');
+  document.getElementById('inventario-frijol1').value = entradaVisibleInventario(inv, 'frijol1');
+  document.getElementById('inventario-frijol4').value = entradaVisibleInventario(inv, 'frijol4');
+  document.getElementById('inventario-aceite').value = entradaVisibleInventario(inv, 'aceite');
+  document.getElementById('inventario-harina').value = entradaVisibleInventario(inv, 'harina');
   document.getElementById('inventario-observaciones').value = inv.observaciones || '';
   showAlert('alert-inventario', 'Editando registro de inventario. Guarda para aplicar cambios.', 'ok');
   document.getElementById('inventario-fecha')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -9222,6 +9271,7 @@ window.importarInventarioExcel = function(){
             total: total,
             observaciones: 'Importado desde ' + file.name + ' - fila NUEVO SALDO',
             origen: file.name,
+            conversionUnidadInventario: false,
             timestamp: new Date().toISOString(),
             supabase_synced: false
           };
