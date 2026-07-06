@@ -3,6 +3,30 @@
   key: 'sb_publishable_AIUqdFrAct3bR6y8Y6t1Qw_qNGJ5GHs'
 };
 
+var EXCOMERCAFE_RESET_ID = 'reset-20260706-inventario-limpio';
+var EXCOMERCAFE_RESET_AT = '2026-07-06T15:25:00.000Z';
+(function aplicarReinicioPortalLimpio(){
+  try {
+    if (localStorage.getItem('excomercafe_reset_applied') === EXCOMERCAFE_RESET_ID) return;
+    [
+      'exc_agro_hist',
+      'inventario-data',
+      'descargas-data',
+      'descargas-tiendona-historial',
+      'distribucion-cda-data',
+      'devoluciones-data',
+      'bancos-data',
+      'cuadre-bodegas-data',
+      'cuadre-cda-data',
+      'agromercado_portal_pending_v1'
+    ].forEach(function(key){
+      localStorage.setItem(key, '[]');
+    });
+    localStorage.setItem('inventario-clear-before', EXCOMERCAFE_RESET_AT);
+    localStorage.setItem('excomercafe_reset_applied', EXCOMERCAFE_RESET_ID);
+  } catch(error) {}
+})();
+
 var AGROMERCADO_NOMBRES = [
   'Acajutla, mercado de Acajutla',
   'Alcaldia de Mejicanos',

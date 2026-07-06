@@ -11,6 +11,7 @@ dist/
 # Respaldos locales y copias antiguas
 backup-*/
 backup-redisenio-*/
+backups/
 *.bak
 *.bak-*
 

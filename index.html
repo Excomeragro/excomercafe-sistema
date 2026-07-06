@@ -2846,6 +2846,29 @@ window.SUPABASE_CONFIG = {
   key: 'sb_publishable_AIUqdFrAct3bR6y8Y6t1Qw_qNGJ5GHs'
 };
 
+window.EXCOMERCAFE_RESET_ID = 'reset-20260706-inventario-limpio';
+window.EXCOMERCAFE_RESET_AT = '2026-07-06T15:25:00.000Z';
+(function aplicarReinicioInventarioLimpio(){
+  try {
+    if (localStorage.getItem('excomercafe_reset_applied') === window.EXCOMERCAFE_RESET_ID) return;
+    [
+      'exc_agro_hist',
+      'inventario-data',
+      'descargas-data',
+      'descargas-tiendona-historial',
+      'distribucion-cda-data',
+      'devoluciones-data',
+      'bancos-data',
+      'cuadre-bodegas-data',
+      'cuadre-cda-data'
+    ].forEach(function(key){
+      localStorage.setItem(key, '[]');
+    });
+    localStorage.setItem('inventario-clear-before', window.EXCOMERCAFE_RESET_AT);
+    localStorage.setItem('excomercafe_reset_applied', window.EXCOMERCAFE_RESET_ID);
+  } catch(error) {}
+})();
+
 window.normTxt = window.normTxt || function(value){
   return String(value || '')
     .toUpperCase()
