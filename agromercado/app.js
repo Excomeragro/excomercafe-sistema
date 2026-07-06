@@ -489,7 +489,7 @@ function renderProductos(){
   body.innerHTML = PRODUCTOS.map(function(p){
     return '<tr data-prod="' + p.key + '">'
       + '<td data-label="Producto">' + p.nombre + '</td>'
-      + '<td data-label="Inv. disponible"><input class="readonly-field" type="number" value="0" data-field="saldo_anterior" readonly></td>'
+      + '<td data-label="Inv. anterior"><input class="readonly-field" type="number" value="0" data-field="saldo_anterior" readonly></td>'
       + '<td data-label="Inv. nuevo"><input class="readonly-field" type="number" value="0" data-field="nuevo" readonly></td>'
       + '<td data-label="Saldo disponible"><input class="readonly-field" type="number" value="0" data-field="anterior" readonly></td>'
       + '<td data-label="Venta"><input type="number" min="0" value="0" data-field="venta" inputmode="numeric" onfocus="clearZero(this)" onblur="restoreZero(this);calcularTotales()" oninput="calcularTotales()"></td>'
@@ -695,7 +695,7 @@ function reporteCanvas(){
 
   y += 82;
   var cols = [200, 95, 80, 95, 70, 80, 70, 95, 133];
-  var headers = ['Producto','Disponible','Nuevo','Saldo disp.','Venta','Faltante','Danado','Saldo final','Total'];
+  var headers = ['Producto','Anterior','Nuevo','Saldo disp.','Venta','Faltante','Danado','Saldo final','Total'];
   var rowH = 42;
   var cx = x;
   ctx.fillStyle = '#e8eef5';
@@ -906,7 +906,7 @@ function buildPrintHtml(){
     + '<div class="box"><b>Encargado</b>' + htmlEscape(encargado) + '</div>'
     + '<div class="box"><b>Banco</b>' + htmlEscape(banco || 'Pendiente') + '</div>'
     + '</div>'
-    + '<table><thead><tr><th>Producto</th><th>Disponible</th><th>Nuevo</th><th>Saldo disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Saldo final</th><th>Total dinero</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<table><thead><tr><th>Producto</th><th>Inventario anterior</th><th>Nuevo</th><th>Saldo disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Saldo final</th><th>Total dinero</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div class="totals"><div><b>Ventas</b><strong>' + htmlEscape(document.getElementById('total-ventas').textContent) + '</strong></div><div><b>Gastos</b><strong>' + htmlEscape(document.getElementById('total-gastos').textContent) + '</strong></div><div><b>Remesa</b><strong>' + htmlEscape(document.getElementById('total-remesa').textContent) + '</strong></div></div>'
     + '<div class="box"><b>Observaciones</b><div class="obs">' + htmlEscape(observaciones) + '</div></div>'
     + '<div class="actions"><button onclick="window.print()">Imprimir</button></div>'
@@ -999,13 +999,17 @@ function acumularMovimientoInventario(totales, row, agromercado, vistos){
 async function cargarSaldosInicialesInventario(agromercado, fecha){
   var totales = {};
   var vistos = {};
+  var fechaCorte = '';
   PRODUCTOS.forEach(function(prod){ totales[prod.key] = 0; });
 
   try{
     var local = JSON.parse(localStorage.getItem('inventario-data') || '[]');
     (Array.isArray(local) ? local : []).forEach(function(row){
       if(String(row && row.fecha || '').slice(0, 10) <= String(fecha || '').slice(0, 10)) {
-        acumularMovimientoInventario(totales, row, agromercado, vistos);
+        if(acumularMovimientoInventario(totales, row, agromercado, vistos)){
+          var fechaRow = String(row && row.fecha || '').slice(0, 10);
+          if(fechaRow > fechaCorte) fechaCorte = fechaRow;
+        }
       }
     });
   }catch(e){}
@@ -1013,10 +1017,14 @@ async function cargarSaldosInicialesInventario(agromercado, fecha){
   try{
     var rows = await fetchSupabase('/rest/v1/inventario_movimientos?select=local_id,fecha,ubicacion,lugar,tipo,arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload&fecha=lte.' + encodeURIComponent(fecha) + '&ubicacion=eq.agromercados&order=fecha.asc&limit=5000');
     (rows || []).forEach(function(row){
-      acumularMovimientoInventario(totales, row, agromercado, vistos);
+      if(acumularMovimientoInventario(totales, row, agromercado, vistos)){
+        var fechaRow = String(row && row.fecha || '').slice(0, 10);
+        if(fechaRow > fechaCorte) fechaCorte = fechaRow;
+      }
     });
   }catch(e){}
 
+  totales.__fechaCorte = fechaCorte;
   return totales;
 }
 
@@ -1158,7 +1166,7 @@ function historialProductosHtml(payload, row){
   var danado = payload.danado || {};
   var dinero = payload.dinero_productos || {};
   return '<div class="history-table-wrap"><table class="history-table"><thead><tr>'
-    + '<th>Producto</th><th>Disponible</th><th>Nuevo</th><th>Saldo disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Saldo final</th><th>Dinero</th>'
+    + '<th>Producto</th><th>Inventario anterior</th><th>Nuevo</th><th>Saldo disponible</th><th>Venta</th><th>Faltante</th><th>Danado</th><th>Saldo final</th><th>Dinero</th>'
     + '</tr></thead><tbody>'
     + PRODUCTOS_TODOS.map(function(prod){
       var vendido = historialMapValue(unidades, prod.key);
@@ -1396,6 +1404,7 @@ async function cargarValoresInicialesAgromercado(agromercado){
   var anteriores = {};
   var nuevos = {};
   var ultimaFechaAprobada = '';
+  var fechaCorteInventario = '';
 
   try{
     var approvedRows = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&order=creado_en.desc&limit=1');
@@ -1411,6 +1420,7 @@ async function cargarValoresInicialesAgromercado(agromercado){
 
   try{
     var saldosIniciales = await cargarSaldosInicialesInventario(agromercado, fecha);
+    fechaCorteInventario = String(saldosIniciales.__fechaCorte || '').slice(0, 10);
     PRODUCTOS.forEach(function(prod){
       anteriores[prod.key] = n(anteriores[prod.key]) + n(saldosIniciales[prod.key]);
     });
@@ -1428,9 +1438,9 @@ async function cargarValoresInicialesAgromercado(agromercado){
 
   try{
     function rangoDistribucionQuery(){
-      var query = ultimaFechaAprobada
-        ? '&fecha=gt.' + encodeURIComponent(ultimaFechaAprobada)
-        : '';
+      var fechaInicio = ultimaFechaAprobada;
+      if(fechaCorteInventario && (!fechaInicio || fechaCorteInventario > fechaInicio)) fechaInicio = fechaCorteInventario;
+      var query = fechaInicio ? '&fecha=gt.' + encodeURIComponent(fechaInicio) : '';
       query += '&fecha=lte.' + encodeURIComponent(fecha);
       return query + '&order=fecha.asc&limit=5000';
     }
@@ -1459,6 +1469,9 @@ async function cargarValoresInicialesAgromercado(agromercado){
       var rangoFallback = ultimaFechaAprobada
         ? '&fecha=gt.' + encodeURIComponent(ultimaFechaAprobada)
         : '';
+      if(fechaCorteInventario && (!ultimaFechaAprobada || fechaCorteInventario > ultimaFechaAprobada)) {
+        rangoFallback = '&fecha=gt.' + encodeURIComponent(fechaCorteInventario);
+      }
       rangoFallback += '&fecha=lte.' + encodeURIComponent(fecha) + '&order=fecha.asc&limit=5000';
       var distCdaFechaRows = await fetchSupabase('/rest/v1/distribucion_cda?select=fecha,cda,arroz,arroz_precocido,frijol_1lb,frijol_4lb,aceite_750ml,harina_820grs,payload' + rangoFallback);
       (distCdaFechaRows || []).forEach(function(row){
