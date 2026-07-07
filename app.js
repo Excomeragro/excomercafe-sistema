@@ -1048,4 +1048,9 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
   restaurarAccesoGuardado();
+  
+  // Iniciar sincronización automática con Supabase
+  if(typeof window.iniciarSincronizacionAutomatica === 'function'){
+    window.iniciarSincronizacionAutomatica();
+  }
 });

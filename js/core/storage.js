@@ -480,6 +480,83 @@ window.limpiarHistorial = function(){
   showToast('🗑️ Historial eliminado');
 };
 
+// ── SINCRONIZACIÓN CON SUPABASE ──
+
+// Variable global para controlar polling
+window.syncPollTimer = null;
+window.lastSyncHash = null;
+
+// Cargar historial desde Supabase
+window.sincronizarDesdeSupabase = async function(){
+  try {
+    if(typeof fetchSupabase === 'undefined') return; // No disponible en este contexto
+    
+    var hist = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=*&order=creado_en.desc&limit=100');
+    if(!hist || !Array.isArray(hist)) return;
+    
+    // Convertir registros de Supabase al formato local
+    var registrosFormato = hist.map(function(row){
+      return {
+        local_id: row.local_id,
+        fecha: row.fecha,
+        nombre: row.agromercado,
+        banco: row.banco || '',
+        ventas: row.ventas || 0,
+        gastos: row.gastos || 0,
+        remesa: row.remesa || 0,
+        ventas_unidades: (row.payload && row.payload.ventas_unidades) || {},
+        dia: (row.payload && row.payload.dia) || '',
+        distrito: (row.payload && row.payload.distrito) || '',
+        municipio: (row.payload && row.payload.municipio) || ''
+      };
+    });
+    
+    // Calcular hash para detectar cambios
+    var currentHash = JSON.stringify(registrosFormato);
+    if(currentHash === window.lastSyncHash) return; // Sin cambios
+    
+    window.lastSyncHash = currentHash;
+    localStorage.setItem('exc_agro_hist', JSON.stringify(registrosFormato));
+    
+    if(window.renderHistorial) window.renderHistorial();
+    if(window.renderBancos) window.renderBancos();
+    
+    console.log('📡 Sincronización completada desde Supabase:', registrosFormato.length, 'registros');
+  } catch(e){
+    console.error('Error sincronizando desde Supabase:', e);
+  }
+};
+
+// Iniciar polling automático
+window.iniciarSincronizacionAutomatica = function(){
+  if(window.syncPollTimer) clearInterval(window.syncPollTimer);
+  
+  // Sincronizar inmediatamente al cargar
+  window.sincronizarDesdeSupabase();
+  
+  // Luego cada 15 segundos
+  window.syncPollTimer = setInterval(function(){
+    window.sincronizarDesdeSupabase();
+  }, 15000);
+};
+
+// Detener polling
+window.detenerSincronizacionAutomatica = function(){
+  if(window.syncPollTimer){
+    clearInterval(window.syncPollTimer);
+    window.syncPollTimer = null;
+  }
+};
+
+// Reiniciar sync cuando cambia de pestaña
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden){
+    window.detenerSincronizacionAutomatica();
+  } else {
+    window.iniciarSincronizacionAutomatica();
+  }
+});
+
 // Guardar edición inline
 window.guardarEdicionInline = function(index){
   var hist = JSON.parse(localStorage.getItem('exc_agro_hist')||'[]');
