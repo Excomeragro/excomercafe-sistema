@@ -581,12 +581,33 @@ window.guardarEdicionInline = function(index){
   registro.gastos = parseFloat(document.getElementById('edit-gastos-' + index).value) || 0;
   registro.remesa = registro.ventas - registro.gastos;
   
-  // Actualizar ventas_unidades
+  // Actualizar TODOS los datos de inventario
   registro.ventas_unidades = {};
+  registro.inventario_inicio = {};
+  registro.mercaderia_nueva = {};
+  registro.inventario_final = {};
+  registro.faltante = {};
+  registro.danado = {};
+  registro.dinero_productos = {};
+  
   var productosKeys = PRODUCTOS_KEYS;
   productosKeys.forEach(function(key){
-    var valor = parseInt(document.getElementById('edit-' + key + '-' + index).value) || 0;
-    if(valor > 0) registro.ventas_unidades[key] = valor;
+    // Leer todos los campos de inventario para cada producto
+    var inicio = parseInt(document.getElementById('edit-' + key + '-inicio-' + index)?.value || 0) || 0;
+    var nuevo = parseInt(document.getElementById('edit-' + key + '-nuevo-' + index)?.value || 0) || 0;
+    var venta = parseInt(document.getElementById('edit-' + key + '-' + index)?.value || 0) || 0;
+    var final = parseInt(document.getElementById('edit-' + key + '-final-' + index)?.value || 0) || 0;
+    var falt = parseInt(document.getElementById('edit-' + key + '-faltante-' + index)?.value || 0) || 0;
+    var dan = parseInt(document.getElementById('edit-' + key + '-danado-' + index)?.value || 0) || 0;
+    var dinero = parseFloat(document.getElementById('edit-' + key + '-dinero-' + index)?.value || 0) || 0;
+    
+    if(venta > 0) registro.ventas_unidades[key] = venta;
+    if(inicio > 0) registro.inventario_inicio[key] = inicio;
+    if(nuevo > 0) registro.mercaderia_nueva[key] = nuevo;
+    if(final > 0) registro.inventario_final[key] = final;
+    if(falt > 0) registro.faltante[key] = falt;
+    if(dan > 0) registro.danado[key] = dan;
+    if(dinero > 0) registro.dinero_productos[key] = dinero;
   });
   
   // Guardar cambios localmente
