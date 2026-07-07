@@ -579,6 +579,7 @@ window.guardarEdicionInline = function(index){
   registro.banco = document.getElementById('edit-banco-' + index).value;
   registro.ventas = parseFloat(document.getElementById('edit-ventas-' + index).value) || 0;
   registro.gastos = parseFloat(document.getElementById('edit-gastos-' + index).value) || 0;
+  registro.remesa = registro.ventas - registro.gastos;
   
   // Actualizar ventas_unidades
   registro.ventas_unidades = {};
@@ -588,9 +589,27 @@ window.guardarEdicionInline = function(index){
     if(valor > 0) registro.ventas_unidades[key] = valor;
   });
   
-  // Guardar cambios
+  // Guardar cambios localmente
   hist[index] = registro;
   localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
+  
+  // Sincronizar con Supabase
+  if(registro.local_id && typeof supabaseUpdate === 'function'){
+    var updateData = {
+      fecha: registro.fecha,
+      agromercado: registro.nombre,
+      banco: registro.banco,
+      ventas: registro.ventas,
+      gastos: registro.gastos,
+      remesa: registro.remesa,
+      payload: registro
+    };
+    supabaseUpdate(registro.local_id, updateData).then(function(){
+      console.log('✅ Edición sincronizada con Supabase:', registro.local_id);
+    }).catch(function(e){
+      console.error('Advertencia: No se sincronizó edición con Supabase:', e);
+    });
+  }
   
   // Actualizar inventario
   actualizarInventarioDesdeRegistro(registro, true); // true = edición
