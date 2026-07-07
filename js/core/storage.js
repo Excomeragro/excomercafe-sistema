@@ -496,18 +496,26 @@ window.sincronizarDesdeSupabase = async function(){
     
     // Convertir registros de Supabase al formato local
     var registrosFormato = hist.map(function(row){
+      var payload = row.payload || {};
       return {
         local_id: row.local_id,
         fecha: row.fecha,
         nombre: row.agromercado,
         banco: row.banco || '',
-        ventas: row.ventas || 0,
-        gastos: row.gastos || 0,
-        remesa: row.remesa || 0,
-        ventas_unidades: (row.payload && row.payload.ventas_unidades) || {},
-        dia: (row.payload && row.payload.dia) || '',
-        distrito: (row.payload && row.payload.distrito) || '',
-        municipio: (row.payload && row.payload.municipio) || ''
+        ventas: row.ventas || payload.ventas || 0,
+        gastos: row.gastos || payload.gastos || 0,
+        remesa: row.remesa || payload.remesa || 0,
+        ventas_unidades: payload.ventas_unidades || {},
+        dinero_productos: payload.dinero_productos || {},
+        inventario_inicio: payload.inventario_inicio || {},
+        mercaderia_nueva: payload.mercaderia_nueva || {},
+        inventario_final: payload.inventario_final || {},
+        faltante: payload.faltante || {},
+        danado: payload.danado || {},
+        dia: payload.dia || '',
+        distrito: payload.distrito || '',
+        municipio: payload.municipio || '',
+        encargado: row.encargado || payload.encargado || ''
       };
     });
     
