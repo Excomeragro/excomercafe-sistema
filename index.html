@@ -20136,6 +20136,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
+  function inventarioDebeSubirSupabase(record){
+    if (typeof inventarioEsRegistroManual === 'function') return inventarioEsRegistroManual(record);
+    var tipo = String(record && record.tipo || '').toLowerCase();
+    return !tipo || tipo === 'registro-inventario' || tipo === 'inventario-manual' || tipo === 'saldo-inicial';
+  }
+
   function distribucionPayloadActualizado(record){
     var payload = Object.assign({}, record || {});
     var unidades = typeof window.expandirDistribucionPaquetes === 'function'
@@ -20297,7 +20303,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if(window.supabaseRlsBlockedTables[config.table]) return 0;
     var local = readLocalList(config.storageKey);
     var pendientes = local.filter(function(record){
-      return record && !record.supabase_synced;
+      return record && !record.supabase_synced && (!config.shouldUpload || config.shouldUpload(record));
     }).slice(0, 50);
 
     if (!pendientes.length) return 0;
@@ -20487,7 +20493,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var SUPABASE_SYNC_CONFIGS = [
     { table: 'ventas_agromercado', storageKey: 'exc_agro_hist', toSupabase: ventaToSupabase, pruneMissing: true },
-    { table: 'inventario_movimientos', storageKey: 'inventario-data', toSupabase: inventarioToSupabase, pruneMissing: true },
+    { table: 'inventario_movimientos', storageKey: 'inventario-data', toSupabase: inventarioToSupabase, pruneMissing: true, shouldUpload: inventarioDebeSubirSupabase },
     { table: 'distribucion_tiendona', storageKey: 'descargas-data', toSupabase: distribucionTiendonaToSupabase, pruneMissing: true },
     { table: 'distribucion_cda', storageKey: 'distribucion-cda-data', toSupabase: distribucionCdaToSupabase, pruneMissing: true },
     { table: 'personas_sistema', storageKey: 'personas-data', toSupabase: personaToSupabase }
