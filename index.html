@@ -20136,8 +20136,31 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
+  function distribucionPayloadActualizado(record){
+    var payload = Object.assign({}, record || {});
+    var unidades = typeof window.expandirDistribucionPaquetes === 'function'
+      ? window.expandirDistribucionPaquetes(payload)
+      : payload;
+    payload.unidades = {
+      arroz: num(unidades.arroz),
+      precocido: num(unidades.precocido),
+      frijol1: num(unidades.frijol1),
+      frijol4: num(unidades.frijol4),
+      aceite: num(unidades.aceite),
+      harina: num(unidades.harina)
+    };
+    payload.total_unidades = num(payload.unidades.arroz)
+      + num(payload.unidades.precocido)
+      + num(payload.unidades.frijol1)
+      + num(payload.unidades.frijol4)
+      + num(payload.unidades.aceite)
+      + num(payload.unidades.harina);
+    return payload;
+  }
+
   function distribucionTiendonaToSupabase(record){
     asegurarUsuarioRegistro(record);
+    var payload = distribucionPayloadActualizado(record);
     return {
       local_id: localId(record),
       fecha: record.fecha || null,
@@ -20153,12 +20176,13 @@ document.addEventListener('DOMContentLoaded', function() {
       harina_820grs: num(record.harina),
       total: num(record.total) || num(record.arroz) + num(record.precocido) + num(record.frijol1) + num(record.frijol4) + num(record.aceite) + num(record.harina),
       observaciones: record.observaciones || '',
-      payload: record
+      payload: payload
     };
   }
 
   function distribucionCdaToSupabase(record){
     asegurarUsuarioRegistro(record);
+    var payload = distribucionPayloadActualizado(record);
     return {
       local_id: localId(record),
       fecha: record.fecha || null,
@@ -20174,7 +20198,7 @@ document.addEventListener('DOMContentLoaded', function() {
       harina_820grs: num(record.harina),
       total: num(record.total) || num(record.arroz) + num(record.precocido) + num(record.frijol1) + num(record.frijol4) + num(record.aceite) + num(record.harina),
       observaciones: record.observaciones || '',
-      payload: record
+      payload: payload
     };
   }
 

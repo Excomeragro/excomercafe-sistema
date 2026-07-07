@@ -120,6 +120,15 @@ var PRODUCTO_COLUMNAS = {
   harina: 'harina_820grs'
 };
 
+var FACTORES_DISTRIBUCION = {
+  arroz: 80,
+  precocido: 80,
+  frijol1: 80,
+  frijol4: 80,
+  aceite: 20,
+  harina: 25
+};
+
 function precioPortalDesdeSistema(producto){
   var precio = Number(producto && producto.precio || 0) || 0;
   return producto && producto.key === 'fr4' ? precio / 4 : precio;
@@ -1085,6 +1094,22 @@ function aplicarValoresProducto(key, anterior, nuevo){
   calcularProducto(row, PRODUCTOS.find(function(p){ return p.key === key; }) || { precio:0 });
 }
 
+function valorDistribucionActual(row, prod){
+  if(!row || !prod) return 0;
+  var col = PRODUCTO_COLUMNAS[prod.key];
+  var raw = row[col];
+  if(raw === undefined || raw === null || raw === '') {
+    var payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    raw = payload[prod.key];
+    if(raw === undefined && prod.key === 'precocido') raw = payload.precocido || payload.arroz_precocido;
+    if(raw === undefined && prod.key === 'frijol1') raw = payload.frijol1 || payload.frijol_1lb;
+    if(raw === undefined && prod.key === 'frijol4') raw = payload.frijol4 || payload.frijol_4lb;
+    if(raw === undefined && prod.key === 'aceite') raw = payload.aceite || payload.aceite_750ml;
+    if(raw === undefined && prod.key === 'harina') raw = payload.harina || payload.harina_820grs;
+  }
+  return n(raw) * (FACTORES_DISTRIBUCION[prod.key] || 1);
+}
+
 function aplicarReporteAprobadoEnFormulario(report){
   var payload = payloadHistorial(report);
   PRODUCTOS.forEach(function(prod){
@@ -1507,11 +1532,7 @@ async function cargarValoresInicialesAgromercado(agromercado){
     function sumarMercaderiaNueva(rows){
       (rows || []).forEach(function(row){
         PRODUCTOS.forEach(function(prod){
-          var col = PRODUCTO_COLUMNAS[prod.key];
-          var payload = row && row.payload && typeof row.payload === 'object' ? row.payload : {};
-          var unidades = payload.unidades || {};
-          var valor = unidades[prod.key] !== undefined ? unidades[prod.key] : row[col];
-          nuevos[prod.key] = n(nuevos[prod.key]) + n(valor);
+          nuevos[prod.key] = n(nuevos[prod.key]) + valorDistribucionActual(row, prod);
         });
       });
     }
@@ -1538,11 +1559,7 @@ async function cargarValoresInicialesAgromercado(agromercado){
         var destino = String(row && row.cda || payload.cda || payload.agromercado || payload.destino || '').trim();
         if(destino !== agromercado) return;
       PRODUCTOS.forEach(function(prod){
-        var col = PRODUCTO_COLUMNAS[prod.key];
-        var payload = row && row.payload && typeof row.payload === 'object' ? row.payload : {};
-        var unidades = payload.unidades || {};
-        var valor = unidades[prod.key] !== undefined ? unidades[prod.key] : row[col];
-        nuevos[prod.key] = n(nuevos[prod.key]) + n(valor);
+        nuevos[prod.key] = n(nuevos[prod.key]) + valorDistribucionActual(row, prod);
       });
     });
     }catch(e){}
