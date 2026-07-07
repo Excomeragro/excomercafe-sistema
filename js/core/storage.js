@@ -345,6 +345,7 @@ window.guardarRegistro = function(){
   ) || 0;
 
   var registro = {
+    local_id: 'app-' + Date.now() + '-' + Math.random().toString(16).slice(2),
     nombre: (document.getElementById('agro-nombre')||{}).value||'',
     fecha: document.getElementById('agro-fecha').value,
     dia: document.getElementById('agro-dia').value,
@@ -434,6 +435,18 @@ window.eliminarRegistro = function(index){
   if(index < 0 || index >= hist.length) return;
   
   var registroEliminado = hist[index];
+  var localId = registroEliminado.local_id;
+  
+  // Sincronizar eliminación con Supabase
+  if(localId && typeof supabaseDelete === 'function'){
+    supabaseDelete(localId).then(function(){
+      console.log('Registro eliminado de Supabase:', localId);
+    }).catch(function(e){
+      console.error('Error eliminando de Supabase:', e);
+      showToast('⚠️ Advertencia: No se sincronizó con Supabase. Registro eliminado localmente.');
+    });
+  }
+  
   hist.splice(index, 1);
   localStorage.setItem('exc_agro_hist', JSON.stringify(hist));
   

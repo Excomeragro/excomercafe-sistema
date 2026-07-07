@@ -953,6 +953,22 @@ async function supabaseInsert(row){
   }
 }
 
+async function supabaseDelete(localId){
+  var response = await fetch(SUPABASE_CONFIG.url + '/rest/v1/ventas_agromercado_pendientes?local_id=eq.' + encodeURIComponent(localId), {
+    method: 'DELETE',
+    headers: {
+      apikey: SUPABASE_CONFIG.key,
+      Authorization: 'Bearer ' + SUPABASE_CONFIG.key,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal'
+    }
+  });
+  if(!response.ok){
+    var data = await response.json().catch(function(){ return null; });
+    throw new Error((data && data.message) || response.status + ' ' + response.statusText);
+  }
+}
+
 async function enviarControl(event){
   event.preventDefault();
   if(!accesoActual) return;
