@@ -18628,6 +18628,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var remesa = ventas - gastos;
     var remesadoManual = getRemesadoManual(record);
     var banco = getBanco(record);
+    var tieneBanco = !!banco && banco !== '0';
+    var remesadoEtiqueta = tieneBanco ? 'Remesado' : 'Pendiente';
     var dia = (record.dia && String(record.dia).split(',')[0]) || (typeof obtenerDiaSemana === 'function' ? obtenerDiaSemana(record.fecha) : '');
     var productCells = BANK_PRODUCTS.map(function(p){
       return '<td class="'+p.cls+' bank-report-number">'+getQty(record, p.key).toLocaleString('es-SV')+'</td>';
@@ -18640,7 +18642,7 @@ document.addEventListener('DOMContentLoaded', function() {
       + '<td class="bank-report-money bank-report-ventas">'+money(ventas)+'</td>'
       + '<td class="bank-report-gastos"><input type="text" inputmode="decimal" value="'+gastos+'" oninput="actualizarReporteBanco('+originalIndex+', \'gastos\', this.value)"></td>'
       + '<td class="bank-report-money bank-report-remesa">'+money(remesa)+'</td>'
-      + '<td class="bank-report-remesado-input"><input type="text" inputmode="decimal" value="'+remesadoManual+'" oninput="actualizarReporteBanco('+originalIndex+', \'dineroRemesado\', this.value)"><button type="button" class="btn-remesado" onclick="confirmarRemesadoReporteBanco('+originalIndex+')">Remesado</button></td>'
+      + '<td class="bank-report-remesado-input"><input type="text" inputmode="decimal" value="'+remesadoManual+'" oninput="actualizarReporteBanco('+originalIndex+', \'dineroRemesado\', this.value)"><button type="button" class="btn-remesado"'+(tieneBanco ? '' : ' disabled')+' onclick="confirmarRemesadoReporteBanco('+originalIndex+')">'+remesadoEtiqueta+'</button></td>'
       + '<td class="'+(!banco || banco === '0' ? 'bank-report-remesado-zero' : 'bank-report-remesado-ok')+'">'+buildBancoBadge(record, originalIndex)+'</td>'
       + '<td class="bank-report-actions"><button type="button" class="btn btn-sm btn-secondary" onclick="limpiarRemesaBanco('+originalIndex+')">Limpiar</button><button type="button" class="btn btn-sm btn-danger" onclick="borrarRegistroBanco('+originalIndex+')">Borrar</button></td>'
       + '</tr>';
