@@ -1191,13 +1191,14 @@ async function borrarReporteRemotoPortal(row){
 
 async function buscarReportePorFecha(agromercado, fecha){
   fecha = String(fecha || fechaSeleccionada()).slice(0,10);
+  if(fechaAnteriorAlCorteHistorialVentas(fecha)) return null;
   var queryAgro = encodeURIComponent(agromercado);
   var queryFecha = encodeURIComponent(fecha);
-  var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=*&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.pendiente&limit=1');
+  var pending = await fetchSupabase(queryConCorteHistorialVentas('/rest/v1/ventas_agromercado_pendientes?select=*&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.pendiente&limit=1'));
   if(pending && pending.length) return Object.assign({ tipo:'pendiente' }, pending[0]);
-  var approved = await fetchSupabase('/rest/v1/ventas_agromercado?select=local_id,fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&limit=1');
+  var approved = await fetchSupabase(queryConCorteHistorialVentas('/rest/v1/ventas_agromercado?select=local_id,fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&limit=1'));
   if(approved && approved.length) return Object.assign({ tipo:'aprobado' }, approved[0]);
-  var rejected = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,estado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.rechazado&order=creado_en.desc&limit=1');
+  var rejected = await fetchSupabase(queryConCorteHistorialVentas('/rest/v1/ventas_agromercado_pendientes?select=fecha,agromercado,estado,creado_en&agromercado=eq.' + queryAgro + '&fecha=eq.' + queryFecha + '&estado=eq.rechazado&order=creado_en.desc&limit=1'));
   if(rejected && rejected.length) return Object.assign({ tipo:'rechazado' }, rejected[0]);
   return null;
 }
@@ -1209,6 +1210,22 @@ function payloadHistorial(row){
     try{ return JSON.parse(row.payload); }catch(e){ return {}; }
   }
   return {};
+}
+
+function historialVentasCutoffPortal(){
+  return String(window.EXCOMERCAFE_HISTORIAL_VENTAS_CUTOFF || localStorage.getItem('exc_agro_hist_corte') || '').slice(0, 10);
+}
+
+function queryConCorteHistorialVentas(query){
+  var corte = historialVentasCutoffPortal();
+  if(corte) query += '&fecha=gte.' + encodeURIComponent(corte);
+  return query;
+}
+
+function fechaAnteriorAlCorteHistorialVentas(fecha){
+  var corte = historialVentasCutoffPortal();
+  fecha = String(fecha || '').slice(0, 10);
+  return !!(corte && fecha && fecha < corte);
 }
 
 function historialMapValue(map, key){
@@ -1419,8 +1436,8 @@ async function cargarHistorialVentas(agromercado){
   var status = document.getElementById('historial-status');
   if(status) status.textContent = 'Cargando...';
   try{
-    var official = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=fecha.desc,creado_en.desc&limit=50');
-    var pending = await fetchSupabase('/rest/v1/ventas_agromercado_pendientes?select=*&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=creado_en.desc&limit=50');
+    var official = await fetchSupabase(queryConCorteHistorialVentas('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=fecha.desc,creado_en.desc&limit=50'));
+    var pending = await fetchSupabase(queryConCorteHistorialVentas('/rest/v1/ventas_agromercado_pendientes?select=*&agromercado=eq.' + encodeURIComponent(agromercado) + '&order=creado_en.desc&limit=50'));
     depurarPendientesLocalesHuerfanos(agromercado, pending);
     var rows = [];
     (official || []).forEach(function(row){
@@ -1489,7 +1506,7 @@ async function cargarValoresInicialesAgromercado(agromercado){
   var fechaCorteInventario = '';
 
   try{
-    var approvedRows = await fetchSupabase('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&order=creado_en.desc&limit=1');
+    var approvedRows = await fetchSupabase(queryConCorteHistorialVentas('/rest/v1/ventas_agromercado?select=fecha,agromercado,ventas,gastos,remesa,banco,observaciones,payload,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=eq.' + encodeURIComponent(fecha) + '&order=creado_en.desc&limit=1'));
     if(approvedRows && approvedRows.length) {
       var aprobadoActual = Object.assign({ estado:'aprobado', tipo:'aprobado', historial_tipo:'oficial' }, approvedRows[0]);
       aplicarReporteAprobadoEnFormulario(aprobadoActual);
@@ -1511,7 +1528,7 @@ async function cargarValoresInicialesAgromercado(agromercado){
   }catch(e){}
 
   try{
-    var prevRows = await fetchSupabase('/rest/v1/ventas_agromercado?select=payload,fecha,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=lt.' + encodeURIComponent(fecha) + '&order=fecha.desc,creado_en.desc&limit=1');
+    var prevRows = await fetchSupabase(queryConCorteHistorialVentas('/rest/v1/ventas_agromercado?select=payload,fecha,creado_en&agromercado=eq.' + encodeURIComponent(agromercado) + '&fecha=lt.' + encodeURIComponent(fecha) + '&order=fecha.desc,creado_en.desc&limit=1'));
     var prevPayload = prevRows && prevRows[0] && prevRows[0].payload ? prevRows[0].payload : null;
     ultimaFechaAprobada = prevRows && prevRows[0] && prevRows[0].fecha ? String(prevRows[0].fecha).slice(0, 10) : '';
     PRODUCTOS.forEach(function(prod){

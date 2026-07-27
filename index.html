@@ -2838,6 +2838,7 @@
 <script src="./js/core/constants.js?v=20260617-productos-sistema"></script>
 <script src="./js/utils/helpers.js"></script>
 <script src="./js/data/inventario-inicial-agromercados-20260629.js?v=20260706-reset-limpio"></script>
+<script src="./js/data/historial-ventas-agromercados-20260720-20260724.js?v=20260725-historial-importado"></script>
 <script src="./js/core/storage.js?v=20260617-productos-sistema"></script>
 <script src="./js/core/app.js?v=20260617-productos-sistema"></script>
 <script>
@@ -2852,7 +2853,6 @@ window.EXCOMERCAFE_RESET_AT = '2026-07-06T15:25:00.000Z';
   try {
     if (localStorage.getItem('excomercafe_reset_applied') === window.EXCOMERCAFE_RESET_ID) return;
     [
-      'exc_agro_hist',
       'inventario-data',
       'descargas-data',
       'descargas-tiendona-historial',
@@ -20371,10 +20371,17 @@ document.addEventListener('DOMContentLoaded', function() {
     var inventarioClearBefore = config.storageKey === 'inventario-data'
       ? localStorage.getItem('inventario-clear-before')
       : '';
+    var historialVentasCutoff = config.table === 'ventas_agromercado'
+      ? String(window.EXCOMERCAFE_HISTORIAL_VENTAS_CUTOFF || localStorage.getItem('exc_agro_hist_corte') || '').slice(0, 10)
+      : '';
 
     (rows || []).reverse().forEach(function(row){
       if (!row || !row.payload) return;
       var id = String(row.local_id || localId(row.payload));
+      if (config.table === 'ventas_agromercado' && historialVentasCutoff) {
+        var fechaRow = fechaReporteNormalizada(row.payload.fecha || row.payload.dia || row.payload.fecha_reporte || row.fecha || '');
+        if (fechaRow && fechaRow < historialVentasCutoff) return;
+      }
       if (config.storageKey === 'inventario-data'
           && typeof window.inventarioVisibleUsuario === 'function'
           && !window.inventarioVisibleUsuario(row.payload)) {
