@@ -33,31 +33,31 @@ window.mostrarSeccionDatos = function(seccion){
     // Cargar datos específicos de la sección
     switch(seccion){
       case 'distritos':
-        if(window.renderDistritos) window.renderDistritos();
+        if(window.cargarDistritos) window.cargarDistritos();
         break;
       case 'agromercados':
-        if(window.renderAgromercados) window.renderAgromercados();
+        if(window.cargarAgromercados) window.cargarAgromercados();
         break;
       case 'cda':
-        if(window.renderCDA) window.renderCDA();
+        if(window.cargarCDA) window.cargarCDA();
         break;
       case 'personas':
-        if(window.renderPersonas) window.renderPersonas();
+        if(window.cargarPersonas) window.cargarPersonas();
         break;
       case 'claves':
         if(window.renderClavesAgromercado) window.renderClavesAgromercado();
         break;
       case 'transporte':
-        if(window.renderTransporte) window.renderTransporte();
+        if(window.cargarTransporte) window.cargarTransporte();
         break;
       case 'bancos':
-        if(window.renderBancosDatos) window.renderBancosDatos();
+        if(window.cargarBancos) window.cargarBancos();
         break;
       case 'productos':
         if(window.renderProductosDatos) window.renderProductosDatos();
         break;
       case 'departamentos':
-        if(window.renderDepartamentos) window.renderDepartamentos();
+        if(window.cargarDistritos) window.cargarDistritos();
         break;
     }
     
