@@ -129,23 +129,214 @@ window.agregarMunicipioDistribucion = function(){ var distritoEl = document.getE
 }; // Agregar nuevo agromercado
 window.agregarAgromercadoDistribucion = function(){ var distritoEl = document.getElementById('distribucion-distrito') || document.getElementById('new-desc-distrito'); if(!distritoEl || !distritoEl.value) { alert('Seleccione un distrito primero.'); return; } var distrito = distritoEl.value; var nombre = prompt('Nombre del nuevo agromercado para ' + distrito + ':'); if(!nombre || nombre.trim() === '') { alert('El nombre del agromercado no puede estar vacío.'); return; } nombre = nombre.trim().toUpperCase().replace(/\s+/g, ' '); // Determinar tipo según pestaña activa var tipo = document.getElementById('tab-distribucion').classList.contains('active') ? 'CDA' : 'TIENDONA'; var customData = getCustomDistribucionData(); var distritoData = customData[distrito] || []; // Verificar si ya existe var existe = distritoData.some(function(e){ return e.a === nombre && e.tipo === tipo; }); if(existe) { alert('Este agromercado ya existe en ' + distrito + '.'); return; } // Agregar agromercado sin municipio distritoData.push({m: '', a: nombre, tipo: tipo}); customData[distrito] = distritoData; saveCustomDistribucionData(customData); // Actualizar datalist actualizarDatalistAgromercados(distrito, tipo); alert('Agromercado "' + nombre + '" agregado a ' + distrito + '.');
 }; // Funciones auxiliares para actualizar selectores
-window.actualizarSelectoresDistrito = function(nombre){ // Actualizar CDA var cdaSelect = document.getElementById('distribucion-distrito'); if(cdaSelect && !Array.from(cdaSelect.options).some(opt =>opt.value === nombre)) { var option = document.createElement('option'); option.value = nombre; option.textContent = nombre; cdaSelect.appendChild(option); } // Actualizar Tiendona var tiendaSelect = document.getElementById('new-desc-distrito'); if(tiendaSelect && !Array.from(tiendaSelect.options).some(opt =>opt.value === nombre)) { var option = document.createElement('option'); option.value = nombre; option.textContent = nombre; tiendaSelect.appendChild(option); }
-}; window.actualizarDatalistAgromercados = function(distrito, tipo){ var datalist = document.getElementById('dl-agros'); if(!datalist) return; // Agregar a datalist si coincide con el tipo var customData = getCustomDistribucionData(); var entries = (customData[distrito] || []).filter(function(e){ return e.tipo === tipo; }); entries.forEach(function(e){ if(!Array.from(datalist.children).some(opt =>opt.value === e.a)) { var option = document.createElement('option'); option.value = e.a; datalist.appendChild(option); } });
-}; // -- CALCULAR --
-/* Función principal de cálculo - debe estar disponible globalmente */ window.calcular = function(){ var totalVenta = 0; PRODUCTOS.forEach(function(p){ var inventarioAnterior = n(p+'-ant'); var mercaderiaNueva = n(p+'-nueva'); var inventarioInicio = inventarioAnterior + mercaderiaNueva; var ventasDia = n(p+'-ven'); var faltantes = n(p+'-fal'); var productoDanado = n(p+'-dan'); // Actualizar Inventario Inicio del Día setVal(p+'-ini', inventarioInicio); // Calcular y actualizar ? Disponibilidad de Venta var disponibilidad = inventarioInicio - ventasDia - faltantes - productoDanado; var disponibilidadFinal = disponibilidad < 0 ? 0 : disponibilidad; var disElement = document.getElementById(p+'-dis'); if(disElement) { disElement.value = disponibilidadFinal; // Agregar MutationObserver temporal para detectar quién modifica el campo if(p === 'ab1') { // Solo para ab1-dis para no saturar la consola var observer = new MutationObserver(function(mutations) { mutations.forEach(function(mutation) { if(mutation.type === 'attributes' && mutation.attributeName === 'value') { var nuevoValor = disElement.value; console.error('¡MUTACIÓN DETECTADA! ab1-dis cambió a:', nuevoValor, 'Stack trace:', new Error().stack); } }); }); observer.observe(disElement, { attributes: true, attributeFilter: ['value'] }); // Remover observer después de 1 segundo para evitar múltiples detecciones setTimeout(function() { observer.disconnect(); }, 1000); } // Verificación silenciosa de valores asignados setTimeout(function() { var valorReal = document.getElementById(p+'-dis').value; if(valorReal != disponibilidadFinal) { // Valor modificado externamente - sin log de diagnóstico } }, 0); // Forzar el evento onchange para actualizar colores disElement.dispatchEvent(new Event('change', { bubbles: true })); } // Calcular y actualizar Dinero de la Venta var dineroVenta = p === 'fr4' ? (ventasDia / 4) * PRECIOS[p] : ventasDia * PRECIOS[p]; setMoney(p+'-din', dineroVenta); totalVenta += dineroVenta; }); setMoney('campo-ventas', totalVenta); setVal('total-venta-display', '$'+totalVenta.toFixed(2)); var elKpiVentas = document.getElementById('kpi-ventas'); if(elKpiVentas) elKpiVentas.textContent = '$'+totalVenta.toFixed(2); calcularRemesa(); calcularCuadre(); guardarLocal();
-}; // Verificación global: asegurar que calcular esté disponible
-// console.log('VERIFICACIÓN: window.calcular está disponible:', typeof window.calcular !== 'undefined'); // Asegurar que window.calcular esté disponible globalmente para eventos oninput
-var calcular = window.calcular; window.calcularCuadre = function(){ var ventasCalculadas = parseFloat(document.getElementById('campo-ventas').value.replace('$', '').replace(',', '')) || 0; var dineroRemesado = parseFloat(document.getElementById('campo-dinero-remesado').value) || 0; var diferencia = +(dineroRemesado - ventasCalculadas).toFixed(2); var estado = diferencia === 0 ? 'CUADRADO' : diferencia >0 ? 'SOBRANTE' : 'FALTANTE'; // Actualizar campos de cuadre setMoney('campo-total-esperado', ventasCalculadas); setMoney('campo-diferencia', Math.abs(diferencia)); var estadoElement = document.getElementById('campo-estado-cuadre'); estadoElement.value = estado; // Aplicar estilos según estado if (estado === 'FALTANTE') { estadoElement.style.background = '#FEE2E2'; estadoElement.style.borderColor = '#EF4444'; estadoElement.style.color = '#DC2626'; } else if (estado === 'SOBRANTE') { estadoElement.style.background = '#DBEAFE'; estadoElement.style.borderColor = '#3B82F6'; estadoElement.style.color = '#1D4ED8'; } else { estadoElement.style.background = '#F0FDF4'; estadoElement.style.borderColor = '#86EFAC'; estadoElement.style.color = '#16A34A'; }
-}; window.calcularRemesa = function(){ var ventas = 0; PRODUCTOS.forEach(function(p){ var cantidad = n(p+'-ven'); ventas += p === 'fr4' ? (cantidad / 4) * PRECIOS[p] : cantidad * PRECIOS[p]; }); var gastos = parseFloat(document.getElementById('campo-gastos').value)||0; var remesa = ventas - gastos; setMoney('campo-remesa', remesa < 0 ? 0 : remesa); var elKpiGastos = document.getElementById('kpi-gastos'); if(elKpiGastos) elKpiGastos.textContent = '$'+gastos.toFixed(2); var elKpiRemesa = document.getElementById('kpi-remesa'); if(elKpiRemesa) elKpiRemesa.textContent = '$'+(remesa < 0 ? 0 : remesa).toFixed(2);
-}; // -- FUNCIÓN AUXILIAR PARA OBTENER INGRESOS DE AGROMERCADO --
-window.obtenerIngresosAgromercado = function(agromercado){ var ingresos = { arroz: 0, precocido: 0, frijol1: 0, frijol4: 0, aceite: 0, harina: 0 }; if(!agromercado) return ingresos; try{ // Buscar en inventario-data para el agromercado específico var inventario = JSON.parse(localStorage.getItem('inventario-data')||'[]'); var registrosAgromercado = inventario.filter(function(item){ return item.ubicacion === 'agromercados' && (item.lugar === agromercado || item.agromercado === agromercado); }); // Sumar cantidades del inventario del agromercado registrosAgromercado.forEach(function(registro){ ingresos.arroz += parseFloat(registro.arroz)||0; ingresos.precocido += parseFloat(registro.precocido)||0; ingresos.frijol1 += parseFloat(registro.frijol1)||0; ingresos.frijol4 += parseFloat(registro.frijol4)||0; ingresos.aceite += parseFloat(registro.aceite)||0; ingresos.harina += parseFloat(registro.harina)||0; }); // También buscar en descargas-tiendona-historial var descargas = JSON.parse(localStorage.getItem('descargas-tiendona-historial')||'[]'); descargas.forEach(function(registro){ if(registro.datos && Array.isArray(registro.datos)){ registro.datos.forEach(function(descarga){ if(descarga.agromercado === agromercado){ ingresos.arroz += parseFloat(descarga.arroz)||0; ingresos.precocido += parseFloat(descarga.arrozPrecocido)||0; ingresos.frijol1 += parseFloat(descarga.frijol1)||0; ingresos.frijol4 += parseFloat(descarga.frijol4)||0; ingresos.aceite += parseFloat(descarga.aceite)||0; ingresos.harina += parseFloat(descarga.harina)||0; } }); } }); } catch(e){ console.error('Error obteniendo ingresos del agromercado:', e); } return ingresos;
-}; // -- CARGAR STOCK AGROMERCADO --
-window.cargarStockAgromercado = function(){ // Validar existencia de elementos var agromercadoEl = document.getElementById('agro-nombre'); if (!agromercadoEl) return; var agromercadoSeleccionado = agromercadoEl.value; if(!agromercadoSeleccionado) return; try{ // Cargar inventario anterior desde inventario-data cargarInventarioAgromercadoSeleccionado?.(); // Obtener stock real del agromercado seleccionado para el inicio var stock = window.obtenerIngresosAgromercado(agromercadoSeleccionado); if(stock){ // Llenar campos de inventario inicio con stock real setVal('ab1-ini', stock.arroz || 0); setVal('ap1-ini', stock.precocido || 0); setVal('fr1-ini', stock.frijol1 || 0); setVal('fr4-ini', stock.frijol4 || 0); setVal('ac-ini', stock.aceite || 0); setVal('ha-ini', stock.harina || 0); } else { // Si no hay stock, dejar en 0 setVal('ab1-ini', 0); setVal('ap1-ini', 0); setVal('fr1-ini', 0); setVal('fr4-ini', 0); setVal('ac-ini', 0); setVal('ha-ini', 0); } // Llamar calcular() para actualizar disponibilidad calcular(); } catch(e){ console.error('Error cargando stock del agromercado:', e); }
-}; // -- CARGAR INVENTARIO DEL AGROMERCADO SELECCIONADO --
-window.cargarInventarioAgromercadoSeleccionado = function(){ var agro = document.getElementById('agro-agromercado')?.value?.trim() || document.getElementById('campo-agromercado')?.value?.trim() || document.getElementById('agro-nombre')?.value?.trim() || ''; if (!agro) return; var inv = JSON.parse(localStorage.getItem('inventario-data') || '[]'); var resumen = { arroz: 0, precocido: 0, frijol1: 0, frijol4: 0, aceite: 0, harina: 0 }; inv.forEach(function(r){ if ((r.ubicacion || '').trim() !== agro) return; resumen.arroz += Number(r.arroz || 0); resumen.precocido += Number(r.precocido || 0); resumen.frijol1 += Number(r.frijol1 || 0); resumen.frijol4 += Number(r.frijol4 || 0); resumen.aceite += Number(r.aceite || 0); resumen.harina += Number(r.harina || 0); }); setVal?.('ab1-ant', resumen.arroz); setVal?.('ap1-ant', resumen.precocido); setVal?.('fr1-ant', resumen.frijol1); setVal?.('fr4-ant', resumen.frijol4); setVal?.('ac-ant', resumen.aceite); setVal?.('ha-ant', resumen.harina); calcular?.();
-}; // -- LIMPIAR FORMULARIO --
-window.limpiarFormulario = function(){ // Obtener agromercado seleccionado var agroNombreEl = document.getElementById('agro-nombre'); var agromercadoSeleccionado = agroNombreEl ? agroNombreEl.value : ''; // Pasar disponibilidad de hoy como inventario anterior del nuevo día PRODUCTOS.forEach(function(p){ var dis = parseFloat((document.getElementById(p+'-dis')||{}).value)||0; setVal(p+'-ant', dis); setVal(p+'-ven', 0); setVal(p+'-fal', 0); setVal(p+'-dan', 0); }); // Llenar automáticamente "Mercadería Nueva" con ingresos del agromercado if(agromercadoSeleccionado && typeof obtenerIngresosAgromercado === 'function'){ var ingresos = obtenerIngresosAgromercado(agromercadoSeleccionado); setVal('ab1-nueva', ingresos.arroz); setVal('ap1-nueva', ingresos.precocido); setVal('fr1-nueva', ingresos.frijol1); setVal('fr4-nueva', ingresos.frijol4); setVal('ac-nueva', ingresos.aceite); setVal('ha-nueva', ingresos.harina); } else { // Si no hay agromercado seleccionado o la función no existe, dejar en 0 PRODUCTOS.forEach(function(p){ setVal(p+'-nueva', 0); }); } var gastosEl = document.getElementById('campo-gastos'); var fechaEl = document.getElementById('agro-fecha'); if(gastosEl) gastosEl.value = '0'; if(fechaEl) fechaEl.value = fechaHoy(); var bSel=document.getElementById('campo-banco'); if(bSel) bSel.value=''; actualizarFecha(); calcular(); showToast('Nuevo día iniciado con el inventario de hoy');
-}; // -- GUARDAR REGISTRO EN HISTORIAL --
+window.actualizarSelectoresDistrito = function(nombre){
+  var cdaSelect = document.getElementById('distribucion-distrito');
+  if(cdaSelect && !Array.from(cdaSelect.options).some(function(opt){ return opt.value === nombre; })) {
+    var option = document.createElement('option');
+    option.value = nombre;
+    option.textContent = nombre;
+    cdaSelect.appendChild(option);
+  }
+  var tiendaSelect = document.getElementById('new-desc-distrito');
+  if(tiendaSelect && !Array.from(tiendaSelect.options).some(function(opt){ return opt.value === nombre; })) {
+    var option = document.createElement('option');
+    option.value = nombre;
+    option.textContent = nombre;
+    tiendaSelect.appendChild(option);
+  }
+};
+window.actualizarDatalistAgromercados = function(distrito, tipo){
+  var datalist = document.getElementById('dl-agros');
+  if(!datalist) return;
+  var customData = getCustomDistribucionData();
+  var entries = (customData[distrito] || []).filter(function(e){ return e.tipo === tipo; });
+  entries.forEach(function(e){
+    if(!Array.from(datalist.children).some(function(opt){ return opt.value === e.a; })) {
+      var option = document.createElement('option');
+      option.value = e.a;
+      datalist.appendChild(option);
+    }
+  });
+};
+// -- CALCULAR --
+window.calcular = function(){
+  var totalVenta = 0;
+  PRODUCTOS.forEach(function(p){
+    var inventarioAnterior = n(p+'-ant');
+    var mercaderiaNueva = n(p+'-nueva');
+    var inventarioInicio = inventarioAnterior + mercaderiaNueva;
+    var ventasDia = n(p+'-ven');
+    var faltantes = n(p+'-fal');
+    var productoDanado = n(p+'-dan');
+    setVal(p+'-ini', inventarioInicio);
+    var disponibilidad = inventarioInicio - ventasDia - faltantes - productoDanado;
+    var disponibilidadFinal = disponibilidad < 0 ? 0 : disponibilidad;
+    var disElement = document.getElementById(p+'-dis');
+    if(disElement) {
+      disElement.value = disponibilidadFinal;
+      disElement.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    var dineroVenta = p === 'fr4' ? (ventasDia / 4) * PRECIOS[p] : ventasDia * PRECIOS[p];
+    setMoney(p+'-din', dineroVenta);
+    totalVenta += dineroVenta;
+  });
+  setMoney('campo-ventas', totalVenta);
+  setVal('total-venta-display', '$'+totalVenta.toFixed(2));
+  var elKpiVentas = document.getElementById('kpi-ventas');
+  if(elKpiVentas) elKpiVentas.textContent = '$'+totalVenta.toFixed(2);
+  calcularRemesa();
+  calcularCuadre();
+  guardarLocal();
+};
+var calcular = window.calcular;
+window.calcularCuadre = function(){
+  var ventasCalculadas = parseFloat(document.getElementById('campo-ventas').value.replace('$', '').replace(',', '')) || 0;
+  var dineroRemesado = parseFloat(document.getElementById('campo-dinero-remesado').value) || 0;
+  var diferencia = +(dineroRemesado - ventasCalculadas).toFixed(2);
+  var estado = diferencia === 0 ? 'CUADRADO' : diferencia >0 ? 'SOBRANTE' : 'FALTANTE';
+  setMoney('campo-total-esperado', ventasCalculadas);
+  setMoney('campo-diferencia', Math.abs(diferencia));
+  var estadoElement = document.getElementById('campo-estado-cuadre');
+  if(estadoElement) {
+    estadoElement.value = estado;
+    if (estado === 'FALTANTE') {
+      estadoElement.style.background = '#FEE2E2';
+      estadoElement.style.borderColor = '#EF4444';
+      estadoElement.style.color = '#DC2626';
+    } else if (estado === 'SOBRANTE') {
+      estadoElement.style.background = '#DBEAFE';
+      estadoElement.style.borderColor = '#3B82F6';
+      estadoElement.style.color = '#1D4ED8';
+    } else {
+      estadoElement.style.background = '#F0FDF4';
+      estadoElement.style.borderColor = '#86EFAC';
+      estadoElement.style.color = '#16A34A';
+    }
+  }
+};
+window.calcularRemesa = function(){
+  var ventas = 0;
+  PRODUCTOS.forEach(function(p){
+    var cantidad = n(p+'-ven');
+    ventas += p === 'fr4' ? (cantidad / 4) * PRECIOS[p] : cantidad * PRECIOS[p];
+  });
+  var gastos = parseFloat(document.getElementById('campo-gastos').value)||0;
+  var remesa = ventas - gastos;
+  setMoney('campo-remesa', remesa < 0 ? 0 : remesa);
+  var elKpiGastos = document.getElementById('kpi-gastos');
+  if(elKpiGastos) elKpiGastos.textContent = '$'+gastos.toFixed(2);
+  var elKpiRemesa = document.getElementById('kpi-remesa');
+  if(elKpiRemesa) elKpiRemesa.textContent = '$'+(remesa < 0 ? 0 : remesa).toFixed(2);
+};
+window.obtenerIngresosAgromercado = function(agromercado){
+  var ingresos = { arroz: 0, precocido: 0, frijol1: 0, frijol4: 0, aceite: 0, harina: 0 };
+  if(!agromercado) return ingresos;
+  try{
+    var inventario = JSON.parse(localStorage.getItem('inventario-data')||'[]');
+    var registrosAgromercado = inventario.filter(function(item){
+      return item.ubicacion === 'agromercados' && (item.lugar === agromercado || item.agromercado === agromercado);
+    });
+    registrosAgromercado.forEach(function(registro){
+      ingresos.arroz += parseFloat(registro.arroz)||0;
+      ingresos.precocido += parseFloat(registro.precocido)||0;
+      ingresos.frijol1 += parseFloat(registro.frijol1)||0;
+      ingresos.frijol4 += parseFloat(registro.frijol4)||0;
+      ingresos.aceite += parseFloat(registro.aceite)||0;
+      ingresos.harina += parseFloat(registro.harina)||0;
+    });
+    var descargas = JSON.parse(localStorage.getItem('descargas-tiendona-historial')||'[]');
+    descargas.forEach(function(registro){
+      if(registro.datos && Array.isArray(registro.datos)){
+        registro.datos.forEach(function(descarga){
+          if(descarga.agromercado === agromercado){
+            ingresos.arroz += parseFloat(descarga.arroz)||0;
+            ingresos.precocido += parseFloat(descarga.arrozPrecocido)||0;
+            ingresos.frijol1 += parseFloat(descarga.frijol1)||0;
+            ingresos.frijol4 += parseFloat(descarga.frijol4)||0;
+            ingresos.aceite += parseFloat(descarga.aceite)||0;
+            ingresos.harina += parseFloat(descarga.harina)||0;
+          }
+        });
+      }
+    });
+  } catch(e){
+    console.error('Error obteniendo ingresos del agromercado:', e);
+  }
+  return ingresos;
+};
+window.cargarStockAgromercado = function(){
+  var agromercadoEl = document.getElementById('agro-nombre');
+  if (!agromercadoEl) return;
+  var agromercadoSeleccionado = agromercadoEl.value;
+  if(!agromercadoSeleccionado) return;
+  try{
+    cargarInventarioAgromercadoSeleccionado?.();
+    var stock = window.obtenerIngresosAgromercado(agromercadoSeleccionado);
+    setVal('ab1-ini', stock.arroz || 0);
+    setVal('ap1-ini', stock.precocido || 0);
+    setVal('fr1-ini', stock.frijol1 || 0);
+    setVal('fr4-ini', stock.frijol4 || 0);
+    setVal('ac-ini', stock.aceite || 0);
+    setVal('ha-ini', stock.harina || 0);
+    calcular();
+  } catch(e){
+    console.error('Error cargando stock del agromercado:', e);
+  }
+};
+window.cargarInventarioAgromercadoSeleccionado = function(){
+  var agro = document.getElementById('agro-agromercado')?.value?.trim() || document.getElementById('campo-agromercado')?.value?.trim() || document.getElementById('agro-nombre')?.value?.trim() || '';
+  if (!agro) return;
+  var inv = JSON.parse(localStorage.getItem('inventario-data') || '[]');
+  var resumen = { arroz: 0, precocido: 0, frijol1: 0, frijol4: 0, aceite: 0, harina: 0 };
+  inv.forEach(function(r){
+    if ((r.ubicacion || '').trim() !== agro) return;
+    resumen.arroz += Number(r.arroz || 0);
+    resumen.precocido += Number(r.precocido || 0);
+    resumen.frijol1 += Number(r.frijol1 || 0);
+    resumen.frijol4 += Number(r.frijol4 || 0);
+    resumen.aceite += Number(r.aceite || 0);
+    resumen.harina += Number(r.harina || 0);
+  });
+  setVal?.('ab1-ant', resumen.arroz);
+  setVal?.('ap1-ant', resumen.precocido);
+  setVal?.('fr1-ant', resumen.frijol1);
+  setVal?.('fr4-ant', resumen.frijol4);
+  setVal?.('ac-ant', resumen.aceite);
+  setVal?.('ha-ant', resumen.harina);
+  calcular?.();
+};
+window.limpiarFormulario = function(){
+  var agroNombreEl = document.getElementById('agro-nombre');
+  var agromercadoSeleccionado = agroNombreEl ? agroNombreEl.value : '';
+  PRODUCTOS.forEach(function(p){
+    var dis = parseFloat((document.getElementById(p+'-dis')||{}).value)||0;
+    setVal(p+'-ant', dis);
+    setVal(p+'-ven', 0);
+    setVal(p+'-fal', 0);
+    setVal(p+'-dan', 0);
+  });
+  if(agromercadoSeleccionado && typeof obtenerIngresosAgromercado === 'function'){
+    var ingresos = obtenerIngresosAgromercado(agromercadoSeleccionado);
+    setVal('ab1-nueva', ingresos.arroz);
+    setVal('ap1-nueva', ingresos.precocido);
+    setVal('fr1-nueva', ingresos.frijol1);
+    setVal('fr4-nueva', ingresos.frijol4);
+    setVal('ac-nueva', ingresos.aceite);
+    setVal('ha-nueva', ingresos.harina);
+  } else {
+    PRODUCTOS.forEach(function(p){ setVal(p+'-nueva', 0); });
+  }
+  var gastosEl = document.getElementById('campo-gastos');
+  var fechaEl = document.getElementById('agro-fecha');
+  if(gastosEl) gastosEl.value = '0';
+  if(fechaEl) fechaEl.value = fechaHoy();
+  var bSel=document.getElementById('campo-banco');
+  if(bSel) bSel.value='';
+  actualizarFecha();
+  calcular();
+  showToast('Nuevo día iniciado con el inventario de hoy');
+};
+// -- GUARDAR REGISTRO EN HISTORIAL --
 window.guardarRegistro = function(){ var agroInput = document.getElementById('agro-agromercado') || document.getElementById('agro-nombre'); var agro = agroInput ? agroInput.value : ''; var nombre = agro || '(sin nombre)'; var fecha = (document.getElementById('agro-fecha')||{}).value||fechaHoy(); var dia = (document.getElementById('agro-dia')||{}).value||''; var ventas = 0; PRODUCTOS.forEach(function(p){ var cantidad = n(p+'-ven'); ventas += p === 'fr4' ? (cantidad / 4) * PRECIOS[p] : cantidad * PRECIOS[p]; }); var gastos = parseFloat(document.getElementById('campo-gastos').value)||0; var remesa = Math.max(0, ventas-gastos); var info = null; Object.keys(AGROMERCADOS_DATA).forEach(function(distritoClave){ if(info) return; (AGROMERCADOS_DATA[distritoClave]||[]).forEach(function(item){ if(item.a && item.a.toString().trim().toLowerCase() === agro.trim().toLowerCase()){ info = { distrito: distritoClave, municipio: item.m }; } }); }); var distrito = info ? info.distrito : ''; var municipio = info ? info.municipio : ''; var banco = document.getElementById('campo-banco')?.value?.trim() || ''; var dineroRemesado = parseFloat((document.getElementById('campo-dinero-remesado')||{}).value) || 0; var ventasCalculadas = ventas; var diferenciaDinero = +(dineroRemesado - ventasCalculadas).toFixed(2); var estadoDinero = diferenciaDinero === 0 ? 'CUADRADO' : diferenciaDinero >0 ? 'SOBRANTE' : 'FALTANTE'; var registro = { fecha:fecha, hora: (typeof window.obtenerHoraActual === 'function' ? window.obtenerHoraActual() : horaVistaSistema({timestamp: Date.now()})), dia:dia, nombre:nombre, agromercado:agro, distrito:distrito, municipio:municipio, banco:banco, ventas_unidades:{}, ventas:ventas, gastos:gastos, remesa:remesa, dineroRemesado:dineroRemesado, diferenciaDinero:diferenciaDinero, estadoDinero:estadoDinero, usuarioCierre: chatName(), usuarioCierreId: window.chatClientId, ts: Date.now() }; PRODUCTOS.forEach(function(p){ registro.ventas_unidades[p] = n(p+'-ven'); }); registro.local_id = 'venta-' + registro.ts; registro.id = registro.local_id; var hist = JSON.parse(localStorage.getItem('exc_agro_hist')||'[]'); hist.unshift(registro); localStorage.setItem('exc_agro_hist', JSON.stringify(hist)); // Validar que no se venda más del stock disponible var agromercadoSeleccionado = document.getElementById('agro-nombre').value; var stockActual = null; var sobreventa = false; var productosSobreventa = []; if(agromercadoSeleccionado && typeof obtenerIngresosAgromercado === 'function'){ stockActual = obtenerIngresosAgromercado(agromercadoSeleccionado); // Validar cada producto contra el stock disponible var stockKeys = { ab1: 'arroz', ap1: 'precocido', fr1: 'frijol1', fr4: 'frijol4', ac: 'aceite', ha: 'harina' }; PRODUCTOS.forEach(function(p){ var vendidas = n(p+'-ven'); var disponibles = stockActual[stockKeys[p] || p] || 0; if(vendidas >disponibles){ sobreventa = true; productosSobreventa.push(p + ' (' + vendidas + ' >' + disponibles + ')'); } }); } // Si hay sobreventa, mostrar alerta y bloquear guardado if(sobreventa){ showAlert('alert-agro', 'No se puede guardar: Ventas mayores al stock disponible para ' + productosSobreventa.join(', '), 'err'); return; } // Si no hay ventas, no crear movimiento de inventario var hayVentas = PRODUCTOS.some(function(p){ return n(p+'-ven') >0; }); // Registrar movimiento de inventario solo si hay ventas if(hayVentas && stockActual){ var movimientoSalida = { id: 'salida-ventas-' + Date.now(), fecha: fecha, hora: (typeof window.obtenerHoraActual === 'function' ? window.obtenerHoraActual() : horaVistaSistema({timestamp: Date.now()})), ubicacion: 'agromercados', lugar: 'Ventas en ' + agromercadoSeleccionado, tipo: 'salida', referencia: 'Ventas del día ' + dia, arroz: -n('ab1-ven'), precocido: -n('ap1-ven'), frijol1: -n('fr1-ven'), frijol4: -n('fr4-ven'), aceite: -n('ac-ven'), harina: -n('ha-ven'), total: Math.abs(-n('ab1-ven') - n('ap1-ven') - n('fr1-ven') - n('fr4-ven') - n('ac-ven') - n('ha-ven')), observaciones: 'Salida por ventas - ' + agromercadoSeleccionado, timestamp: new Date().toISOString() }; var resultado = window.registrarMovimientoInventario(movimientoSalida); if(!resultado.success){ showAlert('alert-agro', 'Error actualizando inventario: ' + resultado.mensaje, 'err'); return; } } if(banco && dineroRemesado >0){ var bancosData = JSON.parse(localStorage.getItem('bancos-data')||'[]'); var existeBancoRegistro = bancosData.some(function(r){ return r.fecha === fecha && r.agromercado === agro && r.banco === banco && parseFloat(r.remesa) === parseFloat(dineroRemesado) && parseFloat(r.ventas) === parseFloat(ventas) && parseFloat(r.gastos) === parseFloat(gastos); }); if(!existeBancoRegistro){ bancosData.unshift({ id: Date.now(), fecha: fecha, distrito: distrito, municipio: municipio, agromercado: agro, banco: banco, ventas: ventas, gastos: gastos, remesa: dineroRemesado, referencia: '', observaciones: 'Generado desde Control de Venta Agromercado', ventas_unidades: registro.ventas_unidades, timestamp: new Date().toISOString() }); localStorage.setItem('bancos-data', JSON.stringify(bancosData)); ['filtro-banco', 'filtro-banco-fecha-desde', 'filtro-banco-fecha-hasta', 'banco-filtro', 'banco-fecha-desde', 'banco-fecha-hasta', 'banco-filtro-banco', 'banco-filtro-desde', 'banco-filtro-hasta', 'banco-filtro-distrito'].forEach(function(id){ var el = document.getElementById(id); if(el) el.value = ''; }); window.bancosNecesitanRender = !document.getElementById('tbody-bancos'); } } else if(!banco && dineroRemesado >0) { showAlert('alert-agro', 'Seleccione un banco para enviar la remesa a Reporte Banco.', 'err'); } renderHistorial?.(); const cont = document.getElementById('historial-registros-content'); if (cont) cont.style.display = 'block'; const btn = document.getElementById('btn-toggle-historial-registros'); if (btn) btn.textContent = '-'; renderBancos?.(); cargarResumenRemesas?.(); actualizarResumenRemesasDia?.(); if(window.calcularTotalesGenerales){ window.calcularTotalesGenerales(); } cargarPanelPrincipal?.(); showAlert('alert-agro', 'Registro guardado correctamente.', 'ok'); guardarLocal(); // Guardar inventario final para usar como inventario inicial del siguiente día var inventarioFinal = {}; PRODUCTOS.forEach(function(p){ inventarioFinal[p] = parseFloat((document.getElementById(p+'-dis')||{}).value)||0; }); localStorage.setItem('agro-inventario-final', JSON.stringify(inventarioFinal)); // Actualizar resumen visual de inventario refrescarInventarioEnTiempoReal(); // Limpiar campos de venta después de guardar para evitar duplicación PRODUCTOS.forEach(function(p){ setVal(p+'-ven', 0); // Ventas del Día setVal(p+'-fal', 0); // Faltantes setVal(p+'-dan', 0); // Producto Dañado }); document.getElementById('campo-gastos').value = '0'; document.getElementById('campo-dinero-remesado').value = '0'; calcular();
 }; // -- RENDER HISTORIAL --
 window.fechaVistaSistema = function(valor){ if(!valor) return ''; if(valor instanceof Date){ var d = String(valor.getDate()).padStart(2,'0'); var m = String(valor.getMonth()+1).padStart(2,'0'); var y = valor.getFullYear(); return d + '/' + m + '/' + y; } if(typeof window.formatearFecha === 'function'){ return window.formatearFecha(valor); } if(typeof valor === 'string' && valor.includes('-')){ var p = valor.split('T')[0].split('-'); if(p.length === 3) return p[2] + '/' + p[1] + '/' + p[0]; } return String(valor);
