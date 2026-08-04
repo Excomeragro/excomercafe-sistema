@@ -1,3 +1,129 @@
+﻿;(function(){
+  if (window.excAgroHistStorageShimInstalled) return;
+  window.excAgroHistStorageShimInstalled = true;
+
+  var HIST_KEY = 'exc_agro_hist';
+  var HIST_DATA_KEY = 'exc_agro_hist__payload';
+  var HIST_META_KEY = 'exc_agro_hist__meta';
+  var ORIGINAL = {
+    getItem: localStorage.getItem.bind(localStorage),
+    setItem: localStorage.setItem.bind(localStorage),
+    removeItem: localStorage.removeItem.bind(localStorage),
+    key: localStorage.key.bind(localStorage)
+  };
+
+  function encodeValue(value) {
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) return { __a: value.map(encodeValue) };
+    if (typeof value === 'object') {
+      var keys = Object.keys(value);
+      return { __o: keys, __v: keys.map(function(key){ return encodeValue(value[key]); }) };
+    }
+    return value;
+  }
+
+  function decodeValue(value) {
+    if (!value || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return value.map(decodeValue);
+    if (Array.isArray(value.__a)) return value.__a.map(decodeValue);
+    if (Array.isArray(value.__o) && Array.isArray(value.__v)) {
+      var out = {};
+      value.__o.forEach(function(key, index){ out[key] = decodeValue(value.__v[index]); });
+      return out;
+    }
+    return value;
+  }
+
+  function compressHistJson(jsonString) {
+    try {
+      var parsed = JSON.parse(jsonString);
+      return JSON.stringify({ __exc_hist: 1, data: encodeValue(parsed) });
+    } catch (error) {
+      return jsonString;
+    }
+  }
+
+  function decompressHistJson(storedString) {
+    try {
+      var parsed = JSON.parse(storedString);
+      if (parsed && parsed.__exc_hist === 1) {
+        return JSON.stringify(decodeValue(parsed.data));
+      }
+    } catch (error) {}
+    return storedString;
+  }
+
+  function readHistStorageRaw() {
+    return ORIGINAL.getItem(HIST_DATA_KEY) || ORIGINAL.getItem(HIST_KEY);
+  }
+
+  function writeHistStorage(value) {
+    var jsonString = String(value == null ? '[]' : value);
+    var compressed = compressHistJson(jsonString);
+    try {
+      if (compressed.length < jsonString.length) {
+        ORIGINAL.removeItem(HIST_KEY);
+        ORIGINAL.setItem(HIST_DATA_KEY, compressed);
+        ORIGINAL.setItem(HIST_META_KEY, JSON.stringify({ mode: 'compressed', updatedAt: new Date().toISOString() }));
+      } else {
+        ORIGINAL.removeItem(HIST_DATA_KEY);
+        ORIGINAL.setItem(HIST_KEY, jsonString);
+        ORIGINAL.setItem(HIST_META_KEY, JSON.stringify({ mode: 'raw', updatedAt: new Date().toISOString() }));
+      }
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function removeHistStorage() {
+    ORIGINAL.removeItem(HIST_KEY);
+    ORIGINAL.removeItem(HIST_DATA_KEY);
+    ORIGINAL.removeItem(HIST_META_KEY);
+  }
+
+  window.excAgroHistStorage = {
+    read: function(fallback) {
+      var raw = readHistStorageRaw();
+      if (raw == null) return fallback;
+      return decompressHistJson(raw);
+    },
+    write: function(value) {
+      return writeHistStorage(value);
+    },
+    remove: function() {
+      removeHistStorage();
+    }
+  };
+
+  localStorage.getItem = function(key) {
+    if (key === HIST_KEY) {
+      var raw = readHistStorageRaw();
+      if (raw == null) return null;
+      return decompressHistJson(raw);
+    }
+    return ORIGINAL.getItem(key);
+  };
+
+  localStorage.setItem = function(key, value) {
+    if (key === HIST_KEY) {
+      if (writeHistStorage(value)) return;
+    }
+    return ORIGINAL.setItem(key, value);
+  };
+
+  localStorage.removeItem = function(key) {
+    if (key === HIST_KEY) {
+      removeHistStorage();
+      return;
+    }
+    return ORIGINAL.removeItem(key);
+  };
+
+  localStorage.key = function(index) {
+    return ORIGINAL.key(index);
+  };
+})();
 // ══ SISTEMA DE ALMACENAMIENTO ══
 
 // ── SISTEMA CENTRALIZADO DE GESTIÓN DE BANCOS ──
@@ -1008,3 +1134,4 @@ window.migrateOldRecords = function(){
     }, 80);
   };
 })();
+
