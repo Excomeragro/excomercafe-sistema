@@ -367,11 +367,98 @@ window.actualizarMunicipiosEdicion = function(index){ var distritoSelect = docum
 }; window.guardarEdicionInline = function(index){ var hist = JSON.parse(localStorage.getItem('exc_agro_hist')||'[]'); if(index < 0 || index >= hist.length) return; // Obtener valores editados var registro = hist[index]; // Guardar valores anteriores para actualizar inventario registro.ventas_unidades_anterior = registro.ventas_unidades || {}; registro.fecha = document.getElementById('edit-fecha-' + index).value; if(!registro.hora) registro.hora = (typeof window.obtenerHoraActual === 'function' ? window.obtenerHoraActual() : horaVistaSistema({timestamp: Date.now()})); registro.distrito = document.getElementById('edit-distrito-' + index).value; registro.municipio = document.getElementById('edit-municipio-' + index).value; registro.nombre = document.getElementById('edit-agromercado-' + index).value; registro.banco = document.getElementById('edit-banco-' + index).value; registro.ventas = parseFloat(document.getElementById('edit-ventas-' + index).value) || 0; registro.gastos = parseFloat(document.getElementById('edit-gastos-' + index).value) || 0; // Actualizar ventas_unidades registro.ventas_unidades = {}; var productosKeys = PRODUCTOS_KEYS; productosKeys.forEach(function(key){ var valor = parseInt(document.getElementById('edit-' + key + '-' + index).value) || 0; if(valor >0) registro.ventas_unidades[key] = valor; }); // Guardar cambios hist[index] = registro; localStorage.setItem('exc_agro_hist', JSON.stringify(hist)); // Actualizar inventario actualizarInventarioDesdeRegistro(registro, true); // true = edición // Refrescar tabla renderHistorial(); if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl(); if(typeof actualizarEstadoReportesAgromercado === 'function') actualizarEstadoReportesAgromercado(); renderBancos(); showToast('Registro actualizado correctamente');
 }; window.cancelarEdicionInline = function(index){ renderHistorial(); if(typeof renderHistorialReportesVentaControl === 'function') renderHistorialReportesVentaControl();
 }; window.cancelarTodasLasEdiciones = function(){ var tbody = document.getElementById('tbody-historial'); var rows = tbody.getElementsByTagName('tr'); for(var i = 0; i < rows.length; i++){ if(rows[i].dataset.editing === 'true'){ renderHistorial(); break; } }
-}; window.actualizarInventarioDesdeRegistro = function(registro, esEdicion){ try{ var inventario = JSON.parse(localStorage.getItem('inventario-data')||'[]'); // Si es edición, primero revertir los cambios anteriores if(esEdicion && registro.ventas_unidades_anterior){ Object.keys(registro.ventas_unidades_anterior).forEach(function(producto){ var item = inventario.find(function(i){ return i.producto === producto; }); if(item){ item.cantidad += registro.ventas_unidades_anterior[producto]; } }); } // Aplicar los cambios actuales if(registro.ventas_unidades){ Object.keys(registro.ventas_unidades).forEach(function(producto){ var item = inventario.find(function(i){ return i.producto === producto; }); if(item){ item.cantidad -= registro.ventas_unidades[producto]; if(item.cantidad < 0) item.cantidad = 0; } }); } localStorage.setItem('inventario-data', JSON.stringify(inventario)); } catch(e){ console.error('Error actualizando inventario:', e); }
-}; window.obtenerDiaSemana = function(fecha){ if(!fecha) return ''; var dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']; var partes = String(fecha).slice(0,10).split('-').map(Number); var date = partes.length === 3 ? new Date(partes[0], partes[1] - 1, partes[2]) : new Date(fecha); return dias[date.getDay()] || '';
-}; // -- GUARDAR LOCAL (formulario actual) --
-window.guardarLocal = function(){ var data = { nombre: (document.getElementById('agro-nombre')||{}).value||'', fecha: document.getElementById('agro-fecha').value, gastos: document.getElementById('campo-gastos').value, distrito: (document.getElementById('agro-distrito')||{}).value||'', municipio: (document.getElementById('agro-municipio')||{}).value||'', banco: (document.getElementById('campo-banco')||{}).value||'' }; PRODUCTOS.forEach(function(p){ ['ant','nueva','ven','fal','dan'].forEach(function(f){ data[p+'_'+f] = (document.getElementById(p+'-'+f)||{}).value||0; }); }); localStorage.setItem('exc_agro_form', JSON.stringify(data));
-}; function cargarLocal(){ var raw = localStorage.getItem('exc_agro_form'); if(!raw) return; try{ var data = JSON.parse(raw); if(data.fecha) document.getElementById('agro-fecha').value = data.fecha; if(data.gastos) document.getElementById('campo-gastos').value = data.gastos; if(data.distrito){ document.getElementById('agro-distrito').value = data.distrito; onDistritoChange(); if(data.municipio){ document.getElementById('agro-municipio').value = data.municipio; onMunicipioChange(); if(data.nombre) document.getElementById('agro-nombre').value = data.nombre; } } if(data.banco) document.getElementById('campo-banco').value = data.banco; PRODUCTOS.forEach(function(p){ ['ant','nueva','ven','fal','dan'].forEach(function(f){ var el = document.getElementById(p+'-'+f); if(el && data[p+'_'+f]!==undefined) el.value = data[p+'_'+f]; }); }); // Cargar inventario final del día anterior como inventario inicial var inventarioFinalRaw = localStorage.getItem('agro-inventario-final'); if(inventarioFinalRaw){ try{ var inventarioFinal = JSON.parse(inventarioFinalRaw); PRODUCTOS.forEach(function(p){ if(inventarioFinal[p] !== undefined){ document.getElementById(p+'-ant').value = inventarioFinal[p]; } }); }catch(e){} } }catch(e){}
+};
+
+window.actualizarInventarioDesdeRegistro = function(registro, esEdicion){
+  try{
+    var inventario = JSON.parse(localStorage.getItem('inventario-data') || '[]');
+
+    if(esEdicion && registro.ventas_unidades_anterior){
+      Object.keys(registro.ventas_unidades_anterior).forEach(function(producto){
+        var item = inventario.find(function(i){ return i.producto === producto; });
+        if(item){
+          item.cantidad += registro.ventas_unidades_anterior[producto];
+        }
+      });
+    }
+
+    if(registro.ventas_unidades){
+      Object.keys(registro.ventas_unidades).forEach(function(producto){
+        var item = inventario.find(function(i){ return i.producto === producto; });
+        if(item){
+          item.cantidad -= registro.ventas_unidades[producto];
+          if(item.cantidad < 0) item.cantidad = 0;
+        }
+      });
+    }
+
+    localStorage.setItem('inventario-data', JSON.stringify(inventario));
+  } catch(e){
+    console.error('Error actualizando inventario:', e);
+  }
+};
+
+window.obtenerDiaSemana = function(fecha){
+  if(!fecha) return '';
+  var dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  var partes = String(fecha).slice(0,10).split('-').map(Number);
+  var date = partes.length === 3 ? new Date(partes[0], partes[1] - 1, partes[2]) : new Date(fecha);
+  return dias[date.getDay()] || '';
+};
+// -- GUARDAR LOCAL (formulario actual) --
+window.guardarLocal = function(){
+  var data = {
+    nombre: (document.getElementById('agro-nombre')||{}).value||'',
+    fecha: document.getElementById('agro-fecha').value,
+    gastos: document.getElementById('campo-gastos').value,
+    distrito: (document.getElementById('agro-distrito')||{}).value||'',
+    municipio: (document.getElementById('agro-municipio')||{}).value||'',
+    banco: (document.getElementById('campo-banco')||{}).value||''
+  };
+  PRODUCTOS.forEach(function(p){
+    ['ant','nueva','ven','fal','dan'].forEach(function(f){
+      data[p+'_'+f] = (document.getElementById(p+'-'+f)||{}).value||0;
+    });
+  });
+  localStorage.setItem('exc_agro_form', JSON.stringify(data));
+};
+
+function cargarLocal(){
+  var raw = localStorage.getItem('exc_agro_form');
+  if(!raw) return;
+  try{
+    var data = JSON.parse(raw);
+    if(data.fecha) document.getElementById('agro-fecha').value = data.fecha;
+    if(data.gastos) document.getElementById('campo-gastos').value = data.gastos;
+    if(data.distrito){
+      document.getElementById('agro-distrito').value = data.distrito;
+      onDistritoChange();
+      if(data.municipio){
+        document.getElementById('agro-municipio').value = data.municipio;
+        onMunicipioChange();
+        if(data.nombre) document.getElementById('agro-nombre').value = data.nombre;
+      }
+    }
+    if(data.banco) document.getElementById('campo-banco').value = data.banco;
+    PRODUCTOS.forEach(function(p){
+      ['ant','nueva','ven','fal','dan'].forEach(function(f){
+        var el = document.getElementById(p+'-'+f);
+        if(el && data[p+'_'+f]!==undefined) el.value = data[p+'_'+f];
+      });
+    });
+    var inventarioFinalRaw = localStorage.getItem('agro-inventario-final');
+    if(inventarioFinalRaw){
+      try{
+        var inventarioFinal = JSON.parse(inventarioFinalRaw);
+        PRODUCTOS.forEach(function(p){
+          if(inventarioFinal[p] !== undefined){
+            document.getElementById(p+'-ant').value = inventarioFinal[p];
+          }
+        });
+      }catch(e){}
+    }
+  }catch(e){}
+}
 } // -- REPORTE DE BANCOS --
 function initFiltrosBancos(){ // Inicializar sistema de bancos y actualizar selector bancosSistema.inicializar(); bancosSistema.actualizarTodosLosSelectores();
 } window.renderBancos = function(){ const hist = JSON.parse(localStorage.getItem('exc_agro_hist') || '[]'); const bancos = hist .filter(r =>r.banco && r.banco !== '—' && Number(r.dineroRemesado || r.remesa || 0) >0) .map(r =>({ fecha: r.fecha, dia: r.dia || '', distrito: r.distrito || '', municipio: r.municipio || '', agromercado: r.agromercado || '', ventas: Number(r.ventas || 0), gastos: Number(r.gastos || 0), remesa: Number(r.dineroRemesado || r.remesa || 0), banco: r.banco || '', referencia: r.referencia || '', id: r.id || r.timestamp || Date.now(), ventas_unidades: r.ventas_unidades || {}, nombre: r.nombre || r.agromercado || '—', origen: 'control-venta' })); // Validar existencia de elementos antes de leer .value var desdeEl = document.getElementById('banco-filtro-desde'); var hastaEl = document.getElementById('banco-filtro-hasta'); var bancoEl = document.getElementById('banco-filtro-banco'); var desde = desdeEl ? desdeEl.value : ''; var hasta = hastaEl ? hastaEl.value : ''; var banco = bancoEl ? bancoEl.value : ''; var filtered = bancos.filter(function(r){ if(desde && r.fecha < desde) return false; if(hasta && r.fecha >hasta) return false; if(banco && r.banco !== banco) return false; return true; }); function numeroSeguroBanco(valor) { if (valor === null || valor === undefined || valor === '') return 0; const limpio = String(valor) .replace(/\$/g, '') .replace(/,/g, '') .replace(/\s/g, '') .trim(); const numero = parseFloat(limpio); return isNaN(numero) ? 0 : numero; } var totV=0, totG=0, totR=0; filtered.forEach(function(r){ totV += numeroSeguroBanco(r.ventas); totG += numeroSeguroBanco(r.gastos); totR += numeroSeguroBanco(r.remesa); }); var elKpiBV = document.getElementById('kpi-b-ventas'); if(elKpiBV) elKpiBV.textContent = '$'+totV.toFixed(2); var elKpiBG = document.getElementById('kpi-b-gastos'); if(elKpiBG) elKpiBG.textContent = '$'+totG.toFixed(2); var elKpiBR = document.getElementById('kpi-b-remesa'); if(elKpiBR) elKpiBR.textContent = '$'+totR.toFixed(2); var tbody = document.getElementById('tbody-bancos'); if(!filtered.length){ tbody.innerHTML='<tr><td colspan="16" style="text-align:center;color:var(--muted);padding:20px;font-style:italic;">Sin registros para los filtros seleccionados.</td></tr>'; return; } tbody.innerHTML = filtered.map(function(r, i){ var vu = r.ventas_unidades || {}; var bancoColor = r.banco ? '#1A3C5E' : '#94A3B8'; var nombre = r.nombre || r.agromercado || '—'; var dia = (r.dia && r.dia.split(',')[0]) || obtenerDiaSemana(r.fecha) || ''; return '<tr>' +'<td>'+fechaVistaSistema(r.fecha)+'</td>' +'<td>'+(dia||'')+'</td>' +'<td>'+(r.distrito||'—')+'</td>' +'<td>'+(r.municipio||'—')+'</td>' +'<td><strong>'+(nombre)+'</strong></td>' +'<td>'+(vu.ab1||0)+'</td>' +'<td>'+(vu.ap1||0)+'</td>' +'<td>'+(vu.fr1||0)+'</td><td>'+(vu.fr4||0)+'</td>' +'<td>'+(vu.ac||0)+'</td><td>'+(vu.ha||0)+'</td>' +'<td style="color:var(--brand2);font-weight:700;">$'+(parseFloat(r.ventas)||0).toFixed(2)+'</td>' +'<td>$'+(parseFloat(r.gastos)||0).toFixed(2)+'</td>' +'<td style="color:var(--green);font-weight:700;">$'+(parseFloat(r.remesa)||0).toFixed(2)+'</td>' +'<td><span style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:4px;padding:2px 7px;font-size:0.72rem;font-weight:700;color:'+bancoColor+';">'+(r.banco||'—')+'</span><br><span style="font-size:0.65rem;color:var(--muted);">'+(bancosSistema.obtenerCuenta(r.banco)||'')+'</span></td>' +'<td style="text-align:center;"><span style="font-size:0.7rem;color:var(--muted);">Desde Control Venta</span></td>' +'</tr>'; }).join('');
