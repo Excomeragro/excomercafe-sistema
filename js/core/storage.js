@@ -542,10 +542,10 @@ window.iniciarSincronizacionAutomatica = function(){
   // Sincronizar inmediatamente al cargar
   window.sincronizarDesdeSupabase();
   
-  // Luego cada 15 segundos
+  // Luego cada 60 segundos para no duplicar trabajo con otros refrescos automáticos
   window.syncPollTimer = setInterval(function(){
     window.sincronizarDesdeSupabase();
-  }, 15000);
+  }, 60000);
 };
 
 // Detener polling

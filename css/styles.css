@@ -1,55 +1,55 @@
 ﻿/* SISTEMA DE VARIABLES CSS - PALETA MODERNA EXCOMERCAFE */
 :root{
-  --bg-primary:#f4f7fb;
-  --bg-secondary:#eef4fb;
+  --bg-primary:#f3f7fb;
+  --bg-secondary:#edf4fb;
   --card-bg:#ffffff;
 
-  --sidebar-bg:#071827;
-  --sidebar-bg-2:#0b2033;
-  --sidebar-active:#166534;
+  --sidebar-bg:#081422;
+  --sidebar-bg-2:#0d2338;
+  --sidebar-active:#0f766e;
 
-  --brand:#17456b;
-  --brand2:#166534;
-  --accent:#16A34A;
-  --accent-color:#16A34A;
+  --brand:#12385a;
+  --brand2:#0f766e;
+  --accent:#14b8a6;
+  --accent-color:#14b8a6;
   --accent-2:#f59e0b;
 
-  --button-bg:#17456b;
-  --button-hover:#1e293b;
+  --button-bg:#12385a;
+  --button-hover:#0f2238;
 
-  --text-primary:#102033;
+  --text-primary:#0f172a;
   --text-secondary:#334155;
   --text-muted:#64748b;
 
-  --border:#dbeafe;
-  --border2:#bfdbfe;
-  --border-color:#dbeafe;
-  --card-border:#dbeafe;
+  --border:#d7e3ef;
+  --border2:#bfd2e5;
+  --border-color:#d7e3ef;
+  --card-border:#d7e3ef;
 
   --success-color:#16a34a;
   --error-color:#dc2626;
   --warning-color:#f59e0b;
 
-  --input-bg:#fff7f2;
+  --input-bg:#ffffff;
   --input-border:#cbd5e1;
-  --input-focus:#16A34A;
+  --input-focus:#14b8a6;
 
   --table-header:var(--brand);
 
-  --surface:#f4f7fb;
-  --surface2:#eef4fb;
+  --surface:#f3f7fb;
+  --surface2:#edf4fb;
   --muted:#64748b;
-  --ink:#102033;
+  --ink:#0f172a;
   --green:#16a34a;
   --red:#dc2626;
 
-  --radius-sm:6px;
-  --radius-md:10px;
-  --radius-lg:14px;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:18px;
 
-  --shadow-sm:0 1px 3px rgba(15,23,42,.08);
-  --shadow-md:0 8px 24px rgba(15,23,42,.08);
-  --shadow-lg:0 18px 40px rgba(15,23,42,.12);
+  --shadow-sm:0 1px 2px rgba(15,23,42,.06), 0 1px 1px rgba(15,23,42,.04);
+  --shadow-md:0 10px 30px rgba(15,23,42,.10);
+  --shadow-lg:0 18px 44px rgba(15,23,42,.14);
 
   --bp-xl: 1200px;
   --bp-lg: 1024px;
@@ -59,7 +59,9 @@
 
 /* ESTILOS BASE - TEMA CLARO PROFESIONAL */
 body {
-  background: var(--bg-primary);
+  background:
+    radial-gradient(circle at top left, rgba(20,184,166,.08), transparent 30%),
+    linear-gradient(180deg, #f8fbff 0%, var(--bg-primary) 100%);
   color: var(--text-primary);
   font-family: 'Barlow', sans-serif;
   min-height: 100vh;
@@ -97,6 +99,39 @@ a {
 a:hover {
   color: var(--button-bg);
   text-decoration: underline;
+}
+
+::selection {
+  background: rgba(20,184,166,.18);
+  color: var(--text-primary);
+}
+
+.header,
+.tabs {
+  background: linear-gradient(135deg, #0f2740 0%, #12385a 48%, #0f766e 100%);
+}
+
+.card,
+.dashboard-panel,
+.home-card,
+.auth-card,
+.settings-panel,
+.creator-notes-modal,
+.program-guide-modal {
+  box-shadow: var(--shadow-md);
+  border-color: var(--card-border);
+}
+
+.btn,
+.hbtn,
+.tab-btn {
+  border-radius: var(--radius-sm);
+}
+
+.tab-btn.active {
+  background: rgba(255,255,255,.14);
+  color: #fff;
+  backdrop-filter: blur(10px);
 }
 
 * {
