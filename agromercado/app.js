@@ -1287,12 +1287,16 @@ function renderHistorialVentas(rows){
   cont.innerHTML = rows.map(function(row, index){
     var payload = payloadHistorial(row);
     var estado = String(row.estado || 'aprobado').toLowerCase();
-    var editable = estado !== 'aprobado';
     var banco = payload.banco || row.banco || 'Pendiente';
     var ventas = row.ventas != null ? row.ventas : payload.ventas;
     var gastos = row.gastos != null ? row.gastos : payload.gastos;
     var remesa = row.remesa != null ? row.remesa : payload.remesa;
     var obs = payload.observaciones || row.observaciones || '';
+    var acciones = '<div class="history-actions">'
+      + '<button type="button" class="history-action edit" onclick="editarReporteEmergencia(' + index + ')">Editar</button>'
+      + '<button type="button" class="history-action delete" onclick="borrarReporteEmergencia(' + index + ')">Borrar</button>'
+      + '</div>';
+    if(estado === 'aprobado') acciones += '<div class="history-actions locked">Aprobado: usa emergencia con confirmacion</div>';
     return '<article class="history-item">'
       + '<div class="history-head"><div><strong>' + htmlEscape(fechaVista(row.fecha || payload.fecha || '')) + '</strong>'
       + '<small>Encargado: ' + htmlEscape(row.encargado || payload.encargado || 'Sin nombre') + '</small></div>'
@@ -1305,12 +1309,7 @@ function renderHistorialVentas(rows){
       + '</div>'
       + historialProductosHtml(payload, row)
       + '<div class="history-obs"><b>Observaciones:</b> ' + htmlEscape(obs || 'Sin observaciones') + '</div>'
-      + (editable
-        ? '<div class="history-actions">'
-          + '<button type="button" class="history-action edit" onclick="editarReporteEmergencia(' + index + ')">Editar</button>'
-          + '<button type="button" class="history-action delete" onclick="borrarReporteEmergencia(' + index + ')">Borrar</button>'
-          + '</div>'
-        : '<div class="history-actions locked">Venta aprobada: no editable por vendedor</div>')
+      + acciones
       + '</article>';
   }).join('');
 }
@@ -1329,8 +1328,7 @@ window.editarReporteEmergencia = function(index){
     setMessage('submit-message', 'No se encontro el reporte para editar.', 'error');
     return;
   }
-  if(String(row.estado || '').toLowerCase() === 'aprobado'){
-    setMessage('submit-message', 'Esta venta ya fue aprobada y no puede editarse desde el vendedor.', 'error');
+  if(String(row.estado || '').toLowerCase() === 'aprobado' && !confirm('Este envio ya fue aprobado. Abrirlo en modo de emergencia reemplazara el reporte guardado y ajustara el inventario. ¿Deseas continuar?')){
     return;
   }
   edicionEmergenciaReporte = row;
@@ -1349,14 +1347,14 @@ window.borrarReporteEmergencia = async function(index){
     setMessage('submit-message', 'No se encontro el reporte para borrar.', 'error');
     return;
   }
-  if(String(row.estado || '').toLowerCase() === 'aprobado'){
-    setMessage('submit-message', 'Esta venta ya fue aprobada y no puede borrarse desde el vendedor.', 'error');
-    return;
-  }
   var payload = payloadHistorial(row);
   var fecha = row.fecha || payload.fecha || '';
   var agromercado = row.agromercado || payload.agromercado || (accesoActual && accesoActual.nombre) || '';
-  if(!confirm('Borrar este envio del ' + fechaVista(fecha) + '? Esta accion es de emergencia y no se puede deshacer.')) return;
+  var esAprobado = String(row.estado || '').toLowerCase() === 'aprobado';
+  var confirmacion = esAprobado
+    ? 'Este envio ya fue aprobado. Si lo borras, el reporte desaparecera y el inventario debe volver a su saldo anterior. ¿Deseas continuar?'
+    : 'Borrar este envio del ' + fechaVista(fecha) + '? Esta accion es de emergencia y no se puede deshacer.';
+  if(!confirm(confirmacion)) return;
   try{
     setMessage('submit-message', 'Borrando envio...', '');
     await borrarReporteRemotoPortal(row);
